@@ -44,6 +44,7 @@ from .const import (
     CONF_ROOM_NAME,
     CONF_ROOMS,
     CONF_SEASON_SENSOR,
+    CONF_SOLAR_OPTIMIZER_SWITCH,
     CONF_TEMPERATURE_SENSOR,
     CONF_TEMP_AWAY,
     CONF_TEMP_COMFORT,
@@ -334,6 +335,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     CONF_LIGHTS: user_input.get(CONF_LIGHTS, []),
                     CONF_CLIMATE_ENTITY: user_input.get(CONF_CLIMATE_ENTITY),
                     CONF_HEATING_SWITCHES: user_input.get(CONF_HEATING_SWITCHES, []),
+                    CONF_SOLAR_OPTIMIZER_SWITCH: user_input.get(CONF_SOLAR_OPTIMIZER_SWITCH),
                 }
             )
             return await self.async_step_room_light_config()
@@ -366,6 +368,14 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                         selector.EntitySelectorConfig(
                             domain=[SWITCH_DOMAIN],
                             multiple=True,
+                        )
+                    ),
+                    vol.Optional(
+                        CONF_SOLAR_OPTIMIZER_SWITCH,
+                        default=self._current_room.get(CONF_SOLAR_OPTIMIZER_SWITCH),
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(
+                            domain=[SWITCH_DOMAIN],
                         )
                     ),
                 }

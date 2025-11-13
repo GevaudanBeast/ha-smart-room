@@ -59,7 +59,8 @@
         "data": {
           "lights": "Lumières",
           "climate_entity": "Entité climat",
-          "heating_switches": "Interrupteurs de chauffage"
+          "heating_switches": "Interrupteurs de chauffage",
+          "solar_optimizer_switch": "Switch Solar Optimizer (optionnel)"
         }
       },
       "room_light_config": {

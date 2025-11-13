@@ -1,8 +1,15 @@
 # Smart Room Manager - Home Assistant Integration
 
-**Version 1.0.0**
+**Version 1.1.0** - ⚡ **Nouveau** : Support de Solar Optimizer !
 
 Une intégration Home Assistant complète pour gérer intelligemment chaque pièce de votre maison en automatisant les lumières et le chauffage selon la présence, la luminosité, les horaires et les modes globaux.
+
+## 🆕 Nouveautés v1.1.0
+
+- ⚡ **Solar Optimizer** : Compatibilité totale avec Solar Optimizer en mode prioritaire
+- 🔄 Gestion automatique du switch Solar Optimizer par pièce
+- 📝 Guide de migration depuis les blueprints HVAC
+- 📖 Documentation complète Solar Optimizer
 
 ## 📋 Fonctionnalités
 
@@ -82,6 +89,7 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 - **Lumières** : Entités light.* ou switch.* à contrôler
 - **Entité climat** : Thermostat ou système de chauffage (climate.*)
 - **Interrupteurs de chauffage** : Switches pilotant le chauffage
+- **⚡ Switch Solar Optimizer** : Switch d'action Solar Optimizer (optionnel - voir [SOLAR_OPTIMIZER.md](SOLAR_OPTIMIZER.md))
 
 #### Étape 4 : Configuration des lumières
 - **Seuil de luminosité** : En dessous de cette valeur (lux), les lumières s'allument
@@ -191,7 +199,15 @@ automation:
 Configurez l'entité alarme dans les paramètres globaux pour adapter automatiquement les comportements quand l'alarme est armée.
 
 ### Solar Optimizer
-L'intégration peut être étendue pour prendre en compte la production solaire dans les décisions de chauffage (future version).
+
+✅ **Compatible dès maintenant !**
+
+Smart Room Manager v1.1.0 supporte nativement Solar Optimizer en mode **prioritaire** :
+- ⚡ Quand Solar Optimizer chauffe → Smart Room Manager se met en retrait
+- 🔄 Quand Solar Optimizer s'arrête → Smart Room Manager reprend le contrôle
+- 📋 Configuration simple : juste sélectionner le switch SO par pièce
+
+**Documentation complète** : Voir [SOLAR_OPTIMIZER.md](SOLAR_OPTIMIZER.md)
 
 ### IPX800
 Compatible avec tous les actionneurs gérés par IPX800 (X4FP, relais, etc.).

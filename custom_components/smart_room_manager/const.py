@@ -20,6 +20,7 @@ CONF_HUMIDITY_SENSOR: Final = "humidity_sensor"
 CONF_LIGHTS: Final = "lights"
 CONF_CLIMATE_ENTITY: Final = "climate_entity"
 CONF_HEATING_SWITCHES: Final = "heating_switches"
+CONF_SOLAR_OPTIMIZER_SWITCH: Final = "solar_optimizer_switch"
 
 # Light behavior configuration
 CONF_LIGHT_LUX_THRESHOLD: Final = "light_lux_threshold"

@@ -59,7 +59,8 @@
         "data": {
           "lights": "Lights",
           "climate_entity": "Climate entity",
-          "heating_switches": "Heating switches"
+          "heating_switches": "Heating switches",
+          "solar_optimizer_switch": "Solar Optimizer switch (optional)"
         }
       },
       "room_light_config": {

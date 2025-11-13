@@ -19,6 +19,7 @@ from .const import (
     CONF_CLIMATE_UNOCCUPIED_DELAY,
     CONF_CLIMATE_WINDOW_CHECK,
     CONF_HEATING_SWITCHES,
+    CONF_SOLAR_OPTIMIZER_SWITCH,
     CONF_TEMP_AWAY,
     CONF_TEMP_COMFORT,
     CONF_TEMP_ECO,
@@ -72,6 +73,19 @@ class ClimateController:
 
         if not climate_entity and not heating_switches:
             return
+
+        # ⚡ SOLAR OPTIMIZER - PRIORITY CHECK
+        solar_switch = self.room_config.get(CONF_SOLAR_OPTIMIZER_SWITCH)
+        if solar_switch:
+            solar_state = self.hass.states.get(solar_switch)
+            if solar_state and solar_state.state == "on":
+                _LOGGER.debug(
+                    "⚡ Solar Optimizer active (%s ON) in %s - Smart Room Manager in standby",
+                    solar_switch,
+                    self.room_manager.room_name,
+                )
+                # Solar Optimizer is actively heating - do nothing
+                return
 
         # Check if heating should be on
         should_heat, target_temp = self._should_heat()
