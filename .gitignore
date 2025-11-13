@@ -107,3 +107,7 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Release artifacts
+*.zip
+*.sha256
