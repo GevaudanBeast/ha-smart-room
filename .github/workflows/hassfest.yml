@@ -1,0 +1,22 @@
+name: Hassfest
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Hassfest validation
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Hassfest validation
+        uses: home-assistant/actions/hassfest@master
+        with:
+          path: ./custom_components/smart_room_manager

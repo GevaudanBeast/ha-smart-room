@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    name: Create GitHub Release
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from manifest
+        id: version
+        run: |
+          VERSION=$(python -c "import json; print(json.load(open('custom_components/smart_room_manager/manifest.json'))['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Verify tag matches version
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          MANIFEST_VERSION="${{ steps.version.outputs.version }}"
+          if [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION) does not match manifest version ($MANIFEST_VERSION)"
+            exit 1
+          fi
+
+      - name: Create release archive
+        run: |
+          cd custom_components
+          zip -r ../smart_room_manager.zip smart_room_manager/
+          cd ..
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          echo "## Smart Room Manager v${{ steps.version.outputs.version }}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "### Installation" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "1. Download \`smart_room_manager.zip\`" >> release_notes.md
+          echo "2. Extract to your \`custom_components\` directory" >> release_notes.md
+          echo "3. Restart Home Assistant" >> release_notes.md
+          echo "4. Add the integration via UI: Configuration → Integrations → Add Integration → Smart Room Manager" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### HACS Installation" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "1. Open HACS" >> release_notes.md
+          echo "2. Go to Integrations" >> release_notes.md
+          echo "3. Click on the 3 dots menu → Custom repositories" >> release_notes.md
+          echo "4. Add this repository URL" >> release_notes.md
+          echo "5. Search for \"Smart Room Manager\" and install" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### Documentation" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "- 📖 [README](https://github.com/${{ github.repository }}/blob/main/README.md)" >> release_notes.md
+          echo "- 🔄 [Migration Guide](https://github.com/${{ github.repository }}/blob/main/MIGRATION_GUIDE.md)" >> release_notes.md
+          echo "- 📋 [Configuration Examples](https://github.com/${{ github.repository }}/blob/main/CONFIGURATION_EXAMPLES.md)" >> release_notes.md
+          echo "- ⚡ [Solar Optimizer Guide](https://github.com/${{ github.repository }}/blob/main/SOLAR_OPTIMIZER.md)" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### Changelog" >> release_notes.md
+          echo "" >> release_notes.md
+          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s" >> release_notes.md || echo "- Initial release" >> release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: smart_room_manager.zip
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update release branch
+        if: ${{ !contains(steps.version.outputs.version, 'beta') && !contains(steps.version.outputs.version, 'alpha') }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git checkout -B release
+          git push origin release --force

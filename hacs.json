@@ -1,0 +1,8 @@
+{
+  "name": "Smart Room Manager",
+  "content_in_root": false,
+  "filename": "smart_room_manager.zip",
+  "homeassistant": "2023.1.0",
+  "render_readme": true,
+  "zip_release": true
+}
