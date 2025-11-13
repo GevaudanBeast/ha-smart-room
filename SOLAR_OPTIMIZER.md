@@ -1,6 +1,6 @@
 # ⚡ Solar Optimizer - Guide d'intégration
 
-Smart Room Manager v1.1.0 supporte maintenant **Solar Optimizer** en mode **prioritaire**.
+Smart Room Manager v0.1.0 supporte dès sa version initiale **Solar Optimizer** en mode **prioritaire**.
 
 ## 🎯 Principe de fonctionnement
 
@@ -311,6 +311,6 @@ Si tu rencontres des problèmes avec Solar Optimizer :
 
 ---
 
-**Version** : 1.1.0
+**Version** : 0.1.0
 **Dernière mise à jour** : 2025-01-13
 **Auteur** : GevaudanBeast

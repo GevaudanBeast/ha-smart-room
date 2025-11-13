@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name="Smart Room Manager",
         manufacturer="HA-SMART",
         model="Room Manager",
-        sw_version="1.0.0",
+        sw_version="0.1.0",
     )
 
     # Forward setup to platforms

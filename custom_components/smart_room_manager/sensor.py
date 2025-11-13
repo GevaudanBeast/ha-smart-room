@@ -72,7 +72,7 @@ class SmartRoomStateSensor(CoordinatorEntity, SensorEntity):
             "name": f"Smart Room: {room_manager.room_name}",
             "manufacturer": "HA-SMART",
             "model": "Smart Room Manager",
-            "sw_version": "1.0.0",
+            "sw_version": "0.1.0",
         }
 
     @property

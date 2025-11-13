@@ -368,5 +368,5 @@ Si tu rencontres des problèmes :
 
 ---
 
-**Version** : 1.0.0
+**Version** : 0.1.0
 **Dernière mise à jour** : 2025-01-13

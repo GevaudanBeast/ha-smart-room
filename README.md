@@ -1,10 +1,10 @@
 # Smart Room Manager - Home Assistant Integration
 
-**Version 1.1.0** - ⚡ **Nouveau** : Support de Solar Optimizer !
+**Version 0.1.0** - ⚡ Version initiale avec support Solar Optimizer !
 
 Une intégration Home Assistant complète pour gérer intelligemment chaque pièce de votre maison en automatisant les lumières et le chauffage selon la présence, la luminosité, les horaires et les modes globaux.
 
-## 🆕 Nouveautés v1.1.0
+## 🆕 Fonctionnalités v0.1.0
 
 - ⚡ **Solar Optimizer** : Compatibilité totale avec Solar Optimizer en mode prioritaire
 - 🔄 Gestion automatique du switch Solar Optimizer par pièce
@@ -202,7 +202,7 @@ Configurez l'entité alarme dans les paramètres globaux pour adapter automatiqu
 
 ✅ **Compatible dès maintenant !**
 
-Smart Room Manager v1.1.0 supporte nativement Solar Optimizer en mode **prioritaire** :
+Smart Room Manager v0.1.0 supporte nativement Solar Optimizer en mode **prioritaire** :
 - ⚡ Quand Solar Optimizer chauffe → Smart Room Manager se met en retrait
 - 🔄 Quand Solar Optimizer s'arrête → Smart Room Manager reprend le contrôle
 - 📋 Configuration simple : juste sélectionner le switch SO par pièce
@@ -263,6 +263,6 @@ Pour toute question ou problème :
 
 ---
 
-**Version** : 1.0.0
+**Version** : 0.1.0
 **Auteur** : GevaudanBeast
 **Compatibilité** : Home Assistant 2023.1+
