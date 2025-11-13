@@ -1,0 +1,119 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Smart Room Manager",
+        "description": "Set up global settings for Smart Room Manager",
+        "data": {
+          "name": "Integration name",
+          "guest_mode_entity": "Guest mode entity",
+          "vacation_mode_entity": "Vacation mode entity",
+          "alarm_entity": "Alarm entity",
+          "season_sensor": "Season sensor"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Smart Room Manager Options",
+        "menu_options": {
+          "list_rooms": "Manage rooms",
+          "add_room": "Add a room",
+          "global_settings": "Global settings"
+        }
+      },
+      "list_rooms": {
+        "title": "Manage Rooms",
+        "description": "Select a room to edit or delete"
+      },
+      "add_room": {
+        "title": "Add Room",
+        "description": "Enter the room name",
+        "data": {
+          "room_name": "Room name"
+        }
+      },
+      "edit_room": {
+        "title": "Edit Room",
+        "description": "Modify room name",
+        "data": {
+          "room_name": "Room name"
+        }
+      },
+      "room_sensors": {
+        "title": "Configure Sensors",
+        "description": "Select sensors for {room_name}",
+        "data": {
+          "presence_sensors": "Presence sensors",
+          "door_window_sensors": "Door/window sensors",
+          "luminosity_sensor": "Luminosity sensor",
+          "temperature_sensor": "Temperature sensor",
+          "humidity_sensor": "Humidity sensor"
+        }
+      },
+      "room_actuators": {
+        "title": "Configure Actuators",
+        "description": "Select lights and climate for {room_name}",
+        "data": {
+          "lights": "Lights",
+          "climate_entity": "Climate entity",
+          "heating_switches": "Heating switches"
+        }
+      },
+      "room_light_config": {
+        "title": "Light Configuration",
+        "description": "Configure light behavior for {room_name}",
+        "data": {
+          "light_lux_threshold": "Luminosity threshold",
+          "light_timeout": "Light timeout",
+          "light_night_mode": "Night mode",
+          "light_night_brightness": "Night brightness",
+          "light_day_brightness": "Day brightness"
+        }
+      },
+      "room_climate_config": {
+        "title": "Climate Configuration",
+        "description": "Configure climate behavior for {room_name}",
+        "data": {
+          "temp_comfort": "Comfort temperature",
+          "temp_eco": "Eco temperature",
+          "temp_night": "Night temperature",
+          "temp_away": "Away temperature",
+          "temp_frost_protection": "Frost protection temperature",
+          "climate_presence_required": "Presence required for heating",
+          "climate_window_check": "Check window status",
+          "climate_unoccupied_delay": "Unoccupied delay"
+        }
+      },
+      "room_schedule": {
+        "title": "Schedule Configuration",
+        "description": "Configure time periods for {room_name}",
+        "data": {
+          "morning_start": "Morning start time",
+          "day_start": "Day start time",
+          "evening_start": "Evening start time",
+          "night_start": "Night start time"
+        }
+      },
+      "delete_room": {
+        "title": "Delete Room",
+        "description": "Are you sure you want to delete {room_name}?",
+        "data": {
+          "confirm": "Confirm deletion"
+        }
+      },
+      "global_settings": {
+        "title": "Global Settings",
+        "description": "Configure global settings",
+        "data": {
+          "guest_mode_entity": "Guest mode entity",
+          "vacation_mode_entity": "Vacation mode entity",
+          "alarm_entity": "Alarm entity",
+          "season_sensor": "Season sensor"
+        }
+      }
+    }
+  }
+}

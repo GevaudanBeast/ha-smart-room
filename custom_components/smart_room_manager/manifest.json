@@ -1,0 +1,12 @@
+{
+  "domain": "smart_room_manager",
+  "name": "Smart Room Manager",
+  "codeowners": ["@GevaudanBeast"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/GevaudanBeast/HA-SMART",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/GevaudanBeast/HA-SMART/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

@@ -1,0 +1,119 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configurer Smart Room Manager",
+        "description": "Configurez les paramètres globaux de Smart Room Manager",
+        "data": {
+          "name": "Nom de l'intégration",
+          "guest_mode_entity": "Entité mode invité",
+          "vacation_mode_entity": "Entité mode vacances",
+          "alarm_entity": "Entité alarme",
+          "season_sensor": "Capteur de saison"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Smart Room Manager",
+        "menu_options": {
+          "list_rooms": "Gérer les pièces",
+          "add_room": "Ajouter une pièce",
+          "global_settings": "Paramètres globaux"
+        }
+      },
+      "list_rooms": {
+        "title": "Gérer les pièces",
+        "description": "Sélectionnez une pièce à modifier ou supprimer"
+      },
+      "add_room": {
+        "title": "Ajouter une pièce",
+        "description": "Entrez le nom de la pièce",
+        "data": {
+          "room_name": "Nom de la pièce"
+        }
+      },
+      "edit_room": {
+        "title": "Modifier la pièce",
+        "description": "Modifiez le nom de la pièce",
+        "data": {
+          "room_name": "Nom de la pièce"
+        }
+      },
+      "room_sensors": {
+        "title": "Configuration des capteurs",
+        "description": "Sélectionnez les capteurs pour {room_name}",
+        "data": {
+          "presence_sensors": "Capteurs de présence",
+          "door_window_sensors": "Capteurs de porte/fenêtre",
+          "luminosity_sensor": "Capteur de luminosité",
+          "temperature_sensor": "Capteur de température",
+          "humidity_sensor": "Capteur d'humidité"
+        }
+      },
+      "room_actuators": {
+        "title": "Configuration des actionneurs",
+        "description": "Sélectionnez les lumières et le chauffage pour {room_name}",
+        "data": {
+          "lights": "Lumières",
+          "climate_entity": "Entité climat",
+          "heating_switches": "Interrupteurs de chauffage"
+        }
+      },
+      "room_light_config": {
+        "title": "Configuration des lumières",
+        "description": "Configurez le comportement des lumières pour {room_name}",
+        "data": {
+          "light_lux_threshold": "Seuil de luminosité",
+          "light_timeout": "Délai d'extinction",
+          "light_night_mode": "Mode nuit",
+          "light_night_brightness": "Luminosité de nuit",
+          "light_day_brightness": "Luminosité de jour"
+        }
+      },
+      "room_climate_config": {
+        "title": "Configuration du chauffage",
+        "description": "Configurez le comportement du chauffage pour {room_name}",
+        "data": {
+          "temp_comfort": "Température confort",
+          "temp_eco": "Température éco",
+          "temp_night": "Température nuit",
+          "temp_away": "Température absence",
+          "temp_frost_protection": "Température hors-gel",
+          "climate_presence_required": "Présence requise pour chauffer",
+          "climate_window_check": "Vérifier l'ouverture des fenêtres",
+          "climate_unoccupied_delay": "Délai d'inoccupation"
+        }
+      },
+      "room_schedule": {
+        "title": "Configuration des horaires",
+        "description": "Configurez les périodes horaires pour {room_name}",
+        "data": {
+          "morning_start": "Heure de début du matin",
+          "day_start": "Heure de début de journée",
+          "evening_start": "Heure de début de soirée",
+          "night_start": "Heure de début de nuit"
+        }
+      },
+      "delete_room": {
+        "title": "Supprimer la pièce",
+        "description": "Êtes-vous sûr de vouloir supprimer {room_name} ?",
+        "data": {
+          "confirm": "Confirmer la suppression"
+        }
+      },
+      "global_settings": {
+        "title": "Paramètres globaux",
+        "description": "Configurez les paramètres globaux",
+        "data": {
+          "guest_mode_entity": "Entité mode invité",
+          "vacation_mode_entity": "Entité mode vacances",
+          "alarm_entity": "Entité alarme",
+          "season_sensor": "Capteur de saison"
+        }
+      }
+    }
+  }
+}
