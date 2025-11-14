@@ -33,9 +33,10 @@ jobs:
 
       - name: Create release archive
         run: |
-          cd custom_components
-          zip -r ../smart_room_manager.zip smart_room_manager/
-          cd ..
+          cd custom_components/smart_room_manager
+          zip -r ../../smart_room_manager.zip ./*
+          cd ../..
+          ls -lh smart_room_manager.zip
 
       - name: Generate release notes
         id: release_notes
