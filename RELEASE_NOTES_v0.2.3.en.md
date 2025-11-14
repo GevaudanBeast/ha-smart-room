@@ -1,24 +1,42 @@
-# Smart Room Manager v0.2.3 - Automatic Migration
+# Smart Room Manager v0.2.3 - Comprehensive Critical Fixes
 
-## 🔧 Critical Fix
+## 🔧 Critical Fixes
 
-### Automatic None Values Migration
+This version fixes **multiple critical errors** affecting v0.2.1 and v0.2.2 users:
 
-This version automatically fixes an issue affecting users who installed v0.2.1 or v0.2.2:
+### 1. Missing DOMAIN Imports
+**Problem:**
+- `NameError: name 'DOMAIN' is not defined` in switch.py and binary_sensor.py
+- Integration couldn't load switch and binary_sensor platforms
 
-**Problem resolved:**
+**Solution:**
+- ✅ Added `from .const import DOMAIN` to switch.py and binary_sensor.py
+- ✅ All entities (switches, binary sensors) now created successfully
+
+### 2. Deprecated Warning (Home Assistant 2025.12)
+**Problem:**
+- Warning about explicit `config_entry` assignment in OptionsFlow
+- Code not compatible with Home Assistant 2025.12+
+
+**Solution:**
+- ✅ Removed explicit assignment (automatically provided by parent class)
+- ✅ Compatible with Home Assistant 2025.12 and future versions
+
+### 3. "Entity None" - Comprehensive Fixes
+**Problem:**
 - Error `Entity None is neither a valid entity ID nor a valid UUID`
-- Temperature/humidity sensors displaying "Entity None"
+- Temperature/humidity sensors displaying "Entity None" in forms
 - Configuration containing `None` values for optional fields
 
-**Automatic solution:**
-- ✅ **Transparent startup migration** : Automatic cleanup of `None` values
-- ✅ **No action required** : Fix applies automatically on restart
-- ✅ **Cleaned configuration** : Removes None values from:
-  - `temperature_sensor`
-  - `humidity_sensor`
-  - `climate_entity`
-  - `climate_bypass_switch`
+**Solution (3 combined fixes):**
+- ✅ **Extended migration**: Automatic cleanup on startup of `None` values in:
+  - `door_window_sensors` and `lights` (newly added)
+  - `temperature_sensor`, `humidity_sensor`
+  - `climate_entity`, `climate_bypass_switch`
+- ✅ **Critical `.get()` fix**: 7 locations corrected from `.get(field, [])` to `.get(field) or []`
+  - Reason: `.get(key, default)` returns `None` if key exists with value `None`
+  - Files: config_flow.py, light_control.py, room_manager.py
+- ✅ **Conditional schemas**: Forms rebuilt to not display "None" as default value
 
 ## 🚀 Installation / Update
 

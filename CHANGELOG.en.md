@@ -10,11 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.3] - 2025-01-14
 
 ### Fixed
-- **Automatic None values migration** : Automatic fix for v0.2.1 configurations containing `None` values
-  - Automatic cleanup on integration startup
-  - Removes None values from temperature_sensor, humidity_sensor, climate_entity, climate_bypass_switch
-  - Resolves error "Entity None is neither a valid entity ID nor a valid UUID"
-  - Transparent migration, no user action required
+- **Multiple critical errors** : Comprehensive fixes for v0.2.3
+  - **Missing DOMAIN imports** : Added `from .const import DOMAIN` in switch.py and binary_sensor.py
+    - Resolves: `NameError: name 'DOMAIN' is not defined`
+  - **Deprecated warning** : Removed explicit config_entry assignment in OptionsFlow
+    - Compatible with Home Assistant 2025.12
+  - **"Entity None" in forms** : Multiple fixes
+    - Extended migration: Cleanup of door_window_sensors and lights (in addition to temperature_sensor, humidity_sensor, climate_entity, climate_bypass_switch)
+    - Fixed `.get(field, [])` to `.get(field) or []` in 7 locations (config_flow.py, light_control.py, room_manager.py)
+    - Conditional form schemas to avoid None as default value
+  - Completely resolves "Entity None is neither a valid entity ID nor a valid UUID" error
+  - Transparent migration on startup, no user action required
 
 ## [0.2.2] - 2025-01-14
 

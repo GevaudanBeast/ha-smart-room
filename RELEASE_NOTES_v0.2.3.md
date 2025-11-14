@@ -1,24 +1,42 @@
-# Smart Room Manager v0.2.3 - Migration Automatique
+# Smart Room Manager v0.2.3 - Correctifs Critiques Complets
 
-## 🔧 Correctif Critique
+## 🔧 Correctifs Critiques
 
-### Migration Automatique des Valeurs None
+Cette version corrige **plusieurs erreurs critiques** affectant les utilisateurs v0.2.1 et v0.2.2 :
 
-Cette version corrige automatiquement un problème affectant les utilisateurs ayant installé la v0.2.1 ou v0.2.2 :
+### 1. Imports DOMAIN Manquants
+**Problème :**
+- `NameError: name 'DOMAIN' is not defined` dans switch.py et binary_sensor.py
+- L'intégration ne pouvait pas charger les plateformes switch et binary_sensor
 
-**Problème résolu :**
+**Solution :**
+- ✅ Ajout de `from .const import DOMAIN` dans switch.py et binary_sensor.py
+- ✅ Toutes les entités (switches, capteurs binaires) sont maintenant créées correctement
+
+### 2. Warning Deprecated (Home Assistant 2025.12)
+**Problème :**
+- Warning sur l'assignation explicite de `config_entry` dans OptionsFlow
+- Code non compatible avec Home Assistant 2025.12+
+
+**Solution :**
+- ✅ Suppression de l'assignation explicite (fournie automatiquement par la classe parente)
+- ✅ Compatible avec Home Assistant 2025.12 et versions futures
+
+### 3. "Entity None" - Corrections Complètes
+**Problème :**
 - Erreur `Entity None is neither a valid entity ID nor a valid UUID`
-- Capteurs de température/humidité affichant "Entity None"
+- Capteurs de température/humidité affichant "Entity None" dans les formulaires
 - Configuration contenant des valeurs `None` pour les champs optionnels
 
-**Solution automatique :**
-- ✅ **Migration transparente au démarrage** : Nettoyage automatique des valeurs `None`
-- ✅ **Aucune action requise** : La correction s'applique automatiquement lors du redémarrage
-- ✅ **Configuration nettoyée** : Suppression des valeurs None dans :
-  - `temperature_sensor`
-  - `humidity_sensor`
-  - `climate_entity`
-  - `climate_bypass_switch`
+**Solution (3 corrections combinées) :**
+- ✅ **Migration étendue** : Nettoyage automatique au démarrage des valeurs `None` dans :
+  - `door_window_sensors` et `lights` (nouvellement ajoutés)
+  - `temperature_sensor`, `humidity_sensor`
+  - `climate_entity`, `climate_bypass_switch`
+- ✅ **Correction `.get()` critique** : 7 emplacements corrigés de `.get(field, [])` vers `.get(field) or []`
+  - Raison : `.get(key, default)` retourne `None` si la clé existe avec valeur `None`
+  - Fichiers : config_flow.py, light_control.py, room_manager.py
+- ✅ **Schémas conditionnels** : Formulaires reconstruits pour ne pas afficher "None" comme valeur par défaut
 
 ## 🚀 Installation / Mise à jour
 
