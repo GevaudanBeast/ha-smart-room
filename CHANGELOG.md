@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2025-01-14
+
+### Fixed
+- **Migration automatique des valeurs None** : Correction automatique des configurations v0.2.1 contenant des valeurs `None`
+  - Nettoyage automatique au démarrage de l'intégration
+  - Suppression des valeurs None dans temperature_sensor, humidity_sensor, climate_entity, climate_bypass_switch
+  - Résout l'erreur "Entity None is neither a valid entity ID nor a valid UUID"
+  - Migration transparente, aucune action utilisateur requise
+
 ## [0.2.2] - 2025-01-14
 
 ### Improved

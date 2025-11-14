@@ -3,7 +3,7 @@ from typing import Final
 
 # Integration domain
 DOMAIN: Final = "smart_room_manager"
-VERSION: Final = "0.2.2"
+VERSION: Final = "0.2.3"
 
 # Configuration and options
 CONF_ROOMS: Final = "rooms"
