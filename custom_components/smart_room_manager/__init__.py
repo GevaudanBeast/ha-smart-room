@@ -9,7 +9,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
-from .const import DOMAIN
+from .const import DOMAIN, VERSION
 from .coordinator import SmartRoomCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         name="Smart Room Manager",
         manufacturer="HA-SMART",
         model="Room Manager",
-        sw_version="0.1.0",
+        sw_version=VERSION,
     )
 
     # Forward setup to platforms

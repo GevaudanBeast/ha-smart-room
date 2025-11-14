@@ -50,8 +50,15 @@ class RoomManager:
         self.room_config = room_config
         self.coordinator = coordinator
 
-        self.room_id: str = room_config[CONF_ROOM_ID]
-        self.room_name: str = room_config[CONF_ROOM_NAME]
+        # Validate required fields
+        self.room_id: str = room_config.get(CONF_ROOM_ID)
+        if not self.room_id:
+            raise ValueError("Room config missing required field 'room_id'")
+
+        self.room_name: str = room_config.get(CONF_ROOM_NAME)
+        if not self.room_name:
+            raise ValueError(f"Room config for {self.room_id} missing required field 'room_name'")
+
         self.room_type: str = room_config.get(CONF_ROOM_TYPE, "normal")
 
         # State tracking
@@ -74,7 +81,14 @@ class RoomManager:
     def update_config(self, room_config: dict[str, Any]) -> None:
         """Update room configuration."""
         self.room_config = room_config
-        self.room_name = room_config[CONF_ROOM_NAME]
+
+        # Validate required fields
+        new_name = room_config.get(CONF_ROOM_NAME)
+        if not new_name:
+            _LOGGER.error("Room config for %s missing required field 'room_name'", self.room_id)
+            return
+
+        self.room_name = new_name
         self.room_type = room_config.get(CONF_ROOM_TYPE, "normal")
         self.light_controller.update_config(room_config)
         self.climate_controller.update_config(room_config)
@@ -240,10 +254,14 @@ class RoomManager:
         # Get alarm state for state reporting
         alarm_entity = self.coordinator.entry.data.get(CONF_ALARM_ENTITY)
         alarm_state_value = "unknown"
+        occupied = True  # Default to occupied if no alarm
+
         if alarm_entity:
             alarm_state = self.hass.states.get(alarm_entity)
             if alarm_state:
                 alarm_state_value = alarm_state.state
+                # In v0.2.0: occupied = NOT armed_away (simplified presence detection)
+                occupied = alarm_state_value != ALARM_STATE_ARMED_AWAY
 
         # Check if any light is on (for bathroom logic reporting)
         lights = self.room_config.get(CONF_LIGHTS, [])
@@ -255,6 +273,12 @@ class RoomManager:
                     light_on = True
                     break
 
+        # Get light state with should_be_on
+        light_state_data = self.light_controller.get_state()
+        # In simplified v0.2.0: no automatic "should be on" logic
+        # Lights are manual or via external automation
+        light_state_data["should_be_on"] = False
+
         return {
             "room_id": self.room_id,
             "room_name": self.room_name,
@@ -264,9 +288,10 @@ class RoomManager:
             "current_mode": self._current_mode,
             "time_period": self.get_time_period(),
             "alarm_state": alarm_state_value,
+            "occupied": occupied,
             "light_on": light_on,
             "automation_enabled": self._automation_enabled,
-            "light_state": self.light_controller.get_state(),
+            "light_state": light_state_data,
             "climate_state": self.climate_controller.get_state(),
         }
 

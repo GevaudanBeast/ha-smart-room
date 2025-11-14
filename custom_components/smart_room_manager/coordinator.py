@@ -51,7 +51,11 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
 
         # Create/update room managers
         for room_config in rooms_config:
-            room_id = room_config["room_id"]
+            room_id = room_config.get("room_id")
+            if not room_id:
+                _LOGGER.error("Room config missing required 'room_id': %s", room_config)
+                continue
+
             if room_id in self.room_managers:
                 # Update existing room manager
                 self.room_managers[room_id].update_config(room_config)

@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, VERSION
 from .coordinator import SmartRoomCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ class SmartRoomAutomationSwitch(CoordinatorEntity, SwitchEntity):
             "name": f"Smart Room: {room_manager.room_name}",
             "manufacturer": "HA-SMART",
             "model": "Smart Room Manager",
-            "sw_version": "0.1.0",
+            "sw_version": VERSION,
         }
 
     @property

@@ -23,6 +23,7 @@ from .const import (
     ATTR_TEMPERATURE,
     ATTR_WINDOWS_OPEN,
     DOMAIN,
+    VERSION,
 )
 from .coordinator import SmartRoomCoordinator
 
@@ -72,7 +73,7 @@ class SmartRoomStateSensor(CoordinatorEntity, SensorEntity):
             "name": f"Smart Room: {room_manager.room_name}",
             "manufacturer": "HA-SMART",
             "model": "Smart Room Manager",
-            "sw_version": "0.1.0",
+            "sw_version": VERSION,
         }
 
     @property

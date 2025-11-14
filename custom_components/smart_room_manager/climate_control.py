@@ -145,9 +145,8 @@ class ClimateController:
 
     def _is_summer_mode(self) -> bool:
         """Check if summer mode is active (from calendar)."""
-        season_calendar = self.hass.data.get(self.room_manager.coordinator.entry.entry_id, {}).get(
-            CONF_SEASON_CALENDAR
-        )
+        # Get season calendar from global config (entry.data)
+        season_calendar = self.room_manager.coordinator.entry.data.get(CONF_SEASON_CALENDAR)
 
         if not season_calendar:
             return False
@@ -287,25 +286,32 @@ class ClimateController:
 
     async def _set_frost_protection(self, climate_entity: str) -> None:
         """Set frost protection when windows open."""
-        if self._climate_type == CLIMATE_TYPE_X4FP:
-            await self.hass.services.async_call(
-                CLIMATE_DOMAIN,
-                SERVICE_SET_PRESET_MODE,
-                {
-                    "entity_id": climate_entity,
-                    ATTR_PRESET_MODE: X4FP_PRESET_AWAY,
-                },
-                blocking=True,
-            )
-        else:
-            await self.hass.services.async_call(
-                CLIMATE_DOMAIN,
-                SERVICE_SET_TEMPERATURE,
-                {
-                    "entity_id": climate_entity,
-                    ATTR_TEMPERATURE: DEFAULT_TEMP_FROST_PROTECTION,
-                },
-                blocking=True,
+        try:
+            if self._climate_type == CLIMATE_TYPE_X4FP:
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN,
+                    SERVICE_SET_PRESET_MODE,
+                    {
+                        "entity_id": climate_entity,
+                        ATTR_PRESET_MODE: X4FP_PRESET_AWAY,
+                    },
+                    blocking=True,
+                )
+            else:
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN,
+                    SERVICE_SET_TEMPERATURE,
+                    {
+                        "entity_id": climate_entity,
+                        ATTR_TEMPERATURE: DEFAULT_TEMP_FROST_PROTECTION,
+                    },
+                    blocking=True,
+                )
+        except Exception as err:
+            _LOGGER.error(
+                "Error setting frost protection for %s: %s",
+                climate_entity,
+                err,
             )
 
     def _get_x4fp_preset(self, mode: str) -> str:

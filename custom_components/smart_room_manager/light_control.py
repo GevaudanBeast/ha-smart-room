@@ -8,6 +8,7 @@ from typing import Any, TYPE_CHECKING
 from homeassistant.components.light import ATTR_BRIGHTNESS
 from homeassistant.const import STATE_ON, SERVICE_TURN_ON, SERVICE_TURN_OFF
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import split_entity_id
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -119,8 +120,9 @@ class LightController:
     async def _turn_off_light(self, entity_id: str) -> None:
         """Turn off a single light."""
         try:
+            domain = split_entity_id(entity_id)[0]
             await self.hass.services.async_call(
-                "light" if "light." in entity_id else "switch",
+                domain,
                 SERVICE_TURN_OFF,
                 {"entity_id": entity_id},
                 blocking=True,

@@ -90,6 +90,16 @@ ATTR_TARGET_TEMPERATURE: Final = "target_temperature"
 ATTR_CLIMATE_TYPE: Final = "climate_type"
 ATTR_SUMMER_MODE: Final = "summer_mode"
 ATTR_CURRENT_MODE: Final = "current_mode"
+# State data attributes
+ATTR_LIGHT_STATE: Final = "light_state"
+ATTR_CLIMATE_STATE: Final = "climate_state"
+ATTR_TIME_PERIOD: Final = "time_period"
+ATTR_AUTOMATION_ENABLED: Final = "automation_enabled"
+# Optional sensors (not used in v0.2.0 simplified logic)
+ATTR_TEMPERATURE: Final = "temperature"
+ATTR_HUMIDITY: Final = "humidity"
+ATTR_LUMINOSITY: Final = "luminosity"
+ATTR_OCCUPIED: Final = "occupied"
 
 # Update intervals
 UPDATE_INTERVAL: Final = 30  # seconds
