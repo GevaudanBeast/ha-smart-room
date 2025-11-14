@@ -11,6 +11,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     ALARM_STATE_ARMED_AWAY as CONF_ALARM_STATE_ARMED_AWAY,
     CONF_ALARM_ENTITY,
+    CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
     CONF_LIGHTS,
     CONF_NIGHT_START,
@@ -124,6 +125,45 @@ class RoomManager:
 
         self._is_night = now >= night_start
 
+    def _is_in_comfort_time_range(self) -> bool:
+        """Check if current time is within any configured comfort time range."""
+        comfort_ranges = self.room_config.get(CONF_COMFORT_TIME_RANGES, [])
+
+        if not comfort_ranges:
+            return False
+
+        now = dt_util.now().time()
+
+        for time_range in comfort_ranges:
+            start_str = time_range.get("start")
+            end_str = time_range.get("end")
+
+            if not start_str or not end_str:
+                continue
+
+            try:
+                start_time = dt_util.parse_time(start_str)
+                end_time = dt_util.parse_time(end_str)
+
+                # Handle time ranges that cross midnight
+                if start_time <= end_time:
+                    if start_time <= now <= end_time:
+                        return True
+                else:
+                    # Range crosses midnight
+                    if now >= start_time or now <= end_time:
+                        return True
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    "Invalid time range in %s: %s - %s",
+                    self.room_name,
+                    start_str,
+                    end_str,
+                )
+                continue
+
+        return False
+
     def _update_current_mode(self) -> None:
         """Determine current operating mode."""
         # PRIORITY 1: Check alarm armed_away
@@ -158,8 +198,13 @@ class RoomManager:
             self._current_mode = MODE_NIGHT
             return
 
-        # DEFAULT: Comfort
-        self._current_mode = MODE_COMFORT
+        # PRIORITY 4: Check if in comfort time range
+        if self._is_in_comfort_time_range():
+            self._current_mode = MODE_COMFORT
+            return
+
+        # DEFAULT: Eco
+        self._current_mode = MODE_ECO
 
     def is_night_period(self) -> bool:
         """Check if it's night period."""

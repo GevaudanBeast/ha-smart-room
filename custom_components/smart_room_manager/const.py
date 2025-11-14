@@ -46,6 +46,7 @@ CONF_TEMP_COOL_ECO: Final = "temp_cool_eco"
 
 # Schedule configuration
 CONF_NIGHT_START: Final = "night_start"
+CONF_COMFORT_TIME_RANGES: Final = "comfort_time_ranges"  # List of {"start": "HH:MM", "end": "HH:MM"}
 
 # Global configuration
 CONF_ALARM_ENTITY: Final = "alarm_entity"
@@ -108,9 +109,10 @@ CLIMATE_TYPE_X4FP: Final = "x4fp"
 CLIMATE_TYPE_THERMOSTAT: Final = "thermostat"
 
 # X4FP preset modes (IPX800 fil pilote)
+# Real preset names from IPX800: comfort, eco, away, none
 X4FP_PRESET_COMFORT: Final = "comfort"
 X4FP_PRESET_ECO: Final = "eco"
-X4FP_PRESET_FROST: Final = "frost_protection"
+X4FP_PRESET_AWAY: Final = "away"  # Hors-gel/frost protection mode
 X4FP_PRESET_OFF: Final = "none"
 
 # Alarm states

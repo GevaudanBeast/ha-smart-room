@@ -42,7 +42,7 @@ from .const import (
     MODE_NIGHT,
     X4FP_PRESET_COMFORT,
     X4FP_PRESET_ECO,
-    X4FP_PRESET_FROST,
+    X4FP_PRESET_AWAY,
     X4FP_PRESET_OFF,
 )
 
@@ -164,7 +164,7 @@ class ClimateController:
             if mode != MODE_FROST_PROTECTION:
                 target_preset = X4FP_PRESET_OFF
             else:
-                target_preset = X4FP_PRESET_FROST
+                target_preset = X4FP_PRESET_AWAY
         else:
             # Winter: map mode to preset
             target_preset = self._get_x4fp_preset(mode)
@@ -293,7 +293,7 @@ class ClimateController:
                 SERVICE_SET_PRESET_MODE,
                 {
                     "entity_id": climate_entity,
-                    ATTR_PRESET_MODE: X4FP_PRESET_FROST,
+                    ATTR_PRESET_MODE: X4FP_PRESET_AWAY,
                 },
                 blocking=True,
             )
@@ -311,7 +311,7 @@ class ClimateController:
     def _get_x4fp_preset(self, mode: str) -> str:
         """Map mode to X4FP preset."""
         if mode == MODE_FROST_PROTECTION:
-            return X4FP_PRESET_FROST
+            return X4FP_PRESET_AWAY
         elif mode == MODE_COMFORT:
             return X4FP_PRESET_COMFORT
         else:  # eco, night
