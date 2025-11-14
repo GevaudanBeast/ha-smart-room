@@ -21,11 +21,51 @@ PLATFORMS: list[Platform] = [
 ]
 
 
+def _clean_none_values_from_config(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Clean None values from room configurations (migration from v0.2.1).
+
+    In v0.2.1 and earlier, optional fields were saved with None values.
+    This function removes those None values to prevent 'Entity None' errors.
+    """
+    rooms = list(entry.options.get("rooms", []))
+    cleaned = False
+
+    for room in rooms:
+        # List of optional fields that should not be saved as None
+        optional_fields = [
+            "temperature_sensor",
+            "humidity_sensor",
+            "climate_entity",
+            "climate_bypass_switch",
+        ]
+
+        for field in optional_fields:
+            if field in room and room[field] is None:
+                del room[field]
+                cleaned = True
+                _LOGGER.debug(
+                    "Cleaned None value for field '%s' in room '%s'",
+                    field,
+                    room.get("room_name", "unknown"),
+                )
+
+    # Update the config entry if we cleaned anything
+    if cleaned:
+        hass.config_entries.async_update_entry(
+            entry,
+            options={**entry.options, "rooms": rooms},
+        )
+        _LOGGER.info("Cleaned None values from room configurations (v0.2.1 migration)")
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Smart Room Manager from a config entry."""
     _LOGGER.debug("Setting up Smart Room Manager integration")
 
     hass.data.setdefault(DOMAIN, {})
+
+    # Clean up None values from old configurations (v0.2.1 migration)
+    _clean_none_values_from_config(hass, entry)
 
     # Create coordinator
     coordinator = SmartRoomCoordinator(hass, entry)
