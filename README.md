@@ -1,45 +1,54 @@
 # Smart Room Manager - Home Assistant Integration
 
-**Version 0.1.0** - ⚡ Version initiale avec support Solar Optimizer !
+**Version 0.2.0** - 🎯 Architecture simplifiée et optimisée !
 
-Une intégration Home Assistant complète pour gérer intelligemment chaque pièce de votre maison en automatisant les lumières et le chauffage selon la présence, la luminosité, les horaires et les modes globaux.
+Une intégration Home Assistant complète pour gérer intelligemment chaque pièce de votre maison en automatisant les lumières et le chauffage de manière simple et efficace.
 
-## 🆕 Fonctionnalités v0.1.0
+## 🆕 Nouveautés v0.2.0
 
-- ⚡ **Solar Optimizer** : Compatibilité totale avec Solar Optimizer en mode prioritaire
-- 🔄 Gestion automatique du switch Solar Optimizer par pièce
-- 📝 Guide de migration depuis les blueprints HVAC
-- 📖 Documentation complète Solar Optimizer
+### Architecture Simplifiée
+- 🔄 **Plus de capteurs de présence** : L'alarme détermine la présence (armed_away = absent)
+- 💡 **Contrôle manuel des lumières** : Timer auto-off uniquement pour couloirs/salles de bain
+- 🎛️ **Bypass générique** : Un seul switch pour désactiver le chauffage (Solar Optimizer, manuel, etc.)
+- 📊 **4 modes au lieu de 6** : Confort, Eco, Nuit, Hors-gel (suppression modes invité/vacances)
+- ⏰ **Horaires simplifiés** : Période nuit + plages horaires confort configurables
+
+### Nouvelles Fonctionnalités
+- 🏠 **Types de pièces** :
+  - **Normal** (chambres) : Pas de timer lumière
+  - **Couloir** : Auto-off lumières après 5 min (configurable)
+  - **Salle de bain** : Timer 15 min + lumière pilote chauffage (ON=confort, OFF=eco)
+- 🌡️ **Support été/hiver** : Températures cool/heat séparées avec calendrier
+- 🔧 **Auto-détection X4FP** : Détection automatique X4FP vs thermostat
+- 🎨 **Icônes personnalisables** : Choisissez l'icône de chaque pièce
 
 ## 📋 Fonctionnalités
 
-### Gestion intelligente des lumières
-- ✅ Allumage automatique selon présence, luminosité et horaires
-- ✅ Mode nuit avec luminosité réduite
-- ✅ Extinction automatique avec délai configurable
-- ✅ Respect des commandes manuelles (pas de "lutte" contre l'utilisateur)
+### Gestion intelligente des lumières (v0.2.0 simplifié)
+- ✅ **Contrôle manuel** : Vous contrôlez vos lumières manuellement ou via automatisations
+- ✅ **Timer auto-off** : Uniquement pour couloirs et salles de bain (configurable)
+- ✅ **Salle de bain spécial** : Lumière ON = chauffage confort, OFF = chauffage eco
 
 ### Gestion intelligente du chauffage
-- ✅ Consignes de température variables selon :
-  - Plages horaires (matin, journée, soirée, nuit)
-  - Présence dans la pièce
-  - Modes globaux (vacances, invité, alarme)
-- ✅ Arrêt automatique si fenêtre ouverte
-- ✅ Mode hors-gel en cas d'absence prolongée
-- ✅ Délai d'inoccupation configurable avant réduction de consigne
+- ✅ **4 modes adaptés** :
+  - **Confort** : Présence + plages horaires configurables
+  - **Eco** : Mode par défaut hors plages confort
+  - **Nuit** : Période nocturne (configurable)
+  - **Hors-gel** : Alarme armed_away ou fenêtre ouverte
+- ✅ **Auto-détection X4FP/Thermostat** : Contrôle automatique selon type
+- ✅ **Support été/hiver** : Températures heat/cool via calendrier
+- ✅ **Bypass générique** : Switch pour désactiver contrôle (Solar Optimizer, etc.)
+- ✅ **Fenêtres ouvertes** : Passage automatique en hors-gel
 
-### Modes globaux
-- 🏠 **Mode Confort** : Températures confortables quand la pièce est occupée
-- 🌱 **Mode Éco** : Températures réduites quand la pièce est inoccupée
-- 🌙 **Mode Nuit** : Températures et luminosités adaptées la nuit
-- 🏖️ **Mode Vacances** : Mode hors-gel, automatisations minimales
-- 👥 **Mode Invité** : Comportements adaptés à la présence d'invités
-- 🚨 **Mode Alarme** : Automatisations réduites quand l'alarme est armée
+### Détection de présence simplifiée
+- 🚨 **Via alarme** : armed_away = absent, sinon présent
+- ⏰ **Plages horaires** : Mode confort sur plages configurables si présent
+- 🌙 **Mode nuit** : Basé sur heure de début nuit
 
 ### Configuration UI complète
 - ⚙️ Ajout/modification/suppression de pièces via l'interface
-- 📊 Configuration des seuils, délais et températures par pièce
-- 🕐 Programmation des plages horaires
+- 📊 Configuration des types de pièce et comportements
+- 🕐 Plages horaires confort multiples (format HH:MM-HH:MM,HH:MM-HH:MM)
 - 🔄 Recharge automatique à chaque modification
 
 ## 🚀 Installation
@@ -48,190 +57,176 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 1. Ouvrez HACS dans Home Assistant
 2. Allez dans "Intégrations"
 3. Cliquez sur les 3 points en haut à droite > "Dépôts personnalisés"
-4. Ajoutez l'URL de ce repository
+4. Ajoutez l'URL : `https://github.com/GevaudanBeast/HA-SMART`
 5. Recherchez "Smart Room Manager" et installez
+6. Redémarrez Home Assistant
 
 ### Méthode 2 : Manuelle
-1. Copiez le dossier `custom_components/smart_room_manager` dans votre dossier `config/custom_components/`
-2. Redémarrez Home Assistant
+1. Téléchargez la dernière release depuis [GitHub Releases](https://github.com/GevaudanBeast/HA-SMART/releases)
+2. Extrayez `smart_room_manager.zip` dans votre dossier `config/custom_components/`
+3. Redémarrez Home Assistant
 
 ## ⚙️ Configuration
 
 ### Configuration initiale
 
-1. Allez dans **Configuration** > **Intégrations**
+1. Allez dans **Paramètres** > **Appareils et services**
 2. Cliquez sur **+ Ajouter une intégration**
 3. Recherchez **Smart Room Manager**
 4. Configurez les paramètres globaux (optionnels) :
-   - Entité mode invité
-   - Entité mode vacances
-   - Entité alarme
-   - Capteur de saison
+   - **Alarme** : Détecte présence (armed_away = absent)
+   - **Calendrier été** : Bascule heat/cool pour climatisation
 
 ### Ajout d'une pièce
 
 1. Ouvrez l'intégration **Smart Room Manager**
-2. Cliquez sur **Configurer**
-3. Sélectionnez **Ajouter une pièce**
-4. Suivez l'assistant de configuration :
+2. Cliquez sur **Configurer** > **Ajouter une pièce**
+3. Suivez l'assistant de configuration :
 
-#### Étape 1 : Nom de la pièce
-- Donnez un nom à votre pièce (ex: "Salon", "Chambre", "Bureau")
+#### Étape 1 : Informations de base
+- **Nom** : Nom de la pièce (ex: "Salon", "Chambre")
+- **Type** :
+  - **Normal** : Chambres, bureau (pas de timer lumière)
+  - **Couloir** : Auto-off lumières après 5 min
+  - **Salle de bain** : Timer 15 min + lumière contrôle chauffage
+- **Icône** : Icône personnalisée (ex: mdi:bed, mdi:desk)
 
-#### Étape 2 : Capteurs
-- **Capteurs de présence** : Détecteurs de mouvement (binary_sensor)
-- **Capteurs de porte/fenêtre** : Détecteurs d'ouverture (binary_sensor)
-- **Capteur de luminosité** : Mesure en lux (sensor)
-- **Capteur de température** : Température actuelle (sensor)
-- **Capteur d'humidité** : Humidité (sensor) - optionnel
+#### Étape 2 : Capteurs (tous optionnels)
+- **Capteurs fenêtre/porte** : Pour détecter ouverture → hors-gel
+- **Capteur température** : Pour info seulement (affiché dans attributs)
+- **Capteur humidité** : Pour info seulement
 
 #### Étape 3 : Actionneurs
-- **Lumières** : Entités light.* ou switch.* à contrôler
-- **Entité climat** : Thermostat ou système de chauffage (climate.*)
-- **Interrupteurs de chauffage** : Switches pilotant le chauffage
-- **⚡ Switch Solar Optimizer** : Switch d'action Solar Optimizer (optionnel - voir [SOLAR_OPTIMIZER.md](SOLAR_OPTIMIZER.md))
+- **Lumières** : Entités light.* ou switch.* (contrôle manuel + timer si type couloir/SdB)
+- **Entité climat** : Thermostat ou X4FP (auto-détection)
+- **Switch bypass** : Désactive contrôle chauffage (Solar Optimizer, manuel, etc.)
 
-#### Étape 4 : Configuration des lumières
-- **Seuil de luminosité** : En dessous de cette valeur (lux), les lumières s'allument
-- **Délai d'extinction** : Temps avant extinction après fin de présence
-- **Mode nuit activé** : Luminosité réduite la nuit
-- **Luminosité de nuit** : Pourcentage de luminosité la nuit (1-100%)
-- **Luminosité de jour** : Pourcentage de luminosité le jour (1-100%)
+#### Étape 4 : Configuration lumières
+- Affiché uniquement si type = Couloir ou Salle de bain
+- **Timeout** : Délai avant extinction automatique (60-1800s)
 
-#### Étape 5 : Configuration du chauffage
-- **Température confort** : Consigne quand la pièce est occupée
-- **Température éco** : Consigne quand la pièce est inoccupée
-- **Température nuit** : Consigne pendant la nuit
-- **Température absence** : Consigne en mode absence/alarme
-- **Température hors-gel** : Consigne en mode vacances
-- **Présence requise** : Exiger la présence pour chauffer en mode confort
-- **Vérifier les fenêtres** : Couper le chauffage si fenêtre ouverte
-- **Délai d'inoccupation** : Temps avant passage en mode éco
+#### Étape 5 : Configuration chauffage
+**Températures hiver (heat)** :
+- **Confort** : Température quand présent + plage horaire confort (défaut: 20°C)
+- **Eco** : Température par défaut hors plages confort (défaut: 18°C)
+- **Nuit** : Température période nocturne (défaut: 17°C)
+- **Hors-gel** : Température si alarme armed_away ou fenêtre ouverte (défaut: 12°C)
+
+**Températures été (cool)** :
+- **Confort** : Température clim si été actif (défaut: 24°C)
+- **Eco** : Température clim eco été (défaut: 26°C)
+
+**Options** :
+- **Vérifier fenêtres** : Activer hors-gel si fenêtre ouverte
 
 #### Étape 6 : Horaires
-- **Début du matin** : Heure de début de la période matinale
-- **Début de journée** : Heure de début de la période de journée
-- **Début de soirée** : Heure de début de la soirée
-- **Début de nuit** : Heure de début de la nuit
+- **Début nuit** : Heure de début période nuit (ex: 22:00)
+- **Plages confort** : Format `HH:MM-HH:MM,HH:MM-HH:MM`
+  - Exemple : `07:00-09:00,18:00-22:00` (matin + soirée)
+  - Vide = jamais en mode confort (toujours eco)
 
 ## 📊 Entités créées
 
-Pour chaque pièce configurée, l'intégration crée automatiquement :
+Pour chaque pièce configurée :
 
 ### Sensors
-- **sensor.smart_room_[nom]_state** : État général de la pièce
-  - Valeur : Mode actuel (comfort, eco, night, away, frost_protection)
-  - Attributs : occupation, luminosité, température, humidité, état lumières, état chauffage
+- **sensor.smart_room_[nom]_state** : Mode actuel
+  - Valeurs : `comfort`, `eco`, `night`, `frost_protection`
+  - Attributs : occupation, fenêtres, température, humidité, état lumières, état chauffage
 
 ### Binary Sensors
-- **binary_sensor.smart_room_[nom]_occupied** : Occupation de la pièce
-- **binary_sensor.smart_room_[nom]_light_needed** : Indique si les lumières doivent être allumées
+- **binary_sensor.smart_room_[nom]_occupied** : Occupation (basée sur alarme)
+- **binary_sensor.smart_room_[nom]_light_needed** : Indique si lumières nécessaires (toujours False en v0.2.0 - contrôle manuel)
 
 ### Switches
-- **switch.smart_room_[nom]_automation** : Active/désactive l'automatisation pour cette pièce
+- **switch.smart_room_[nom]_automation** : Active/désactive l'automatisation
 
 ## 🎯 Exemples d'utilisation
 
-### Scénario 1 : Salon avec lumières et chauffage
-- **Capteurs** : 1 détecteur de présence, capteur de luminosité, capteur de température
-- **Actionneurs** : 3 lumières, 1 radiateur (climate)
-- **Configuration** :
-  - Seuil luminosité : 50 lux
-  - Extinction après : 5 minutes
-  - Confort : 20°C, Éco : 18°C, Nuit : 17°C
+### Scénario 1 : Chambre simple
+**Configuration** :
+- Type : Normal (pas de timer)
+- Entité climat : climate.chambre
+- Températures : Confort 20°C, Eco 18°C, Nuit 17°C
+- Horaires nuit : 22:00
+- Plages confort : `07:00-09:00` (matin uniquement)
 
 **Comportement** :
-- Présence détectée + < 50 lux → Lumières ON
-- Pas de présence pendant 5 min → Lumières OFF
-- Pièce occupée → Chauffage 20°C
-- Pièce inoccupée > 30 min → Chauffage 18°C
+- 7h-9h + présent (alarme désarmée) → Chauffage 20°C (confort)
+- 9h-22h + présent → Chauffage 18°C (eco)
+- 22h-7h → Chauffage 17°C (nuit)
+- Alarme armed_away → Chauffage 12°C (hors-gel)
 
-### Scénario 2 : Chambre avec mode nuit
-- **Configuration** :
-  - Mode nuit : Activé
-  - Luminosité nuit : 20%
-  - Luminosité jour : 100%
-  - Nuit : 22h00 - 07h00
-
-**Comportement** :
-- Présence la nuit (22h-7h) → Lumières 20%
-- Présence le jour → Lumières 100%
-- Période nuit → Température 17°C
-
-### Scénario 3 : Bureau avec présence obligatoire
-- **Configuration** :
-  - Présence requise pour chauffer : Activé
-  - Vérifier fenêtres : Activé
+### Scénario 2 : Salle de bain
+**Configuration** :
+- Type : Salle de bain
+- Lumières : light.salle_bain
+- Timer lumière : 900s (15 min)
+- Climat : climate.radiateur_sdb
+- Températures : Confort 22°C, Eco 17°C
 
 **Comportement** :
-- Présence → Chauffage mode confort
-- Absence immédiate → Chauffage mode éco
-- Fenêtre ouverte → Chauffage OFF
+- Lumière allumée manuellement → Chauffage 22°C (confort)
+- Lumière éteinte → Chauffage 17°C (eco)
+- Lumière ON > 15 min → Extinction automatique
+- Extinction → Retour chauffage 17°C
 
-## 🔧 Automatisations avancées
+### Scénario 3 : Salon avec bypass
+**Configuration** :
+- Type : Normal
+- Climat : climate.salon
+- Bypass : switch.solar_optimizer_salon
+- Plages confort : `18:00-23:00`
 
-Vous pouvez créer des automatisations basées sur les entités de l'intégration :
+**Comportement** :
+- Bypass ON (Solar Optimizer actif) → Smart Room Manager ne contrôle pas
+- Bypass OFF + 18h-23h + présent → Chauffage confort
+- Bypass OFF + hors plage → Chauffage eco
 
-```yaml
-# Exemple : Notification si fenêtre ouverte trop longtemps en hiver
-automation:
-  - alias: "Alerte fenêtre ouverte"
-    trigger:
-      - platform: state
-        entity_id: sensor.smart_room_salon_state
-        attribute: windows_open
-        to: true
-        for:
-          minutes: 10
-    condition:
-      - condition: numeric_state
-        entity_id: sensor.temperature_exterieure
-        below: 10
-    action:
-      - service: notify.mobile_app
-        data:
-          message: "La fenêtre du salon est ouverte depuis 10 minutes et il fait froid dehors !"
-```
+### Scénario 4 : Bureau avec été/hiver
+**Configuration** :
+- Calendrier été : calendar.ete (ON en été)
+- Températures heat : Confort 20°C, Eco 18°C
+- Températures cool : Confort 24°C, Eco 26°C
 
-## 📈 Intégration avec d'autres systèmes
+**Comportement** :
+- Hiver (calendrier OFF) → hvac_mode: heat, température selon mode
+- Été (calendrier ON) → hvac_mode: cool, température selon mode
 
-### Alarmo
-Configurez l'entité alarme dans les paramètres globaux pour adapter automatiquement les comportements quand l'alarme est armée.
+## 🔧 Intégration avec Solar Optimizer
 
-### Solar Optimizer
+✅ **Compatible via bypass générique !**
 
-✅ **Compatible dès maintenant !**
+**Configuration** :
+1. Ajoutez le switch Solar Optimizer dans "Switch bypass"
+2. Quand SO chauffe (ON) → Smart Room Manager se met en retrait
+3. Quand SO s'arrête (OFF) → Smart Room Manager reprend le contrôle
 
-Smart Room Manager v0.1.0 supporte nativement Solar Optimizer en mode **prioritaire** :
-- ⚡ Quand Solar Optimizer chauffe → Smart Room Manager se met en retrait
-- 🔄 Quand Solar Optimizer s'arrête → Smart Room Manager reprend le contrôle
-- 📋 Configuration simple : juste sélectionner le switch SO par pièce
-
-**Documentation complète** : Voir [SOLAR_OPTIMIZER.md](SOLAR_OPTIMIZER.md)
-
-### IPX800
-Compatible avec tous les actionneurs gérés par IPX800 (X4FP, relais, etc.).
+**Avantages** :
+- ⚡ Priorité à Solar Optimizer (énergie gratuite)
+- 🔄 Reprise automatique du contrôle
+- 📋 Configuration simple (un seul switch)
 
 ## 🐛 Dépannage
 
-### Les lumières ne s'allument pas
+### Le chauffage ne change pas
 - Vérifiez que le switch d'automatisation est activé
-- Vérifiez les seuils de luminosité
-- Consultez les logs : `Configuration` > `Logs` > Filtrer "smart_room_manager"
+- Vérifiez que le bypass n'est pas actif
+- Consultez `sensor.smart_room_*_state` pour voir le mode actuel
+- Logs : `Paramètres` > `Système` > `Logs` > Filtrer "smart_room_manager"
 
-### Le chauffage ne change pas de consigne
-- Vérifiez la compatibilité de votre entité climate
-- Assurez-vous que les températures sont correctement configurées
-- Vérifiez si une fenêtre est détectée ouverte
+### Les lumières ne s'éteignent pas (couloir/SdB)
+- Vérifiez le type de pièce (Normal n'a pas de timer)
+- Vérifiez le timeout configuré
+- Les lumières doivent être ON depuis > timeout
 
-### L'intégration ne se charge pas
-- Vérifiez les logs Home Assistant
-- Redémarrez Home Assistant
-- Vérifiez que tous les fichiers sont présents dans `custom_components/smart_room_manager/`
+### L'auto-détection X4FP ne fonctionne pas
+- Vérifiez que l'entité climate a les preset_modes: comfort, eco, away
+- Si thermostat classique : contrôle par hvac_mode + température
 
 ## 📝 Logs et débogage
 
-Pour activer les logs détaillés, ajoutez dans `configuration.yaml` :
+Configuration détaillée dans `configuration.yaml` :
 
 ```yaml
 logger:
@@ -240,12 +235,24 @@ logger:
     custom_components.smart_room_manager: debug
 ```
 
+## 🔄 Migration depuis v0.1.0
+
+**Changements majeurs** :
+- ❌ Capteurs de présence supprimés (utiliser alarme)
+- ❌ Capteurs luminosité intérieurs supprimés
+- ❌ Modes guest/vacation supprimés
+- ✅ Types de pièces ajoutés
+- ✅ Plages confort multiples au lieu de 4 périodes
+- ✅ Bypass générique au lieu de Solar Optimizer spécifique
+
+**Action requise** : Reconfigurer les pièces via UI (anciennes configs incompatibles)
+
 ## 🤝 Contribution
 
-Les contributions sont les bienvenues ! N'hésitez pas à :
-- Ouvrir une issue pour signaler un bug
-- Proposer des améliorations
-- Soumettre une pull request
+Les contributions sont bienvenues !
+- 🐛 [Signaler un bug](https://github.com/GevaudanBeast/HA-SMART/issues)
+- 💡 Proposer des améliorations
+- 🔧 Soumettre une pull request
 
 ## 📄 Licence
 
@@ -257,12 +264,12 @@ Développé avec ❤️ pour la communauté Home Assistant.
 
 ## 📞 Support
 
-Pour toute question ou problème :
-- Ouvrez une issue sur GitHub
-- Consultez la documentation Home Assistant
+- 📖 [Documentation complète](https://github.com/GevaudanBeast/HA-SMART)
+- 🐛 [Issues GitHub](https://github.com/GevaudanBeast/HA-SMART/issues)
+- 💬 [Discussions](https://github.com/GevaudanBeast/HA-SMART/discussions)
 
 ---
 
-**Version** : 0.1.0
+**Version** : 0.2.0
 **Auteur** : GevaudanBeast
 **Compatibilité** : Home Assistant 2023.1+

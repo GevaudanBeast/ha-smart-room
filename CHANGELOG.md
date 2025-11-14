@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-01-14
+
+### 🎯 Major Refactoring - Simplified Architecture
+
+#### Removed (Breaking Changes)
+- **Presence sensors** : Replaced by alarm-based presence detection (armed_away = absent)
+- **Interior luminosity sensors** : Manual light control only, auto-off timer for corridors/bathrooms
+- **Guest mode and vacation mode** : Simplified to 4 modes (removed 2 modes)
+- **6 time periods** : Reduced to night period + multiple configurable comfort time ranges
+- **Solar Optimizer specific field** : Replaced with generic bypass switch
+
+#### Added
+- **Room types** system:
+  - Normal (bedrooms): No light timer
+  - Corridor: 5-minute auto-off timer (configurable)
+  - Bathroom: 15-minute timer + light controls heating (ON=comfort, OFF=eco)
+- **Generic bypass switch** : Single switch to disable climate control (Solar Optimizer, manual, etc.)
+- **Summer/winter mode** : Separate cool/heat temperatures with calendar-based season detection
+- **X4FP auto-detection** : Automatic detection of X4FP vs thermostat control
+- **Multiple comfort time ranges** : Configure multiple daily time ranges (format: HH:MM-HH:MM,HH:MM-HH:MM)
+- **Room icon customization** : Choose custom icon for each room
+- **SmartRoomEntity base class** : Factored device_info to eliminate code duplication
+
+#### Changed
+- **Default mode** : Changed from comfort to eco
+- **Modes** : 6 modes → 4 modes (comfort, eco, night, frost_protection)
+- **Light control** : Manual control with optional timer (corridor/bathroom types only)
+- **Presence detection** : Alarm armed_away determines absence instead of sensors
+- **Config flow** : Complete rewrite matching v0.2.0 architecture
+- **X4FP control** : Uses correct preset names from IPX800 (away instead of frost_protection)
+
+#### Fixed
+- **Missing constants** : Added ATTR_LUMINOSITY, ATTR_OCCUPIED, and other missing constants
+- **Season calendar access** : Fixed incorrect data structure access
+- **Version consistency** : All files now use VERSION constant instead of hard-coded "0.1.0"
+- **Error handling** : Added try/except to _set_frost_protection and other service calls
+- **Entity ID parsing** : Using split_entity_id() instead of unsafe string checking
+- **Data validation** : Added validation for required room_config fields (room_id, room_name)
+- **Code duplication** : Created SmartRoomEntity base class (eliminated ~60 lines of duplicated code)
+
+#### Technical Improvements
+- Comprehensive code review improvements (security, robustness, validation)
+- Better error handling throughout
+- Proper data structure access patterns
+- Factored common code into base classes
+- Added comments and documentation where needed
+
+### Migration from v0.1.0
+**Action Required**: Rooms must be reconfigured via UI. Old v0.1.0 configurations are incompatible with v0.2.0 architecture.
+
+See [Migration Guide](MIGRATION_GUIDE.md) for detailed instructions.
+
 ## [0.1.0] - 2025-01-13
 
 ### Added
@@ -53,5 +105,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Proper error handling and logging
 - Home Assistant 2023.1+ compatibility
 
-[Unreleased]: https://github.com/GevaudanBeast/HA-SMART/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/GevaudanBeast/HA-SMART/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/GevaudanBeast/HA-SMART/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/GevaudanBeast/HA-SMART/releases/tag/v0.1.0

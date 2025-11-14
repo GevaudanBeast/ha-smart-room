@@ -40,33 +40,41 @@ jobs:
       - name: Generate release notes
         id: release_notes
         run: |
-          echo "## Smart Room Manager v${{ steps.version.outputs.version }}" > release_notes.md
-          echo "" >> release_notes.md
-          echo "### Installation" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "1. Download \`smart_room_manager.zip\`" >> release_notes.md
-          echo "2. Extract to your \`custom_components\` directory" >> release_notes.md
-          echo "3. Restart Home Assistant" >> release_notes.md
-          echo "4. Add the integration via UI: Configuration → Integrations → Add Integration → Smart Room Manager" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### HACS Installation" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "1. Open HACS" >> release_notes.md
-          echo "2. Go to Integrations" >> release_notes.md
-          echo "3. Click on the 3 dots menu → Custom repositories" >> release_notes.md
-          echo "4. Add this repository URL" >> release_notes.md
-          echo "5. Search for \"Smart Room Manager\" and install" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Documentation" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "- 📖 [README](https://github.com/${{ github.repository }}/blob/main/README.md)" >> release_notes.md
-          echo "- 🔄 [Migration Guide](https://github.com/${{ github.repository }}/blob/main/MIGRATION_GUIDE.md)" >> release_notes.md
-          echo "- 📋 [Configuration Examples](https://github.com/${{ github.repository }}/blob/main/CONFIGURATION_EXAMPLES.md)" >> release_notes.md
-          echo "- ⚡ [Solar Optimizer Guide](https://github.com/${{ github.repository }}/blob/main/SOLAR_OPTIMIZER.md)" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Changelog" >> release_notes.md
-          echo "" >> release_notes.md
-          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s" >> release_notes.md || echo "- Initial release" >> release_notes.md
+          VERSION="${{ steps.version.outputs.version }}"
+          RELEASE_NOTES_FILE="RELEASE_NOTES_v${VERSION}.md"
+
+          # Check if dedicated release notes file exists
+          if [ -f "$RELEASE_NOTES_FILE" ]; then
+            echo "Using dedicated release notes from $RELEASE_NOTES_FILE"
+            cp "$RELEASE_NOTES_FILE" release_notes.md
+          else
+            echo "Generating generic release notes"
+            echo "## Smart Room Manager v${VERSION}" > release_notes.md
+            echo "" >> release_notes.md
+            echo "### Installation" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "1. Download \`smart_room_manager.zip\`" >> release_notes.md
+            echo "2. Extract to your \`custom_components\` directory" >> release_notes.md
+            echo "3. Restart Home Assistant" >> release_notes.md
+            echo "4. Add the integration via UI: Configuration → Integrations → Add Integration → Smart Room Manager" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "### HACS Installation" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "1. Open HACS" >> release_notes.md
+            echo "2. Go to Integrations" >> release_notes.md
+            echo "3. Click on the 3 dots menu → Custom repositories" >> release_notes.md
+            echo "4. Add this repository URL" >> release_notes.md
+            echo "5. Search for \"Smart Room Manager\" and install" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "### Documentation" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "- 📖 [README](https://github.com/${{ github.repository }}/blob/main/README.md)" >> release_notes.md
+            echo "- 📋 [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "### Changelog" >> release_notes.md
+            echo "" >> release_notes.md
+            git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"- %s" >> release_notes.md || echo "- Initial release" >> release_notes.md
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
