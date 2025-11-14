@@ -270,13 +270,19 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Configure room sensors (v0.2.0 - simplified, optional)."""
         if user_input is not None:
-            self._current_room.update(
-                {
-                    CONF_DOOR_WINDOW_SENSORS: user_input.get(CONF_DOOR_WINDOW_SENSORS, []),
-                    CONF_TEMPERATURE_SENSOR: user_input.get(CONF_TEMPERATURE_SENSOR),
-                    CONF_HUMIDITY_SENSOR: user_input.get(CONF_HUMIDITY_SENSOR),
-                }
-            )
+            # Only save sensors that are actually configured (non-empty)
+            update_data = {
+                CONF_DOOR_WINDOW_SENSORS: user_input.get(CONF_DOOR_WINDOW_SENSORS, []),
+            }
+
+            # Add optional sensors only if they are configured
+            if user_input.get(CONF_TEMPERATURE_SENSOR):
+                update_data[CONF_TEMPERATURE_SENSOR] = user_input.get(CONF_TEMPERATURE_SENSOR)
+
+            if user_input.get(CONF_HUMIDITY_SENSOR):
+                update_data[CONF_HUMIDITY_SENSOR] = user_input.get(CONF_HUMIDITY_SENSOR)
+
+            self._current_room.update(update_data)
             return await self.async_step_room_actuators()
 
         return self.async_show_form(
@@ -321,13 +327,20 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Configure room actuators (v0.2.0)."""
         if user_input is not None:
-            self._current_room.update(
-                {
-                    CONF_LIGHTS: user_input.get(CONF_LIGHTS, []),
-                    CONF_CLIMATE_ENTITY: user_input.get(CONF_CLIMATE_ENTITY),
-                    CONF_CLIMATE_BYPASS_SWITCH: user_input.get(CONF_CLIMATE_BYPASS_SWITCH),
-                }
-            )
+            # Only save actuators that are actually configured (non-empty)
+            update_data = {
+                CONF_LIGHTS: user_input.get(CONF_LIGHTS, []),
+            }
+
+            # Add optional climate entity only if configured
+            if user_input.get(CONF_CLIMATE_ENTITY):
+                update_data[CONF_CLIMATE_ENTITY] = user_input.get(CONF_CLIMATE_ENTITY)
+
+            # Add optional bypass switch only if configured
+            if user_input.get(CONF_CLIMATE_BYPASS_SWITCH):
+                update_data[CONF_CLIMATE_BYPASS_SWITCH] = user_input.get(CONF_CLIMATE_BYPASS_SWITCH)
+
+            self._current_room.update(update_data)
             return await self.async_step_room_light_config()
 
         return self.async_show_form(
