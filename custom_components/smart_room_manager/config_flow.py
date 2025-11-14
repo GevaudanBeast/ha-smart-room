@@ -126,7 +126,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        # Note: self.config_entry is already provided by OptionsFlow parent class
+        # Setting it explicitly is deprecated and will be removed in HA 2025.12
+        super().__init__()
         self._current_room: dict[str, Any] | None = None
         self._room_index: int | None = None
 
@@ -285,37 +287,45 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             self._current_room.update(update_data)
             return await self.async_step_room_actuators()
 
+        # Build schema conditionally to avoid None defaults
+        schema_dict = {}
+
+        # Door/window sensors (always show, default to empty list)
+        schema_dict[vol.Optional(
+            CONF_DOOR_WINDOW_SENSORS,
+            default=self._current_room.get(CONF_DOOR_WINDOW_SENSORS, []),
+        )] = selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[BINARY_SENSOR_DOMAIN],
+                multiple=True,
+            )
+        )
+
+        # Temperature sensor (only set default if it exists and is not None)
+        temp_sensor = self._current_room.get(CONF_TEMPERATURE_SENSOR)
+        if temp_sensor is not None:
+            schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR, default=temp_sensor)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            )
+        else:
+            schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            )
+
+        # Humidity sensor (only set default if it exists and is not None)
+        humidity_sensor = self._current_room.get(CONF_HUMIDITY_SENSOR)
+        if humidity_sensor is not None:
+            schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR, default=humidity_sensor)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            )
+        else:
+            schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            )
+
         return self.async_show_form(
             step_id="room_sensors",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_DOOR_WINDOW_SENSORS,
-                        default=self._current_room.get(CONF_DOOR_WINDOW_SENSORS, []),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[BINARY_SENSOR_DOMAIN],
-                            multiple=True,
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_TEMPERATURE_SENSOR,
-                        default=self._current_room.get(CONF_TEMPERATURE_SENSOR),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[SENSOR_DOMAIN],
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_HUMIDITY_SENSOR,
-                        default=self._current_room.get(CONF_HUMIDITY_SENSOR),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[SENSOR_DOMAIN],
-                        )
-                    ),
-                }
-            ),
+            data_schema=vol.Schema(schema_dict),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Tous optionnels. Fenêtres → hors-gel si ouvertes.",
@@ -343,37 +353,45 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             self._current_room.update(update_data)
             return await self.async_step_room_light_config()
 
+        # Build schema conditionally to avoid None defaults
+        schema_dict = {}
+
+        # Lights (always show, default to empty list)
+        schema_dict[vol.Optional(
+            CONF_LIGHTS,
+            default=self._current_room.get(CONF_LIGHTS, []),
+        )] = selector.EntitySelector(
+            selector.EntitySelectorConfig(
+                domain=[LIGHT_DOMAIN, SWITCH_DOMAIN],
+                multiple=True,
+            )
+        )
+
+        # Climate entity (only set default if it exists and is not None)
+        climate_entity = self._current_room.get(CONF_CLIMATE_ENTITY)
+        if climate_entity is not None:
+            schema_dict[vol.Optional(CONF_CLIMATE_ENTITY, default=climate_entity)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
+            )
+        else:
+            schema_dict[vol.Optional(CONF_CLIMATE_ENTITY)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
+            )
+
+        # Bypass switch (only set default if it exists and is not None)
+        bypass_switch = self._current_room.get(CONF_CLIMATE_BYPASS_SWITCH)
+        if bypass_switch is not None:
+            schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH, default=bypass_switch)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+            )
+        else:
+            schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+            )
+
         return self.async_show_form(
             step_id="room_actuators",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_LIGHTS,
-                        default=self._current_room.get(CONF_LIGHTS, []),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[LIGHT_DOMAIN, SWITCH_DOMAIN],
-                            multiple=True,
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_CLIMATE_ENTITY,
-                        default=self._current_room.get(CONF_CLIMATE_ENTITY),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[CLIMATE_DOMAIN],
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_CLIMATE_BYPASS_SWITCH,
-                        default=self._current_room.get(CONF_CLIMATE_BYPASS_SWITCH),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[SWITCH_DOMAIN, "input_boolean"],
-                        )
-                    ),
-                }
-            ),
+            data_schema=vol.Schema(schema_dict),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Bypass: Solar Optimizer, contrôle manuel, etc. (désactive contrôle chauffage)",
