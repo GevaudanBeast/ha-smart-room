@@ -1,4 +1,4 @@
-"""Config flow for Smart Room Manager integration."""
+"""Config flow for Smart Room Manager integration (v0.2.0)."""
 from __future__ import annotations
 
 import logging
@@ -20,112 +20,85 @@ import homeassistant.helpers.config_validation as cv
 
 from .const import (
     CONF_ALARM_ENTITY,
+    CONF_CLIMATE_BYPASS_SWITCH,
     CONF_CLIMATE_ENTITY,
-    CONF_CLIMATE_PRESENCE_REQUIRED,
-    CONF_CLIMATE_UNOCCUPIED_DELAY,
     CONF_CLIMATE_WINDOW_CHECK,
-    CONF_DAY_START,
+    CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
-    CONF_EVENING_START,
-    CONF_GUEST_MODE_ENTITY,
-    CONF_HEATING_SWITCHES,
     CONF_HUMIDITY_SENSOR,
     CONF_LIGHTS,
-    CONF_LIGHT_DAY_BRIGHTNESS,
-    CONF_LIGHT_LUX_THRESHOLD,
-    CONF_LIGHT_NIGHT_BRIGHTNESS,
-    CONF_LIGHT_NIGHT_MODE,
     CONF_LIGHT_TIMEOUT,
-    CONF_LUMINOSITY_SENSOR,
-    CONF_MORNING_START,
     CONF_NIGHT_START,
-    CONF_PRESENCE_SENSORS,
+    CONF_ROOM_ICON,
     CONF_ROOM_ID,
     CONF_ROOM_NAME,
+    CONF_ROOM_TYPE,
     CONF_ROOMS,
-    CONF_SEASON_SENSOR,
-    CONF_SOLAR_OPTIMIZER_SWITCH,
+    CONF_SEASON_CALENDAR,
     CONF_TEMPERATURE_SENSOR,
-    CONF_TEMP_AWAY,
     CONF_TEMP_COMFORT,
+    CONF_TEMP_COOL_COMFORT,
+    CONF_TEMP_COOL_ECO,
     CONF_TEMP_ECO,
     CONF_TEMP_FROST_PROTECTION,
     CONF_TEMP_NIGHT,
-    CONF_VACATION_MODE_ENTITY,
-    DEFAULT_CLIMATE_UNOCCUPIED_DELAY,
-    DEFAULT_DAY_START,
-    DEFAULT_EVENING_START,
-    DEFAULT_LIGHT_DAY_BRIGHTNESS,
-    DEFAULT_LIGHT_LUX_THRESHOLD,
-    DEFAULT_LIGHT_NIGHT_BRIGHTNESS,
     DEFAULT_LIGHT_TIMEOUT,
-    DEFAULT_MORNING_START,
+    DEFAULT_LIGHT_TIMEOUT_BATHROOM,
     DEFAULT_NIGHT_START,
-    DEFAULT_TEMP_AWAY,
     DEFAULT_TEMP_COMFORT,
+    DEFAULT_TEMP_COOL_COMFORT,
+    DEFAULT_TEMP_COOL_ECO,
     DEFAULT_TEMP_ECO,
     DEFAULT_TEMP_FROST_PROTECTION,
     DEFAULT_TEMP_NIGHT,
     DOMAIN,
+    ROOM_TYPE_BATHROOM,
+    ROOM_TYPE_CORRIDOR,
+    ROOM_TYPE_NORMAL,
 )
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class SmartRoomManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Smart Room Manager."""
+    """Handle a config flow for Smart Room Manager (v0.2.0)."""
 
     VERSION = 1
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Handle the initial step."""
-        errors: dict[str, str] = {}
-
+        """Handle the initial step - simplified for v0.2.0."""
         if user_input is not None:
             # Check if already configured
             await self.async_set_unique_id(DOMAIN)
             self._abort_if_unique_id_configured()
 
-            # Store configuration
+            # Store minimal initial configuration
+            # Global settings go in data (not modifiable after creation)
+            # Room configurations go in options (modifiable)
             return self.async_create_entry(
                 title="Smart Room Manager",
                 data={
-                    CONF_NAME: user_input.get(CONF_NAME, "Smart Room Manager"),
+                    CONF_ALARM_ENTITY: user_input.get(CONF_ALARM_ENTITY),
+                    CONF_SEASON_CALENDAR: user_input.get(CONF_SEASON_CALENDAR),
                 },
                 options={
                     CONF_ROOMS: [],
-                    # Global settings
-                    CONF_GUEST_MODE_ENTITY: user_input.get(CONF_GUEST_MODE_ENTITY),
-                    CONF_VACATION_MODE_ENTITY: user_input.get(CONF_VACATION_MODE_ENTITY),
-                    CONF_ALARM_ENTITY: user_input.get(CONF_ALARM_ENTITY),
-                    CONF_SEASON_SENSOR: user_input.get(CONF_SEASON_SENSOR),
                 },
             )
 
-        # Show form
+        # Show simplified initial form
         data_schema = vol.Schema(
             {
-                vol.Optional(CONF_NAME, default="Smart Room Manager"): cv.string,
-                vol.Optional(CONF_GUEST_MODE_ENTITY): selector.EntitySelector(
-                    selector.EntitySelectorConfig(
-                        domain=["input_boolean", "binary_sensor"],
-                    )
-                ),
-                vol.Optional(CONF_VACATION_MODE_ENTITY): selector.EntitySelector(
-                    selector.EntitySelectorConfig(
-                        domain=["input_boolean", "binary_sensor"],
-                    )
-                ),
                 vol.Optional(CONF_ALARM_ENTITY): selector.EntitySelector(
                     selector.EntitySelectorConfig(
                         domain=["alarm_control_panel"],
                     )
                 ),
-                vol.Optional(CONF_SEASON_SENSOR): selector.EntitySelector(
+                vol.Optional(CONF_SEASON_CALENDAR): selector.EntitySelector(
                     selector.EntitySelectorConfig(
-                        domain=[SENSOR_DOMAIN],
+                        domain=["calendar", "binary_sensor"],
                     )
                 ),
             }
@@ -134,7 +107,9 @@ class SmartRoomManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=data_schema,
-            errors=errors,
+            description_placeholders={
+                "description": "Configuration simplifiée v0.2.0 - Alarme détermine présence, pas de capteurs présence/luminosité"
+            },
         )
 
     @staticmethod
@@ -147,7 +122,7 @@ class SmartRoomManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
 
 class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
-    """Handle options flow for Smart Room Manager."""
+    """Handle options flow for Smart Room Manager (v0.2.0)."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
@@ -177,7 +152,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         if not rooms:
             return self.async_show_form(
                 step_id="list_rooms",
-                description_placeholders={"rooms": "Aucune pièce configurée."},
+                description_placeholders={"rooms": "Aucune pièce configurée. Retournez au menu pour ajouter une pièce."},
             )
 
         if user_input is not None:
@@ -191,7 +166,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
             if action == "edit":
                 self._current_room = rooms[self._room_index].copy()
-                return await self.async_step_edit_room()
+                return await self.async_step_edit_room_basic()
             elif action == "delete":
                 return await self.async_step_delete_room()
 
@@ -199,9 +174,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         room_choices = {}
         for idx, room in enumerate(rooms):
             room_name = room.get(CONF_ROOM_NAME, f"Room {idx + 1}")
-            room_choices[f"edit_{idx}"] = f"✏️ Modifier: {room_name}"
+            room_type = room.get(CONF_ROOM_TYPE, "normal")
+            room_choices[f"edit_{idx}"] = f"✏️ Modifier: {room_name} ({room_type})"
             room_choices[f"delete_{idx}"] = f"🗑️ Supprimer: {room_name}"
-        room_choices["back"] = "⬅️ Retour"
+        room_choices["back"] = "⬅️ Retour au menu"
 
         return self.async_show_form(
             step_id="list_rooms",
@@ -215,13 +191,15 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_add_room(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Add a new room - step 1: basic info."""
+        """Add a new room - step 1: basic info (v0.2.0)."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             self._current_room = {
                 CONF_ROOM_ID: str(uuid.uuid4())[:8],
                 CONF_ROOM_NAME: user_input[CONF_ROOM_NAME],
+                CONF_ROOM_TYPE: user_input.get(CONF_ROOM_TYPE, ROOM_TYPE_NORMAL),
+                CONF_ROOM_ICON: user_input.get(CONF_ROOM_ICON, "mdi:home"),
             }
             return await self.async_step_room_sensors()
 
@@ -230,12 +208,21 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_ROOM_NAME): cv.string,
+                    vol.Optional(CONF_ROOM_TYPE, default=ROOM_TYPE_NORMAL): vol.In(
+                        {
+                            ROOM_TYPE_NORMAL: "Normal (chambres - pas de timer lumière)",
+                            ROOM_TYPE_CORRIDOR: "Couloir (timer 5min)",
+                            ROOM_TYPE_BATHROOM: "Salle de bain (timer 15min + lumière pilote chauffage)",
+                        }
+                    ),
+                    vol.Optional(CONF_ROOM_ICON, default="mdi:home"): selector.IconSelector(),
                 }
             ),
             errors=errors,
+            description_placeholders={"info": "Type normal: pas de timer. Couloir/SdB: timer auto-off."},
         )
 
-    async def async_step_edit_room(
+    async def async_step_edit_room_basic(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
         """Edit room - step 1: basic info."""
@@ -243,16 +230,36 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         if user_input is not None:
             self._current_room[CONF_ROOM_NAME] = user_input[CONF_ROOM_NAME]
+            self._current_room[CONF_ROOM_TYPE] = user_input.get(
+                CONF_ROOM_TYPE, ROOM_TYPE_NORMAL
+            )
+            self._current_room[CONF_ROOM_ICON] = user_input.get(
+                CONF_ROOM_ICON, "mdi:home"
+            )
             return await self.async_step_room_sensors()
 
         return self.async_show_form(
-            step_id="edit_room",
+            step_id="edit_room_basic",
             data_schema=vol.Schema(
                 {
                     vol.Required(
                         CONF_ROOM_NAME,
                         default=self._current_room.get(CONF_ROOM_NAME, ""),
                     ): cv.string,
+                    vol.Optional(
+                        CONF_ROOM_TYPE,
+                        default=self._current_room.get(CONF_ROOM_TYPE, ROOM_TYPE_NORMAL),
+                    ): vol.In(
+                        {
+                            ROOM_TYPE_NORMAL: "Normal (chambres)",
+                            ROOM_TYPE_CORRIDOR: "Couloir (timer 5min)",
+                            ROOM_TYPE_BATHROOM: "Salle de bain (timer 15min + pilote chauffage)",
+                        }
+                    ),
+                    vol.Optional(
+                        CONF_ROOM_ICON,
+                        default=self._current_room.get(CONF_ROOM_ICON, "mdi:home"),
+                    ): selector.IconSelector(),
                 }
             ),
             errors=errors,
@@ -261,13 +268,11 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_room_sensors(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure room sensors."""
+        """Configure room sensors (v0.2.0 - simplified, optional)."""
         if user_input is not None:
             self._current_room.update(
                 {
-                    CONF_PRESENCE_SENSORS: user_input.get(CONF_PRESENCE_SENSORS, []),
                     CONF_DOOR_WINDOW_SENSORS: user_input.get(CONF_DOOR_WINDOW_SENSORS, []),
-                    CONF_LUMINOSITY_SENSOR: user_input.get(CONF_LUMINOSITY_SENSOR),
                     CONF_TEMPERATURE_SENSOR: user_input.get(CONF_TEMPERATURE_SENSOR),
                     CONF_HUMIDITY_SENSOR: user_input.get(CONF_HUMIDITY_SENSOR),
                 }
@@ -279,29 +284,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Optional(
-                        CONF_PRESENCE_SENSORS,
-                        default=self._current_room.get(CONF_PRESENCE_SENSORS, []),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[BINARY_SENSOR_DOMAIN],
-                            multiple=True,
-                        )
-                    ),
-                    vol.Optional(
                         CONF_DOOR_WINDOW_SENSORS,
                         default=self._current_room.get(CONF_DOOR_WINDOW_SENSORS, []),
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(
                             domain=[BINARY_SENSOR_DOMAIN],
                             multiple=True,
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_LUMINOSITY_SENSOR,
-                        default=self._current_room.get(CONF_LUMINOSITY_SENSOR),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[SENSOR_DOMAIN],
                         )
                     ),
                     vol.Optional(
@@ -322,20 +310,22 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     ),
                 }
             ),
-            description_placeholders={"room_name": self._current_room[CONF_ROOM_NAME]},
+            description_placeholders={
+                "room_name": self._current_room[CONF_ROOM_NAME],
+                "info": "Tous optionnels. Fenêtres → hors-gel si ouvertes.",
+            },
         )
 
     async def async_step_room_actuators(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure room actuators."""
+        """Configure room actuators (v0.2.0)."""
         if user_input is not None:
             self._current_room.update(
                 {
                     CONF_LIGHTS: user_input.get(CONF_LIGHTS, []),
                     CONF_CLIMATE_ENTITY: user_input.get(CONF_CLIMATE_ENTITY),
-                    CONF_HEATING_SWITCHES: user_input.get(CONF_HEATING_SWITCHES, []),
-                    CONF_SOLAR_OPTIMIZER_SWITCH: user_input.get(CONF_SOLAR_OPTIMIZER_SWITCH),
+                    CONF_CLIMATE_BYPASS_SWITCH: user_input.get(CONF_CLIMATE_BYPASS_SWITCH),
                 }
             )
             return await self.async_step_room_light_config()
@@ -362,145 +352,88 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                         )
                     ),
                     vol.Optional(
-                        CONF_HEATING_SWITCHES,
-                        default=self._current_room.get(CONF_HEATING_SWITCHES, []),
+                        CONF_CLIMATE_BYPASS_SWITCH,
+                        default=self._current_room.get(CONF_CLIMATE_BYPASS_SWITCH),
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(
-                            domain=[SWITCH_DOMAIN],
-                            multiple=True,
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_SOLAR_OPTIMIZER_SWITCH,
-                        default=self._current_room.get(CONF_SOLAR_OPTIMIZER_SWITCH),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=[SWITCH_DOMAIN],
+                            domain=[SWITCH_DOMAIN, "input_boolean"],
                         )
                     ),
                 }
             ),
-            description_placeholders={"room_name": self._current_room[CONF_ROOM_NAME]},
+            description_placeholders={
+                "room_name": self._current_room[CONF_ROOM_NAME],
+                "info": "Bypass: Solar Optimizer, contrôle manuel, etc. (désactive contrôle chauffage)",
+            },
         )
 
     async def async_step_room_light_config(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure light behavior."""
+        """Configure light behavior (v0.2.0 - simplified, timer only)."""
+        room_type = self._current_room.get(CONF_ROOM_TYPE, ROOM_TYPE_NORMAL)
+
         if user_input is not None:
-            self._current_room.update(
-                {
-                    CONF_LIGHT_LUX_THRESHOLD: user_input.get(
-                        CONF_LIGHT_LUX_THRESHOLD, DEFAULT_LIGHT_LUX_THRESHOLD
-                    ),
-                    CONF_LIGHT_TIMEOUT: user_input.get(
-                        CONF_LIGHT_TIMEOUT, DEFAULT_LIGHT_TIMEOUT
-                    ),
-                    CONF_LIGHT_NIGHT_MODE: user_input.get(CONF_LIGHT_NIGHT_MODE, True),
-                    CONF_LIGHT_NIGHT_BRIGHTNESS: user_input.get(
-                        CONF_LIGHT_NIGHT_BRIGHTNESS, DEFAULT_LIGHT_NIGHT_BRIGHTNESS
-                    ),
-                    CONF_LIGHT_DAY_BRIGHTNESS: user_input.get(
-                        CONF_LIGHT_DAY_BRIGHTNESS, DEFAULT_LIGHT_DAY_BRIGHTNESS
-                    ),
-                }
-            )
+            # Only save timeout if room type uses timer (corridor, bathroom)
+            if room_type in [ROOM_TYPE_CORRIDOR, ROOM_TYPE_BATHROOM]:
+                self._current_room[CONF_LIGHT_TIMEOUT] = user_input.get(CONF_LIGHT_TIMEOUT)
             return await self.async_step_room_climate_config()
 
-        return self.async_show_form(
-            step_id="room_light_config",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_LIGHT_LUX_THRESHOLD,
-                        default=self._current_room.get(
-                            CONF_LIGHT_LUX_THRESHOLD, DEFAULT_LIGHT_LUX_THRESHOLD
+        # Show timeout config only for corridor/bathroom
+        if room_type in [ROOM_TYPE_CORRIDOR, ROOM_TYPE_BATHROOM]:
+            default_timeout = (
+                DEFAULT_LIGHT_TIMEOUT_BATHROOM
+                if room_type == ROOM_TYPE_BATHROOM
+                else DEFAULT_LIGHT_TIMEOUT
+            )
+            return self.async_show_form(
+                step_id="room_light_config",
+                data_schema=vol.Schema(
+                    {
+                        vol.Optional(
+                            CONF_LIGHT_TIMEOUT,
+                            default=self._current_room.get(CONF_LIGHT_TIMEOUT, default_timeout),
+                        ): selector.NumberSelector(
+                            selector.NumberSelectorConfig(
+                                min=60,
+                                max=1800,
+                                step=30,
+                                mode=selector.NumberSelectorMode.SLIDER,
+                                unit_of_measurement="s",
+                            )
                         ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=0,
-                            max=1000,
-                            step=10,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="lx",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_LIGHT_TIMEOUT,
-                        default=self._current_room.get(
-                            CONF_LIGHT_TIMEOUT, DEFAULT_LIGHT_TIMEOUT
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=60,
-                            max=3600,
-                            step=30,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="s",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_LIGHT_NIGHT_MODE,
-                        default=self._current_room.get(CONF_LIGHT_NIGHT_MODE, True),
-                    ): selector.BooleanSelector(),
-                    vol.Optional(
-                        CONF_LIGHT_NIGHT_BRIGHTNESS,
-                        default=self._current_room.get(
-                            CONF_LIGHT_NIGHT_BRIGHTNESS, DEFAULT_LIGHT_NIGHT_BRIGHTNESS
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=1,
-                            max=100,
-                            step=1,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="%",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_LIGHT_DAY_BRIGHTNESS,
-                        default=self._current_room.get(
-                            CONF_LIGHT_DAY_BRIGHTNESS, DEFAULT_LIGHT_DAY_BRIGHTNESS
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=1,
-                            max=100,
-                            step=1,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="%",
-                        )
-                    ),
-                }
-            ),
-            description_placeholders={"room_name": self._current_room[CONF_ROOM_NAME]},
-        )
+                    }
+                ),
+                description_placeholders={
+                    "room_name": self._current_room[CONF_ROOM_NAME],
+                    "info": f"Type {room_type}: auto-off après timeout",
+                },
+            )
+        else:
+            # Skip light config for normal rooms (no timer)
+            return await self.async_step_room_climate_config()
 
     async def async_step_room_climate_config(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure climate behavior."""
+        """Configure climate behavior (v0.2.0 - 4 modes, summer/winter)."""
         if user_input is not None:
             self._current_room.update(
                 {
-                    CONF_TEMP_COMFORT: user_input.get(
-                        CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
-                    ),
+                    CONF_TEMP_COMFORT: user_input.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT),
                     CONF_TEMP_ECO: user_input.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO),
                     CONF_TEMP_NIGHT: user_input.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT),
-                    CONF_TEMP_AWAY: user_input.get(CONF_TEMP_AWAY, DEFAULT_TEMP_AWAY),
                     CONF_TEMP_FROST_PROTECTION: user_input.get(
                         CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
                     ),
-                    CONF_CLIMATE_PRESENCE_REQUIRED: user_input.get(
-                        CONF_CLIMATE_PRESENCE_REQUIRED, False
+                    CONF_TEMP_COOL_COMFORT: user_input.get(
+                        CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
+                    ),
+                    CONF_TEMP_COOL_ECO: user_input.get(
+                        CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO
                     ),
                     CONF_CLIMATE_WINDOW_CHECK: user_input.get(
                         CONF_CLIMATE_WINDOW_CHECK, True
-                    ),
-                    CONF_CLIMATE_UNOCCUPIED_DELAY: user_input.get(
-                        CONF_CLIMATE_UNOCCUPIED_DELAY,
-                        DEFAULT_CLIMATE_UNOCCUPIED_DELAY,
                     ),
                 }
             )
@@ -512,9 +445,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_TEMP_COMFORT,
-                        default=self._current_room.get(
-                            CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
-                        ),
+                        default=self._current_room.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=15,
@@ -538,27 +469,11 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     ),
                     vol.Optional(
                         CONF_TEMP_NIGHT,
-                        default=self._current_room.get(
-                            CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT
-                        ),
+                        default=self._current_room.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=15,
                             max=25,
-                            step=0.5,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="°C",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_TEMP_AWAY,
-                        default=self._current_room.get(
-                            CONF_TEMP_AWAY, DEFAULT_TEMP_AWAY
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=10,
-                            max=20,
                             step=0.5,
                             mode=selector.NumberSelectorMode.SLIDER,
                             unit_of_measurement="°C",
@@ -579,54 +494,74 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                         )
                     ),
                     vol.Optional(
-                        CONF_CLIMATE_PRESENCE_REQUIRED,
+                        CONF_TEMP_COOL_COMFORT,
                         default=self._current_room.get(
-                            CONF_CLIMATE_PRESENCE_REQUIRED, False
+                            CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
                         ),
-                    ): selector.BooleanSelector(),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=20,
+                            max=28,
+                            step=0.5,
+                            mode=selector.NumberSelectorMode.SLIDER,
+                            unit_of_measurement="°C",
+                        )
+                    ),
+                    vol.Optional(
+                        CONF_TEMP_COOL_ECO,
+                        default=self._current_room.get(
+                            CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO
+                        ),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=20,
+                            max=30,
+                            step=0.5,
+                            mode=selector.NumberSelectorMode.SLIDER,
+                            unit_of_measurement="°C",
+                        )
+                    ),
                     vol.Optional(
                         CONF_CLIMATE_WINDOW_CHECK,
                         default=self._current_room.get(CONF_CLIMATE_WINDOW_CHECK, True),
                     ): selector.BooleanSelector(),
-                    vol.Optional(
-                        CONF_CLIMATE_UNOCCUPIED_DELAY,
-                        default=self._current_room.get(
-                            CONF_CLIMATE_UNOCCUPIED_DELAY,
-                            DEFAULT_CLIMATE_UNOCCUPIED_DELAY,
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=300,
-                            max=7200,
-                            step=300,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="s",
-                        )
-                    ),
                 }
             ),
-            description_placeholders={"room_name": self._current_room[CONF_ROOM_NAME]},
+            description_placeholders={
+                "room_name": self._current_room[CONF_ROOM_NAME],
+                "info": "Températures hiver (heat) et été (cool). 4 modes: confort, eco, nuit, hors-gel.",
+            },
         )
 
     async def async_step_room_schedule(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure room schedule."""
+        """Configure room schedule (v0.2.0 - night_start + comfort_time_ranges)."""
         if user_input is not None:
-            self._current_room.update(
-                {
-                    CONF_MORNING_START: user_input.get(
-                        CONF_MORNING_START, DEFAULT_MORNING_START
-                    ),
-                    CONF_DAY_START: user_input.get(CONF_DAY_START, DEFAULT_DAY_START),
-                    CONF_EVENING_START: user_input.get(
-                        CONF_EVENING_START, DEFAULT_EVENING_START
-                    ),
-                    CONF_NIGHT_START: user_input.get(
-                        CONF_NIGHT_START, DEFAULT_NIGHT_START
-                    ),
-                }
+            # Save night start
+            self._current_room[CONF_NIGHT_START] = user_input.get(
+                CONF_NIGHT_START, DEFAULT_NIGHT_START
             )
+
+            # Parse comfort time ranges (simplified: user enters as text for now)
+            # TODO: In future, could use a more sophisticated multi-time-range selector
+            comfort_ranges_text = user_input.get("comfort_ranges", "")
+            comfort_ranges = []
+            if comfort_ranges_text:
+                # Format: "HH:MM-HH:MM,HH:MM-HH:MM"
+                for range_str in comfort_ranges_text.split(","):
+                    range_str = range_str.strip()
+                    if "-" in range_str:
+                        try:
+                            start, end = range_str.split("-")
+                            comfort_ranges.append({
+                                "start": start.strip(),
+                                "end": end.strip(),
+                            })
+                        except Exception:
+                            _LOGGER.warning("Invalid time range format: %s", range_str)
+
+            self._current_room[CONF_COMFORT_TIME_RANGES] = comfort_ranges
 
             # Save the room
             rooms = list(self.config_entry.options.get(CONF_ROOMS, []))
@@ -645,37 +580,30 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 },
             )
 
+        # Format existing comfort ranges for display
+        comfort_ranges = self._current_room.get(CONF_COMFORT_TIME_RANGES, [])
+        comfort_ranges_text = ",".join(
+            [f"{r['start']}-{r['end']}" for r in comfort_ranges if r.get("start") and r.get("end")]
+        )
+
         return self.async_show_form(
             step_id="room_schedule",
             data_schema=vol.Schema(
                 {
                     vol.Optional(
-                        CONF_MORNING_START,
-                        default=self._current_room.get(
-                            CONF_MORNING_START, DEFAULT_MORNING_START
-                        ),
-                    ): selector.TimeSelector(),
-                    vol.Optional(
-                        CONF_DAY_START,
-                        default=self._current_room.get(
-                            CONF_DAY_START, DEFAULT_DAY_START
-                        ),
-                    ): selector.TimeSelector(),
-                    vol.Optional(
-                        CONF_EVENING_START,
-                        default=self._current_room.get(
-                            CONF_EVENING_START, DEFAULT_EVENING_START
-                        ),
-                    ): selector.TimeSelector(),
-                    vol.Optional(
                         CONF_NIGHT_START,
-                        default=self._current_room.get(
-                            CONF_NIGHT_START, DEFAULT_NIGHT_START
-                        ),
+                        default=self._current_room.get(CONF_NIGHT_START, DEFAULT_NIGHT_START),
                     ): selector.TimeSelector(),
+                    vol.Optional(
+                        "comfort_ranges",
+                        default=comfort_ranges_text,
+                    ): cv.string,
                 }
             ),
-            description_placeholders={"room_name": self._current_room[CONF_ROOM_NAME]},
+            description_placeholders={
+                "room_name": self._current_room[CONF_ROOM_NAME],
+                "info": "Période nuit commence à night_start. Plages confort: format HH:MM-HH:MM,HH:MM-HH:MM (ex: 07:00-09:00,18:00-22:00)",
+            },
         )
 
     async def async_step_delete_room(
@@ -710,57 +638,48 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_global_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure global settings."""
+        """Configure global settings (v0.2.0 - alarm + season calendar)."""
         if user_input is not None:
-            return self.async_create_entry(
-                title="",
-                data={
-                    **self.config_entry.options,
-                    CONF_GUEST_MODE_ENTITY: user_input.get(CONF_GUEST_MODE_ENTITY),
-                    CONF_VACATION_MODE_ENTITY: user_input.get(CONF_VACATION_MODE_ENTITY),
-                    CONF_ALARM_ENTITY: user_input.get(CONF_ALARM_ENTITY),
-                    CONF_SEASON_SENSOR: user_input.get(CONF_SEASON_SENSOR),
-                },
+            # Update entry data (not options) for global settings
+            # Note: This requires updating entry.data which is normally immutable
+            # We create a new data dict
+            new_data = {
+                **self.config_entry.data,
+                CONF_ALARM_ENTITY: user_input.get(CONF_ALARM_ENTITY),
+                CONF_SEASON_CALENDAR: user_input.get(CONF_SEASON_CALENDAR),
+            }
+
+            # Update the config entry
+            self.hass.config_entries.async_update_entry(
+                self.config_entry,
+                data=new_data,
             )
+
+            return self.async_create_entry(title="", data=self.config_entry.options)
 
         return self.async_show_form(
             step_id="global_settings",
             data_schema=vol.Schema(
                 {
                     vol.Optional(
-                        CONF_GUEST_MODE_ENTITY,
-                        default=self.config_entry.options.get(CONF_GUEST_MODE_ENTITY),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=["input_boolean", "binary_sensor"],
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_VACATION_MODE_ENTITY,
-                        default=self.config_entry.options.get(
-                            CONF_VACATION_MODE_ENTITY
-                        ),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=["input_boolean", "binary_sensor"],
-                        )
-                    ),
-                    vol.Optional(
                         CONF_ALARM_ENTITY,
-                        default=self.config_entry.options.get(CONF_ALARM_ENTITY),
+                        default=self.config_entry.data.get(CONF_ALARM_ENTITY),
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(
                             domain=["alarm_control_panel"],
                         )
                     ),
                     vol.Optional(
-                        CONF_SEASON_SENSOR,
-                        default=self.config_entry.options.get(CONF_SEASON_SENSOR),
+                        CONF_SEASON_CALENDAR,
+                        default=self.config_entry.data.get(CONF_SEASON_CALENDAR),
                     ): selector.EntitySelector(
                         selector.EntitySelectorConfig(
-                            domain=[SENSOR_DOMAIN],
+                            domain=["calendar", "binary_sensor"],
                         )
                     ),
                 }
             ),
+            description_placeholders={
+                "info": "Alarme: armed_away → hors-gel. Calendrier été: clim cool, hiver: heat.",
+            },
         )
