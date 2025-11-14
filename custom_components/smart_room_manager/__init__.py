@@ -33,6 +33,8 @@ def _clean_none_values_from_config(hass: HomeAssistant, entry: ConfigEntry) -> N
     for room in rooms:
         # List of optional fields that should not be saved as None
         optional_fields = [
+            "door_window_sensors",  # Added: can be None instead of []
+            "lights",  # Added: can be None instead of []
             "temperature_sensor",
             "humidity_sensor",
             "climate_entity",

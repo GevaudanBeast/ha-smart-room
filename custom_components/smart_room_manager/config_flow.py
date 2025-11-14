@@ -291,9 +291,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         schema_dict = {}
 
         # Door/window sensors (always show, default to empty list)
+        # Use 'or []' to handle None values (dict.get returns None if value is None)
         schema_dict[vol.Optional(
             CONF_DOOR_WINDOW_SENSORS,
-            default=self._current_room.get(CONF_DOOR_WINDOW_SENSORS, []),
+            default=self._current_room.get(CONF_DOOR_WINDOW_SENSORS) or [],
         )] = selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[BINARY_SENSOR_DOMAIN],
@@ -357,9 +358,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         schema_dict = {}
 
         # Lights (always show, default to empty list)
+        # Use 'or []' to handle None values (dict.get returns None if value is None)
         schema_dict[vol.Optional(
             CONF_LIGHTS,
-            default=self._current_room.get(CONF_LIGHTS, []),
+            default=self._current_room.get(CONF_LIGHTS) or [],
         )] = selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[LIGHT_DOMAIN, SWITCH_DOMAIN],

@@ -115,7 +115,8 @@ class RoomManager:
 
     def _update_window_states(self) -> None:
         """Update window/door open states."""
-        door_window_sensors = self.room_config.get(CONF_DOOR_WINDOW_SENSORS, [])
+        # Use 'or []' to handle None values (dict.get returns None if value is None)
+        door_window_sensors = self.room_config.get(CONF_DOOR_WINDOW_SENSORS) or []
 
         if not door_window_sensors:
             self._windows_open = False
@@ -141,7 +142,8 @@ class RoomManager:
 
     def _is_in_comfort_time_range(self) -> bool:
         """Check if current time is within any configured comfort time range."""
-        comfort_ranges = self.room_config.get(CONF_COMFORT_TIME_RANGES, [])
+        # Use 'or []' to handle None values (dict.get returns None if value is None)
+        comfort_ranges = self.room_config.get(CONF_COMFORT_TIME_RANGES) or []
 
         if not comfort_ranges:
             return False
@@ -190,7 +192,8 @@ class RoomManager:
 
         # PRIORITY 2: Bathroom special logic (light state determines mode)
         if self.room_type == ROOM_TYPE_BATHROOM:
-            lights = self.room_config.get(CONF_LIGHTS, [])
+            # Use 'or []' to handle None values (dict.get returns None if value is None)
+            lights = self.room_config.get(CONF_LIGHTS) or []
             if lights:
                 # Check if ANY light is ON
                 any_light_on = False
@@ -264,7 +267,8 @@ class RoomManager:
                 occupied = alarm_state_value != ALARM_STATE_ARMED_AWAY
 
         # Check if any light is on (for bathroom logic reporting)
-        lights = self.room_config.get(CONF_LIGHTS, [])
+        # Use 'or []' to handle None values (dict.get returns None if value is None)
+        lights = self.room_config.get(CONF_LIGHTS) or []
         light_on = False
         if lights:
             for light_entity in lights:
