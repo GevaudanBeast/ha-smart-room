@@ -1,42 +1,49 @@
 """Climate control logic for Smart Room Manager."""
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
 from typing import Any, TYPE_CHECKING
 
 from homeassistant.components.climate import (
+    ATTR_HVAC_MODE,
+    ATTR_PRESET_MODE,
     ATTR_TEMPERATURE,
+    DOMAIN as CLIMATE_DOMAIN,
+    HVACMode,
+    SERVICE_SET_HVAC_MODE,
+    SERVICE_SET_PRESET_MODE,
     SERVICE_SET_TEMPERATURE,
 )
-from homeassistant.const import SERVICE_TURN_ON, SERVICE_TURN_OFF
+from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
-from homeassistant.util import dt as dt_util
 
 from .const import (
+    CLIMATE_TYPE_THERMOSTAT,
+    CLIMATE_TYPE_X4FP,
+    CONF_CLIMATE_BYPASS_SWITCH,
     CONF_CLIMATE_ENTITY,
-    CONF_CLIMATE_PRESENCE_REQUIRED,
-    CONF_CLIMATE_UNOCCUPIED_DELAY,
     CONF_CLIMATE_WINDOW_CHECK,
-    CONF_HEATING_SWITCHES,
-    CONF_SOLAR_OPTIMIZER_SWITCH,
-    CONF_TEMP_AWAY,
+    CONF_SEASON_CALENDAR,
     CONF_TEMP_COMFORT,
+    CONF_TEMP_COOL_COMFORT,
+    CONF_TEMP_COOL_ECO,
     CONF_TEMP_ECO,
     CONF_TEMP_FROST_PROTECTION,
     CONF_TEMP_NIGHT,
-    DEFAULT_CLIMATE_UNOCCUPIED_DELAY,
-    DEFAULT_TEMP_AWAY,
     DEFAULT_TEMP_COMFORT,
+    DEFAULT_TEMP_COOL_COMFORT,
+    DEFAULT_TEMP_COOL_ECO,
     DEFAULT_TEMP_ECO,
     DEFAULT_TEMP_FROST_PROTECTION,
     DEFAULT_TEMP_NIGHT,
-    MODE_AWAY,
     MODE_COMFORT,
     MODE_ECO,
     MODE_FROST_PROTECTION,
-    MODE_GUEST,
     MODE_NIGHT,
+    X4FP_PRESET_COMFORT,
+    X4FP_PRESET_ECO,
+    X4FP_PRESET_FROST,
+    X4FP_PRESET_OFF,
 )
 
 if TYPE_CHECKING:
@@ -59,183 +66,277 @@ class ClimateController:
         self.room_config = room_config
         self.room_manager = room_manager
 
+        self._climate_type: str | None = None
         self._target_temperature: float | None = None
-        self._last_unoccupied_time: Any = None
+        self._current_preset: str | None = None
+        self._current_hvac_mode: str | None = None
 
     def update_config(self, room_config: dict[str, Any]) -> None:
         """Update configuration."""
         self.room_config = room_config
+        # Reset climate type detection on config change
+        self._climate_type = None
 
     async def async_update(self) -> None:
         """Update climate control logic."""
         climate_entity = self.room_config.get(CONF_CLIMATE_ENTITY)
-        heating_switches = self.room_config.get(CONF_HEATING_SWITCHES, [])
 
-        if not climate_entity and not heating_switches:
+        if not climate_entity:
             return
 
-        # ⚡ SOLAR OPTIMIZER - PRIORITY CHECK
-        solar_switch = self.room_config.get(CONF_SOLAR_OPTIMIZER_SWITCH)
-        if solar_switch:
-            solar_state = self.hass.states.get(solar_switch)
-            if solar_state and solar_state.state == "on":
+        # PRIORITY 1: Check bypass switch (Solar Optimizer, manual control, etc.)
+        bypass_switch = self.room_config.get(CONF_CLIMATE_BYPASS_SWITCH)
+        if bypass_switch:
+            bypass_state = self.hass.states.get(bypass_switch)
+            if bypass_state and bypass_state.state == STATE_ON:
                 _LOGGER.debug(
-                    "⚡ Solar Optimizer active (%s ON) in %s - Smart Room Manager in standby",
-                    solar_switch,
+                    "🔌 Climate bypass active (%s ON) in %s - skipping control",
+                    bypass_switch,
                     self.room_manager.room_name,
                 )
-                # Solar Optimizer is actively heating - do nothing
                 return
 
-        # Check if heating should be on
-        should_heat, target_temp = self._should_heat()
+        # Detect climate type if not already done
+        if self._climate_type is None:
+            self._climate_type = self._detect_climate_type(climate_entity)
+            _LOGGER.info(
+                "Climate type detected for %s: %s (%s)",
+                self.room_manager.room_name,
+                self._climate_type,
+                climate_entity,
+            )
 
-        # Control climate entity
-        if climate_entity and target_temp is not None:
-            await self._set_climate_temperature(climate_entity, target_temp, should_heat)
-
-        # Control heating switches
-        if heating_switches:
-            await self._control_heating_switches(heating_switches, should_heat)
-
-    def _should_heat(self) -> tuple[bool, float | None]:
-        """Determine if heating should be active and target temperature."""
-        # Check window state if configured
+        # PRIORITY 2: Check windows
         if self.room_config.get(CONF_CLIMATE_WINDOW_CHECK, True):
             if self.room_manager.is_windows_open():
                 _LOGGER.debug(
-                    "Windows open in %s, turning off heating",
+                    "🪟 Windows open in %s - setting frost protection",
                     self.room_manager.room_name,
                 )
-                return False, None
+                await self._set_frost_protection(climate_entity)
+                return
 
-        # Get target temperature based on mode
-        target_temp = self._get_target_temperature()
+        # PRIORITY 3: Check summer mode
+        is_summer = self._is_summer_mode()
 
-        # Check presence requirement
-        if self.room_config.get(CONF_CLIMATE_PRESENCE_REQUIRED, False):
-            if not self.room_manager.is_occupied():
-                # Check unoccupied delay
-                if self._last_unoccupied_time is None:
-                    self._last_unoccupied_time = dt_util.utcnow()
-
-                delay = self.room_config.get(
-                    CONF_CLIMATE_UNOCCUPIED_DELAY, DEFAULT_CLIMATE_UNOCCUPIED_DELAY
-                )
-                time_unoccupied = (
-                    dt_util.utcnow() - self._last_unoccupied_time
-                ).total_seconds()
-
-                if time_unoccupied > delay:
-                    _LOGGER.debug(
-                        "Room %s unoccupied for %d seconds, reducing heating",
-                        self.room_manager.room_name,
-                        time_unoccupied,
-                    )
-                    # Use eco or away temperature
-                    target_temp = self.room_config.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
-            else:
-                # Reset unoccupied timer
-                self._last_unoccupied_time = None
-
-        self._target_temperature = target_temp
-        return True, target_temp
-
-    def _get_target_temperature(self) -> float:
-        """Get target temperature based on current mode."""
+        # PRIORITY 4: Get current mode and apply
         mode = self.room_manager.get_current_mode()
 
-        if mode == MODE_FROST_PROTECTION:
-            return self.room_config.get(
-                CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
-            )
-        elif mode == MODE_AWAY:
-            return self.room_config.get(CONF_TEMP_AWAY, DEFAULT_TEMP_AWAY)
-        elif mode == MODE_NIGHT:
-            return self.room_config.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT)
-        elif mode == MODE_COMFORT or mode == MODE_GUEST:
-            return self.room_config.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT)
-        else:  # MODE_ECO
-            return self.room_config.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
+        if self._climate_type == CLIMATE_TYPE_X4FP:
+            await self._control_x4fp(climate_entity, mode, is_summer)
+        else:
+            await self._control_thermostat(climate_entity, mode, is_summer)
 
-    async def _set_climate_temperature(
-        self, climate_entity: str, temperature: float, turn_on: bool
-    ) -> None:
-        """Set climate entity temperature."""
+    def _detect_climate_type(self, climate_entity: str) -> str:
+        """Detect if climate entity is X4FP (preset_mode) or thermostat (hvac_mode)."""
         state = self.hass.states.get(climate_entity)
         if not state:
             _LOGGER.warning("Climate entity %s not found", climate_entity)
-            return
+            return CLIMATE_TYPE_THERMOSTAT
 
-        current_temp = state.attributes.get(ATTR_TEMPERATURE)
+        # Check if entity has X4FP-style preset modes
+        preset_modes = state.attributes.get("preset_modes", [])
 
-        # Only update if temperature changed significantly (> 0.5°C)
-        if current_temp is not None and abs(current_temp - temperature) < 0.5:
+        # X4FP has "comfort" and/or "eco" preset modes
+        if X4FP_PRESET_COMFORT in preset_modes or X4FP_PRESET_ECO in preset_modes:
+            return CLIMATE_TYPE_X4FP
+
+        return CLIMATE_TYPE_THERMOSTAT
+
+    def _is_summer_mode(self) -> bool:
+        """Check if summer mode is active (from calendar)."""
+        season_calendar = self.hass.data.get(self.room_manager.coordinator.entry.entry_id, {}).get(
+            CONF_SEASON_CALENDAR
+        )
+
+        if not season_calendar:
+            return False
+
+        calendar_state = self.hass.states.get(season_calendar)
+        return calendar_state and calendar_state.state == STATE_ON
+
+    async def _control_x4fp(
+        self, climate_entity: str, mode: str, is_summer: bool
+    ) -> None:
+        """Control X4FP climate entity via preset_mode."""
+        # Summer: turn off (except frost protection)
+        if is_summer:
+            if mode != MODE_FROST_PROTECTION:
+                target_preset = X4FP_PRESET_OFF
+            else:
+                target_preset = X4FP_PRESET_FROST
+        else:
+            # Winter: map mode to preset
+            target_preset = self._get_x4fp_preset(mode)
+
+        # Only change if different
+        if self._current_preset == target_preset:
             return
 
         _LOGGER.debug(
-            "Setting temperature for %s in %s to %.1f°C",
+            "Setting X4FP preset for %s in %s to %s (mode: %s, summer: %s)",
             climate_entity,
             self.room_manager.room_name,
-            temperature,
+            target_preset,
+            mode,
+            is_summer,
         )
 
         try:
             await self.hass.services.async_call(
-                "climate",
-                SERVICE_SET_TEMPERATURE,
+                CLIMATE_DOMAIN,
+                SERVICE_SET_PRESET_MODE,
                 {
                     "entity_id": climate_entity,
-                    ATTR_TEMPERATURE: temperature,
+                    ATTR_PRESET_MODE: target_preset,
                 },
                 blocking=True,
             )
+            self._current_preset = target_preset
         except Exception as err:
             _LOGGER.error(
-                "Error setting temperature for %s: %s",
+                "Error setting preset mode for %s: %s",
                 climate_entity,
                 err,
             )
 
-    async def _control_heating_switches(
-        self, heating_switches: list[str], turn_on: bool
+    async def _control_thermostat(
+        self, climate_entity: str, mode: str, is_summer: bool
     ) -> None:
-        """Control heating switches."""
-        for entity_id in heating_switches:
-            state = self.hass.states.get(entity_id)
-            if not state:
-                continue
-
-            current_state = state.state
-            desired_state = "on" if turn_on else "off"
-
-            if current_state != desired_state:
-                _LOGGER.debug(
-                    "Turning %s heating switch %s in %s",
-                    desired_state,
-                    entity_id,
-                    self.room_manager.room_name,
+        """Control thermostat climate entity via hvac_mode + temperature."""
+        if is_summer:
+            # Summer mode
+            if mode == MODE_FROST_PROTECTION:
+                target_hvac = HVACMode.OFF
+                target_temp = None
+            elif mode == MODE_COMFORT:
+                target_hvac = HVACMode.COOL
+                target_temp = self.room_config.get(
+                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
                 )
+            else:  # eco, night
+                # Option: cool à température plus haute ou OFF
+                target_hvac = HVACMode.OFF
+                target_temp = None
+        else:
+            # Winter mode
+            target_hvac = HVACMode.HEAT
+            target_temp = self._get_target_temperature(mode)
 
+        # Check current state
+        state = self.hass.states.get(climate_entity)
+        if not state:
+            return
+
+        current_hvac = state.state
+        current_temp = state.attributes.get(ATTR_TEMPERATURE)
+
+        # Set HVAC mode if different
+        if current_hvac != target_hvac:
+            _LOGGER.debug(
+                "Setting HVAC mode for %s in %s to %s",
+                climate_entity,
+                self.room_manager.room_name,
+                target_hvac,
+            )
+            try:
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN,
+                    SERVICE_SET_HVAC_MODE,
+                    {
+                        "entity_id": climate_entity,
+                        ATTR_HVAC_MODE: target_hvac,
+                    },
+                    blocking=True,
+                )
+                self._current_hvac_mode = target_hvac
+            except Exception as err:
+                _LOGGER.error(
+                    "Error setting HVAC mode for %s: %s",
+                    climate_entity,
+                    err,
+                )
+                return
+
+        # Set temperature if needed and different
+        if target_temp is not None:
+            if current_temp is None or abs(current_temp - target_temp) >= 0.5:
+                _LOGGER.debug(
+                    "Setting temperature for %s in %s to %.1f°C",
+                    climate_entity,
+                    self.room_manager.room_name,
+                    target_temp,
+                )
                 try:
                     await self.hass.services.async_call(
-                        "switch",
-                        SERVICE_TURN_ON if turn_on else SERVICE_TURN_OFF,
-                        {"entity_id": entity_id},
+                        CLIMATE_DOMAIN,
+                        SERVICE_SET_TEMPERATURE,
+                        {
+                            "entity_id": climate_entity,
+                            ATTR_TEMPERATURE: target_temp,
+                        },
                         blocking=True,
                     )
+                    self._target_temperature = target_temp
                 except Exception as err:
                     _LOGGER.error(
-                        "Error controlling heating switch %s: %s",
-                        entity_id,
+                        "Error setting temperature for %s: %s",
+                        climate_entity,
                         err,
                     )
+
+    async def _set_frost_protection(self, climate_entity: str) -> None:
+        """Set frost protection when windows open."""
+        if self._climate_type == CLIMATE_TYPE_X4FP:
+            await self.hass.services.async_call(
+                CLIMATE_DOMAIN,
+                SERVICE_SET_PRESET_MODE,
+                {
+                    "entity_id": climate_entity,
+                    ATTR_PRESET_MODE: X4FP_PRESET_FROST,
+                },
+                blocking=True,
+            )
+        else:
+            await self.hass.services.async_call(
+                CLIMATE_DOMAIN,
+                SERVICE_SET_TEMPERATURE,
+                {
+                    "entity_id": climate_entity,
+                    ATTR_TEMPERATURE: DEFAULT_TEMP_FROST_PROTECTION,
+                },
+                blocking=True,
+            )
+
+    def _get_x4fp_preset(self, mode: str) -> str:
+        """Map mode to X4FP preset."""
+        if mode == MODE_FROST_PROTECTION:
+            return X4FP_PRESET_FROST
+        elif mode == MODE_COMFORT:
+            return X4FP_PRESET_COMFORT
+        else:  # eco, night
+            return X4FP_PRESET_ECO
+
+    def _get_target_temperature(self, mode: str) -> float:
+        """Get target temperature based on mode."""
+        if mode == MODE_FROST_PROTECTION:
+            return self.room_config.get(
+                CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
+            )
+        elif mode == MODE_NIGHT:
+            return self.room_config.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT)
+        elif mode == MODE_COMFORT:
+            return self.room_config.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT)
+        else:  # MODE_ECO
+            return self.room_config.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
 
     def get_state(self) -> dict[str, Any]:
         """Get current climate controller state."""
         return {
+            "climate_type": self._climate_type,
             "target_temperature": self._target_temperature,
-            "heating_active": self._target_temperature is not None,
+            "current_preset": self._current_preset,
+            "current_hvac_mode": self._current_hvac_mode,
         }
 
     async def async_shutdown(self) -> None:

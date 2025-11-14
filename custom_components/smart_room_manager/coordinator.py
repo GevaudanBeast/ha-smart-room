@@ -61,7 +61,7 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
                 self.room_managers[room_id] = RoomManager(
                     self.hass,
                     room_config,
-                    self.entry.options,
+                    self,
                 )
 
     async def _async_update_data(self) -> dict[str, Any]:
