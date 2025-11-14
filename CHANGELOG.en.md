@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2025-01-14
+
+### Improved
+- **Optional configuration** : Temperature/humidity sensors and other actuators are no longer saved with `None` value when not configured
+  - Only actually configured fields are stored in the configuration
+  - Cleaner and more minimal configuration possible
+  - Compatible with minimalist rooms (just a name) to fully-equipped rooms
+
 ## [0.2.1] - 2025-01-14
 
 ### Fixed

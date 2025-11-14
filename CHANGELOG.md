@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2025-01-14
+
+### Improved
+- **Configuration optionnelle** : Les champs température/humidité et autres capteurs/actionneurs ne sont plus sauvegardés avec une valeur `None` lorsqu'ils ne sont pas configurés
+  - Seuls les champs réellement configurés sont enregistrés dans la configuration
+  - Configuration plus propre et minimale possible
+  - Compatible avec des pièces minimalistes (juste un nom) jusqu'à des pièces ultra-équipées
+
 ## [0.2.1] - 2025-01-14
 
 ### Fixed
