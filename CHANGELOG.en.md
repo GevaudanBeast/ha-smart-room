@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2025-01-14
+
+### Fixed
+- **Critical import error** : Fixed ALARM_STATE_ARMED_AWAY import from homeassistant.const (doesn't exist)
+  - Now correctly imports from our own const.py
+  - This was preventing the integration from loading in Home Assistant
+  - Error: `cannot import name 'ALARM_STATE_ARMED_AWAY' from 'homeassistant.const'`
+
 ## [0.2.0] - 2025-01-14
 
 ### 🎯 Major Refactoring - Simplified Architecture
@@ -105,6 +113,7 @@ See [Migration Guide](MIGRATION_GUIDE.md) for detailed instructions.
 - Proper error handling and logging
 - Home Assistant 2023.1+ compatibility
 
-[Unreleased]: https://github.com/GevaudanBeast/HA-SMART/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/GevaudanBeast/HA-SMART/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/GevaudanBeast/HA-SMART/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/GevaudanBeast/HA-SMART/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/GevaudanBeast/HA-SMART/releases/tag/v0.1.0
