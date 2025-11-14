@@ -4,12 +4,12 @@ from __future__ import annotations
 import logging
 from typing import Any, TYPE_CHECKING
 
-from homeassistant.const import STATE_ON, ALARM_STATE_ARMED_AWAY
+from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    ALARM_STATE_ARMED_AWAY as CONF_ALARM_STATE_ARMED_AWAY,
+    ALARM_STATE_ARMED_AWAY,
     CONF_ALARM_ENTITY,
     CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
