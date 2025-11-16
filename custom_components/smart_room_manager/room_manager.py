@@ -1,4 +1,5 @@
 """Room manager for Smart Room Manager."""
+
 from __future__ import annotations
 
 import logging
@@ -57,7 +58,9 @@ class RoomManager:
 
         self.room_name: str = room_config.get(CONF_ROOM_NAME)
         if not self.room_name:
-            raise ValueError(f"Room config for {self.room_id} missing required field 'room_name'")
+            raise ValueError(
+                f"Room config for {self.room_id} missing required field 'room_name'"
+            )
 
         self.room_type: str = room_config.get(CONF_ROOM_TYPE, "normal")
 
@@ -85,7 +88,9 @@ class RoomManager:
         # Validate required fields
         new_name = room_config.get(CONF_ROOM_NAME)
         if not new_name:
-            _LOGGER.error("Room config for %s missing required field 'room_name'", self.room_id)
+            _LOGGER.error(
+                "Room config for %s missing required field 'room_name'", self.room_id
+            )
             return
 
         self.room_name = new_name

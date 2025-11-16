@@ -1,4 +1,5 @@
 """Constants for the Smart Room Manager integration."""
+
 from typing import Final
 
 # Integration domain
@@ -15,7 +16,9 @@ CONF_ROOM_ICON: Final = "room_icon"
 # Room types
 ROOM_TYPE_NORMAL: Final = "normal"  # Chambres - pas de timer lumière
 ROOM_TYPE_CORRIDOR: Final = "corridor"  # Couloirs, WC - timer lumière
-ROOM_TYPE_BATHROOM: Final = "bathroom"  # Salles de bains - timer + lumière pilote chauffage
+ROOM_TYPE_BATHROOM: Final = (
+    "bathroom"  # Salles de bains - timer + lumière pilote chauffage
+)
 
 # Sensor configuration
 CONF_DOOR_WINDOW_SENSORS: Final = "door_window_sensors"
@@ -46,7 +49,9 @@ CONF_TEMP_COOL_ECO: Final = "temp_cool_eco"
 
 # Schedule configuration
 CONF_NIGHT_START: Final = "night_start"
-CONF_COMFORT_TIME_RANGES: Final = "comfort_time_ranges"  # List of {"start": "HH:MM", "end": "HH:MM"}
+CONF_COMFORT_TIME_RANGES: Final = (
+    "comfort_time_ranges"  # List of {"start": "HH:MM", "end": "HH:MM"}
+)
 
 # Global configuration
 CONF_ALARM_ENTITY: Final = "alarm_entity"

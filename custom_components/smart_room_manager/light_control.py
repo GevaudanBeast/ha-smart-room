@@ -1,4 +1,5 @@
 """Light control logic for Smart Room Manager."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -99,7 +100,9 @@ class LightController:
                     )
 
                 # Check if timeout exceeded
-                time_on = (dt_util.utcnow() - self._light_on_times[entity_id]).total_seconds()
+                time_on = (
+                    dt_util.utcnow() - self._light_on_times[entity_id]
+                ).total_seconds()
                 if time_on > timeout:
                     _LOGGER.debug(
                         "Auto-off light %s in %s after %d seconds (timeout: %d)",

@@ -1,4 +1,5 @@
 """Binary sensor platform for Smart Room Manager."""
+
 from __future__ import annotations
 
 import logging

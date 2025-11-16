@@ -1,4 +1,5 @@
 """Climate control logic for Smart Room Manager."""
+
 from __future__ import annotations
 
 import logging
@@ -146,7 +147,9 @@ class ClimateController:
     def _is_summer_mode(self) -> bool:
         """Check if summer mode is active (from calendar)."""
         # Get season calendar from global config (entry.data)
-        season_calendar = self.room_manager.coordinator.entry.data.get(CONF_SEASON_CALENDAR)
+        season_calendar = self.room_manager.coordinator.entry.data.get(
+            CONF_SEASON_CALENDAR
+        )
 
         if not season_calendar:
             return False

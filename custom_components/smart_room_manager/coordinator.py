@@ -1,4 +1,5 @@
 """DataUpdateCoordinator for Smart Room Manager."""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -59,7 +60,9 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
                 self.room_managers[room_id].update_config(room_config)
             else:
                 # Create new room manager
-                _LOGGER.debug("Creating room manager for %s", room_config.get("room_name"))
+                _LOGGER.debug(
+                    "Creating room manager for %s", room_config.get("room_name")
+                )
                 self.room_managers[room_id] = RoomManager(
                     self.hass,
                     room_config,

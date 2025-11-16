@@ -1,4 +1,5 @@
 """Sensor platform for Smart Room Manager."""
+
 from __future__ import annotations
 
 import logging
@@ -109,7 +110,9 @@ class SmartRoomStateSensor(SmartRoomEntity, SensorEntity):
         }
 
         if climate_state.get("target_temperature") is not None:
-            attributes[ATTR_TARGET_TEMPERATURE] = climate_state.get("target_temperature")
+            attributes[ATTR_TARGET_TEMPERATURE] = climate_state.get(
+                "target_temperature"
+            )
 
         return attributes
 
