@@ -1,6 +1,11 @@
 # Smart Room Manager - Home Assistant Integration
 
-**Version 0.2.3** - 🎯 Simplified and Optimized Architecture!
+[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
+[![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+
+**Version 0.2.4** - 🎯 Simplified and Optimized Architecture!
 
 [English](#english) | [Français](#français)
 
