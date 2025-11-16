@@ -8,7 +8,6 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     CONF_ROOMS,
@@ -33,7 +32,6 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
         )
         self.entry = entry
         self.room_managers: dict[str, RoomManager] = {}
-        self._unsub_update = None
 
         # Initialize room managers
         self._setup_room_managers()
@@ -87,11 +85,13 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
     async def async_shutdown(self) -> None:
         """Shutdown coordinator and room managers."""
         _LOGGER.debug("Shutting down coordinator")
-        if self._unsub_update:
-            self._unsub_update()
 
+        # Shutdown all room managers first
         for room_manager in self.room_managers.values():
             await room_manager.async_shutdown()
+
+        # Call parent shutdown to cancel timers and cleanup listeners
+        await super().async_shutdown()
 
     async def async_config_entry_first_refresh(self) -> None:
         """Refresh data for the first time when a config entry is setup."""
