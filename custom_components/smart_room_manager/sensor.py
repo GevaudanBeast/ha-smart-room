@@ -8,7 +8,6 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     ATTR_CLIMATE_STATE,
@@ -25,6 +24,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import SmartRoomCoordinator
+from .entity import SmartRoomEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -44,14 +44,12 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class SmartRoomStateSensor(CoordinatorEntity, SensorEntity):
+class SmartRoomStateSensor(SmartRoomEntity, SensorEntity):
     """Sensor representing the state of a smart room."""
 
     def __init__(self, coordinator: SmartRoomCoordinator, room_id: str) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self._room_id = room_id
-        self._attr_has_entity_name = True
+        super().__init__(coordinator, room_id)
 
         room_manager = coordinator.get_room_manager(room_id)
         if room_manager:
@@ -59,21 +57,6 @@ class SmartRoomStateSensor(CoordinatorEntity, SensorEntity):
             self._attr_name = f"{room_name} State"
             self._attr_unique_id = f"smart_room_{room_id}_state"
             self._attr_icon = "mdi:home-automation"
-
-    @property
-    def device_info(self):
-        """Return device information."""
-        room_manager = self.coordinator.get_room_manager(self._room_id)
-        if not room_manager:
-            return None
-
-        return {
-            "identifiers": {(DOMAIN, self._room_id)},
-            "name": f"Smart Room: {room_manager.room_name}",
-            "manufacturer": "HA-SMART",
-            "model": "Smart Room Manager",
-            "sw_version": "0.1.0",
-        }
 
     @property
     def native_value(self) -> str | None:

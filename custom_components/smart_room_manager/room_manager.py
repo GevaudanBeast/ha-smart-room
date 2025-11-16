@@ -1,63 +1,37 @@
 """Room manager for Smart Room Manager."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from homeassistant.const import STATE_ON, STATE_OFF, STATE_HOME, STATE_ALARM_ARMED_AWAY
-from homeassistant.core import HomeAssistant, State, callback
-from homeassistant.helpers.sun import get_astral_event_date
+from homeassistant.const import STATE_ON
+from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    ALARM_STATE_ARMED_AWAY,
     CONF_ALARM_ENTITY,
-    CONF_CLIMATE_ENTITY,
-    CONF_CLIMATE_PRESENCE_REQUIRED,
-    CONF_CLIMATE_UNOCCUPIED_DELAY,
-    CONF_CLIMATE_WINDOW_CHECK,
-    CONF_DAY_START,
+    CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
-    CONF_EVENING_START,
-    CONF_GUEST_MODE_ENTITY,
-    CONF_HEATING_SWITCHES,
-    CONF_HUMIDITY_SENSOR,
     CONF_LIGHTS,
-    CONF_LIGHT_DAY_BRIGHTNESS,
-    CONF_LIGHT_LUX_THRESHOLD,
-    CONF_LIGHT_NIGHT_BRIGHTNESS,
-    CONF_LIGHT_NIGHT_MODE,
-    CONF_LIGHT_TIMEOUT,
-    CONF_LUMINOSITY_SENSOR,
-    CONF_MORNING_START,
     CONF_NIGHT_START,
-    CONF_PRESENCE_SENSORS,
     CONF_ROOM_ID,
     CONF_ROOM_NAME,
-    CONF_SEASON_SENSOR,
-    CONF_TEMPERATURE_SENSOR,
-    CONF_TEMP_AWAY,
-    CONF_TEMP_COMFORT,
-    CONF_TEMP_ECO,
-    CONF_TEMP_FROST_PROTECTION,
-    CONF_TEMP_NIGHT,
-    CONF_VACATION_MODE_ENTITY,
-    DEFAULT_CLIMATE_UNOCCUPIED_DELAY,
-    DEFAULT_LIGHT_LUX_THRESHOLD,
-    DEFAULT_LIGHT_TIMEOUT,
-    MODE_AWAY,
+    CONF_ROOM_TYPE,
+    DEFAULT_NIGHT_START,
     MODE_COMFORT,
     MODE_ECO,
     MODE_FROST_PROTECTION,
-    MODE_GUEST,
     MODE_NIGHT,
+    ROOM_TYPE_BATHROOM,
     TIME_PERIOD_DAY,
-    TIME_PERIOD_EVENING,
-    TIME_PERIOD_MORNING,
     TIME_PERIOD_NIGHT,
 )
-from .light_control import LightController
 from .climate_control import ClimateController
+from .light_control import LightController
+
+if TYPE_CHECKING:
+    from .coordinator import SmartRoomCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,22 +43,28 @@ class RoomManager:
         self,
         hass: HomeAssistant,
         room_config: dict[str, Any],
-        global_config: dict[str, Any],
+        coordinator: SmartRoomCoordinator,
     ) -> None:
         """Initialize room manager."""
         self.hass = hass
         self.room_config = room_config
-        self.global_config = global_config
+        self.coordinator = coordinator
 
-        self.room_id: str = room_config[CONF_ROOM_ID]
-        self.room_name: str = room_config[CONF_ROOM_NAME]
+        # Validate required fields
+        self.room_id: str = room_config.get(CONF_ROOM_ID)
+        if not self.room_id:
+            raise ValueError("Room config missing required field 'room_id'")
+
+        self.room_name: str = room_config.get(CONF_ROOM_NAME)
+        if not self.room_name:
+            raise ValueError(f"Room config for {self.room_id} missing required field 'room_name'")
+
+        self.room_type: str = room_config.get(CONF_ROOM_TYPE, "normal")
 
         # State tracking
-        self._occupied: bool = False
-        self._last_presence_time: datetime | None = None
-        self._last_motion_time: datetime | None = None
         self._windows_open: bool = False
-        self._current_mode: str = MODE_ECO
+        self._is_night: bool = False
+        self._current_mode: str = MODE_COMFORT
         self._automation_enabled: bool = True
 
         # Controllers
@@ -92,26 +72,35 @@ class RoomManager:
         self.climate_controller = ClimateController(hass, room_config, self)
 
         _LOGGER.debug(
-            "Room manager initialized for %s (ID: %s)",
+            "Room manager initialized for %s (ID: %s, Type: %s)",
             self.room_name,
             self.room_id,
+            self.room_type,
         )
 
     def update_config(self, room_config: dict[str, Any]) -> None:
         """Update room configuration."""
         self.room_config = room_config
-        self.room_name = room_config[CONF_ROOM_NAME]
+
+        # Validate required fields
+        new_name = room_config.get(CONF_ROOM_NAME)
+        if not new_name:
+            _LOGGER.error("Room config for %s missing required field 'room_name'", self.room_id)
+            return
+
+        self.room_name = new_name
+        self.room_type = room_config.get(CONF_ROOM_TYPE, "normal")
         self.light_controller.update_config(room_config)
         self.climate_controller.update_config(room_config)
         _LOGGER.debug("Room config updated for %s", self.room_name)
 
     async def async_update(self) -> dict[str, Any]:
         """Update room state and control logic."""
-        # Update presence
-        self._update_presence()
-
         # Update window states
         self._update_window_states()
+
+        # Update night period
+        self._update_night_period()
 
         # Determine current mode
         self._update_current_mode()
@@ -124,41 +113,10 @@ class RoomManager:
         # Return current state
         return self.get_state()
 
-    def _update_presence(self) -> None:
-        """Update presence detection."""
-        presence_sensors = self.room_config.get(CONF_PRESENCE_SENSORS, [])
-
-        if not presence_sensors:
-            self._occupied = False
-            return
-
-        # Check if any presence sensor is on
-        any_presence = False
-        for entity_id in presence_sensors:
-            state = self.hass.states.get(entity_id)
-            if state and state.state == STATE_ON:
-                any_presence = True
-                self._last_motion_time = dt_util.utcnow()
-                break
-
-        # Update occupation with timeout
-        if any_presence:
-            self._occupied = True
-            self._last_presence_time = dt_util.utcnow()
-        else:
-            # Check if we should still consider the room occupied
-            if self._last_presence_time:
-                timeout = self.room_config.get(CONF_LIGHT_TIMEOUT, DEFAULT_LIGHT_TIMEOUT)
-                time_since_presence = (
-                    dt_util.utcnow() - self._last_presence_time
-                ).total_seconds()
-
-                if time_since_presence > timeout:
-                    self._occupied = False
-
     def _update_window_states(self) -> None:
         """Update window/door open states."""
-        door_window_sensors = self.room_config.get(CONF_DOOR_WINDOW_SENSORS, [])
+        # Use 'or []' to handle None values (dict.get returns None if value is None)
+        door_window_sensors = self.room_config.get(CONF_DOOR_WINDOW_SENSORS) or []
 
         if not door_window_sensors:
             self._windows_open = False
@@ -173,112 +131,105 @@ class RoomManager:
 
         self._windows_open = False
 
+    def _update_night_period(self) -> None:
+        """Update night period status."""
+        now = dt_util.now().time()
+        night_start = dt_util.parse_time(
+            self.room_config.get(CONF_NIGHT_START, DEFAULT_NIGHT_START)
+        )
+
+        self._is_night = now >= night_start
+
+    def _is_in_comfort_time_range(self) -> bool:
+        """Check if current time is within any configured comfort time range."""
+        # Use 'or []' to handle None values (dict.get returns None if value is None)
+        comfort_ranges = self.room_config.get(CONF_COMFORT_TIME_RANGES) or []
+
+        if not comfort_ranges:
+            return False
+
+        now = dt_util.now().time()
+
+        for time_range in comfort_ranges:
+            start_str = time_range.get("start")
+            end_str = time_range.get("end")
+
+            if not start_str or not end_str:
+                continue
+
+            try:
+                start_time = dt_util.parse_time(start_str)
+                end_time = dt_util.parse_time(end_str)
+
+                # Handle time ranges that cross midnight
+                if start_time <= end_time:
+                    if start_time <= now <= end_time:
+                        return True
+                else:
+                    # Range crosses midnight
+                    if now >= start_time or now <= end_time:
+                        return True
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    "Invalid time range in %s: %s - %s",
+                    self.room_name,
+                    start_str,
+                    end_str,
+                )
+                continue
+
+        return False
+
     def _update_current_mode(self) -> None:
-        """Determine current operating mode based on global conditions."""
-        # Check vacation mode
-        vacation_entity = self.global_config.get(CONF_VACATION_MODE_ENTITY)
-        if vacation_entity:
-            state = self.hass.states.get(vacation_entity)
-            if state and state.state == STATE_ON:
+        """Determine current operating mode."""
+        # PRIORITY 1: Check alarm armed_away
+        alarm_entity = self.coordinator.entry.data.get(CONF_ALARM_ENTITY)
+        if alarm_entity:
+            alarm_state = self.hass.states.get(alarm_entity)
+            if alarm_state and alarm_state.state == ALARM_STATE_ARMED_AWAY:
                 self._current_mode = MODE_FROST_PROTECTION
                 return
 
-        # Check alarm state
-        alarm_entity = self.global_config.get(CONF_ALARM_ENTITY)
-        if alarm_entity:
-            state = self.hass.states.get(alarm_entity)
-            if state and state.state == STATE_ALARM_ARMED_AWAY:
-                self._current_mode = MODE_AWAY
-                return
+        # PRIORITY 2: Bathroom special logic (light state determines mode)
+        if self.room_type == ROOM_TYPE_BATHROOM:
+            # Use 'or []' to handle None values (dict.get returns None if value is None)
+            lights = self.room_config.get(CONF_LIGHTS) or []
+            if lights:
+                # Check if ANY light is ON
+                any_light_on = False
+                for light_entity in lights:
+                    light_state = self.hass.states.get(light_entity)
+                    if light_state and light_state.state == STATE_ON:
+                        any_light_on = True
+                        break
 
-        # Check guest mode
-        guest_entity = self.global_config.get(CONF_GUEST_MODE_ENTITY)
-        if guest_entity:
-            state = self.hass.states.get(guest_entity)
-            if state and state.state == STATE_ON:
-                self._current_mode = MODE_GUEST
-                return
+                if any_light_on:
+                    self._current_mode = MODE_COMFORT
+                    return
+                else:
+                    self._current_mode = MODE_ECO
+                    return
 
-        # Determine mode based on time period
-        time_period = self.get_time_period()
-
-        if time_period == TIME_PERIOD_NIGHT:
+        # PRIORITY 3: Night period
+        if self._is_night:
             self._current_mode = MODE_NIGHT
-        elif self._occupied:
+            return
+
+        # PRIORITY 4: Check if in comfort time range
+        if self._is_in_comfort_time_range():
             self._current_mode = MODE_COMFORT
-        else:
-            self._current_mode = MODE_ECO
+            return
+
+        # DEFAULT: Eco
+        self._current_mode = MODE_ECO
+
+    def is_night_period(self) -> bool:
+        """Check if it's night period."""
+        return self._is_night
 
     def get_time_period(self) -> str:
-        """Get current time period."""
-        now = dt_util.now().time()
-
-        morning = dt_util.parse_time(
-            self.room_config.get(CONF_MORNING_START, "07:00:00")
-        )
-        day = dt_util.parse_time(self.room_config.get(CONF_DAY_START, "09:00:00"))
-        evening = dt_util.parse_time(
-            self.room_config.get(CONF_EVENING_START, "18:00:00")
-        )
-        night = dt_util.parse_time(self.room_config.get(CONF_NIGHT_START, "22:00:00"))
-
-        if night <= now or now < morning:
-            return TIME_PERIOD_NIGHT
-        elif morning <= now < day:
-            return TIME_PERIOD_MORNING
-        elif day <= now < evening:
-            return TIME_PERIOD_DAY
-        else:
-            return TIME_PERIOD_EVENING
-
-    def get_luminosity(self) -> float | None:
-        """Get current luminosity value."""
-        lux_sensor = self.room_config.get(CONF_LUMINOSITY_SENSOR)
-        if not lux_sensor:
-            return None
-
-        state = self.hass.states.get(lux_sensor)
-        if not state:
-            return None
-
-        try:
-            return float(state.state)
-        except (ValueError, TypeError):
-            return None
-
-    def get_temperature(self) -> float | None:
-        """Get current temperature value."""
-        temp_sensor = self.room_config.get(CONF_TEMPERATURE_SENSOR)
-        if not temp_sensor:
-            return None
-
-        state = self.hass.states.get(temp_sensor)
-        if not state:
-            return None
-
-        try:
-            return float(state.state)
-        except (ValueError, TypeError):
-            return None
-
-    def get_humidity(self) -> float | None:
-        """Get current humidity value."""
-        humidity_sensor = self.room_config.get(CONF_HUMIDITY_SENSOR)
-        if not humidity_sensor:
-            return None
-
-        state = self.hass.states.get(humidity_sensor)
-        if not state:
-            return None
-
-        try:
-            return float(state.state)
-        except (ValueError, TypeError):
-            return None
-
-    def is_occupied(self) -> bool:
-        """Check if room is currently occupied."""
-        return self._occupied
+        """Get current time period (simplified)."""
+        return TIME_PERIOD_NIGHT if self._is_night else TIME_PERIOD_DAY
 
     def is_windows_open(self) -> bool:
         """Check if any windows/doors are open."""
@@ -303,18 +254,48 @@ class RoomManager:
 
     def get_state(self) -> dict[str, Any]:
         """Get current room state."""
+        # Get alarm state for state reporting
+        alarm_entity = self.coordinator.entry.data.get(CONF_ALARM_ENTITY)
+        alarm_state_value = "unknown"
+        occupied = True  # Default to occupied if no alarm
+
+        if alarm_entity:
+            alarm_state = self.hass.states.get(alarm_entity)
+            if alarm_state:
+                alarm_state_value = alarm_state.state
+                # In v0.2.0: occupied = NOT armed_away (simplified presence detection)
+                occupied = alarm_state_value != ALARM_STATE_ARMED_AWAY
+
+        # Check if any light is on (for bathroom logic reporting)
+        # Use 'or []' to handle None values (dict.get returns None if value is None)
+        lights = self.room_config.get(CONF_LIGHTS) or []
+        light_on = False
+        if lights:
+            for light_entity in lights:
+                light_state = self.hass.states.get(light_entity)
+                if light_state and light_state.state == STATE_ON:
+                    light_on = True
+                    break
+
+        # Get light state with should_be_on
+        light_state_data = self.light_controller.get_state()
+        # In simplified v0.2.0: no automatic "should be on" logic
+        # Lights are manual or via external automation
+        light_state_data["should_be_on"] = False
+
         return {
             "room_id": self.room_id,
             "room_name": self.room_name,
-            "occupied": self._occupied,
+            "room_type": self.room_type,
+            "is_night": self._is_night,
             "windows_open": self._windows_open,
             "current_mode": self._current_mode,
             "time_period": self.get_time_period(),
-            "luminosity": self.get_luminosity(),
-            "temperature": self.get_temperature(),
-            "humidity": self.get_humidity(),
+            "alarm_state": alarm_state_value,
+            "occupied": occupied,
+            "light_on": light_on,
             "automation_enabled": self._automation_enabled,
-            "light_state": self.light_controller.get_state(),
+            "light_state": light_state_data,
             "climate_state": self.climate_controller.get_state(),
         }
 

@@ -10,25 +10,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.3] - 2025-01-14
 
 ### Fixed
-- **Erreurs critiques multiples** : Corrections complètes pour v0.2.3
-  - **Import DOMAIN manquant** : Ajout de `from .const import DOMAIN` dans switch.py et binary_sensor.py
-    - Résout : `NameError: name 'DOMAIN' is not defined`
-  - **Warning deprecated** : Suppression de l'assignment explicite de config_entry dans OptionsFlow
-    - Compatible avec Home Assistant 2025.12
-  - **"Entity None" dans formulaires** : Corrections multiples
-    - Migration étendue : Nettoyage de door_window_sensors et lights (en plus de temperature_sensor, humidity_sensor, climate_entity, climate_bypass_switch)
-    - Correction de `.get(field, [])` en `.get(field) or []` dans 7 emplacements (config_flow.py, light_control.py, room_manager.py)
-    - Schémas de formulaires conditionnels pour ne pas afficher None comme valeur par défaut
-  - Résout complètement l'erreur "Entity None is neither a valid entity ID nor a valid UUID"
-  - Migration transparente au démarrage, aucune action utilisateur requise
+- **Multiple critical errors** : Comprehensive fixes for v0.2.3
+  - **Missing DOMAIN imports** : Added `from .const import DOMAIN` in switch.py and binary_sensor.py
+    - Resolves: `NameError: name 'DOMAIN' is not defined`
+  - **Deprecated warning** : Removed explicit config_entry assignment in OptionsFlow
+    - Compatible with Home Assistant 2025.12
+  - **"Entity None" in forms** : Multiple fixes
+    - Extended migration: Cleanup of door_window_sensors and lights (in addition to temperature_sensor, humidity_sensor, climate_entity, climate_bypass_switch)
+    - Fixed `.get(field, [])` to `.get(field) or []` in 7 locations (config_flow.py, light_control.py, room_manager.py)
+    - Conditional form schemas to avoid None as default value
+  - Completely resolves "Entity None is neither a valid entity ID nor a valid UUID" error
+  - Transparent migration on startup, no user action required
 
 ## [0.2.2] - 2025-01-14
 
 ### Improved
-- **Configuration optionnelle** : Les champs température/humidité et autres capteurs/actionneurs ne sont plus sauvegardés avec une valeur `None` lorsqu'ils ne sont pas configurés
-  - Seuls les champs réellement configurés sont enregistrés dans la configuration
-  - Configuration plus propre et minimale possible
-  - Compatible avec des pièces minimalistes (juste un nom) jusqu'à des pièces ultra-équipées
+- **Optional configuration** : Temperature/humidity sensors and other actuators are no longer saved with `None` value when not configured
+  - Only actually configured fields are stored in the configuration
+  - Cleaner and more minimal configuration possible
+  - Compatible with minimalist rooms (just a name) to fully-equipped rooms
 
 ## [0.2.1] - 2025-01-14
 
@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Added
 - **Room types** system:
   - Normal (bedrooms): No light timer
-  - Corridor: 5-minute auto-off timer (configurable)
+  - Corridor: 5-minute auto-off timer (configurable 60-1800s)
   - Bathroom: 15-minute timer + light controls heating (ON=comfort, OFF=eco)
 - **Generic bypass switch** : Single switch to disable climate control (Solar Optimizer, manual, etc.)
 - **Summer/winter mode** : Separate cool/heat temperatures with calendar-based season detection
