@@ -1,4 +1,5 @@
 """Config flow for Smart Room Manager integration (v0.2.0)."""
+
 from __future__ import annotations
 
 import logging
@@ -154,7 +155,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         if not rooms:
             return self.async_show_form(
                 step_id="list_rooms",
-                description_placeholders={"rooms": "Aucune pièce configurée. Retournez au menu pour ajouter une pièce."},
+                description_placeholders={
+                    "rooms": "Aucune pièce configurée. Retournez au menu pour ajouter une pièce."
+                },
             )
 
         if user_input is not None:
@@ -217,11 +220,15 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                             ROOM_TYPE_BATHROOM: "Salle de bain (timer 15min + lumière pilote chauffage)",
                         }
                     ),
-                    vol.Optional(CONF_ROOM_ICON, default="mdi:home"): selector.IconSelector(),
+                    vol.Optional(
+                        CONF_ROOM_ICON, default="mdi:home"
+                    ): selector.IconSelector(),
                 }
             ),
             errors=errors,
-            description_placeholders={"info": "Type normal: pas de timer. Couloir/SdB: timer auto-off."},
+            description_placeholders={
+                "info": "Type normal: pas de timer. Couloir/SdB: timer auto-off."
+            },
         )
 
     async def async_step_edit_room_basic(
@@ -250,7 +257,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     ): cv.string,
                     vol.Optional(
                         CONF_ROOM_TYPE,
-                        default=self._current_room.get(CONF_ROOM_TYPE, ROOM_TYPE_NORMAL),
+                        default=self._current_room.get(
+                            CONF_ROOM_TYPE, ROOM_TYPE_NORMAL
+                        ),
                     ): vol.In(
                         {
                             ROOM_TYPE_NORMAL: "Normal (chambres)",
@@ -279,7 +288,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
             # Add optional sensors only if they are configured
             if user_input.get(CONF_TEMPERATURE_SENSOR):
-                update_data[CONF_TEMPERATURE_SENSOR] = user_input.get(CONF_TEMPERATURE_SENSOR)
+                update_data[CONF_TEMPERATURE_SENSOR] = user_input.get(
+                    CONF_TEMPERATURE_SENSOR
+                )
 
             if user_input.get(CONF_HUMIDITY_SENSOR):
                 update_data[CONF_HUMIDITY_SENSOR] = user_input.get(CONF_HUMIDITY_SENSOR)
@@ -292,10 +303,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         # Door/window sensors (always show, default to empty list)
         # Use 'or []' to handle None values (dict.get returns None if value is None)
-        schema_dict[vol.Optional(
-            CONF_DOOR_WINDOW_SENSORS,
-            default=self._current_room.get(CONF_DOOR_WINDOW_SENSORS) or [],
-        )] = selector.EntitySelector(
+        schema_dict[
+            vol.Optional(
+                CONF_DOOR_WINDOW_SENSORS,
+                default=self._current_room.get(CONF_DOOR_WINDOW_SENSORS) or [],
+            )
+        ] = selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[BINARY_SENSOR_DOMAIN],
                 multiple=True,
@@ -305,19 +318,25 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         # Temperature sensor (only set default if it exists and is not None)
         temp_sensor = self._current_room.get(CONF_TEMPERATURE_SENSOR)
         if temp_sensor is not None:
-            schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR, default=temp_sensor)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR, default=temp_sensor)] = (
+                selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+                )
             )
         else:
-            schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = (
+                selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+                )
             )
 
         # Humidity sensor (only set default if it exists and is not None)
         humidity_sensor = self._current_room.get(CONF_HUMIDITY_SENSOR)
         if humidity_sensor is not None:
-            schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR, default=humidity_sensor)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR, default=humidity_sensor)] = (
+                selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+                )
             )
         else:
             schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR)] = selector.EntitySelector(
@@ -349,7 +368,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
             # Add optional bypass switch only if configured
             if user_input.get(CONF_CLIMATE_BYPASS_SWITCH):
-                update_data[CONF_CLIMATE_BYPASS_SWITCH] = user_input.get(CONF_CLIMATE_BYPASS_SWITCH)
+                update_data[CONF_CLIMATE_BYPASS_SWITCH] = user_input.get(
+                    CONF_CLIMATE_BYPASS_SWITCH
+                )
 
             self._current_room.update(update_data)
             return await self.async_step_room_light_config()
@@ -359,10 +380,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         # Lights (always show, default to empty list)
         # Use 'or []' to handle None values (dict.get returns None if value is None)
-        schema_dict[vol.Optional(
-            CONF_LIGHTS,
-            default=self._current_room.get(CONF_LIGHTS) or [],
-        )] = selector.EntitySelector(
+        schema_dict[
+            vol.Optional(
+                CONF_LIGHTS,
+                default=self._current_room.get(CONF_LIGHTS) or [],
+            )
+        ] = selector.EntitySelector(
             selector.EntitySelectorConfig(
                 domain=[LIGHT_DOMAIN, SWITCH_DOMAIN],
                 multiple=True,
@@ -372,8 +395,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         # Climate entity (only set default if it exists and is not None)
         climate_entity = self._current_room.get(CONF_CLIMATE_ENTITY)
         if climate_entity is not None:
-            schema_dict[vol.Optional(CONF_CLIMATE_ENTITY, default=climate_entity)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
+            schema_dict[vol.Optional(CONF_CLIMATE_ENTITY, default=climate_entity)] = (
+                selector.EntitySelector(
+                    selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
+                )
             )
         else:
             schema_dict[vol.Optional(CONF_CLIMATE_ENTITY)] = selector.EntitySelector(
@@ -383,12 +408,18 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         # Bypass switch (only set default if it exists and is not None)
         bypass_switch = self._current_room.get(CONF_CLIMATE_BYPASS_SWITCH)
         if bypass_switch is not None:
-            schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH, default=bypass_switch)] = selector.EntitySelector(
+            schema_dict[
+                vol.Optional(CONF_CLIMATE_BYPASS_SWITCH, default=bypass_switch)
+            ] = selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
             )
         else:
-            schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+            schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = (
+                selector.EntitySelector(
+                    selector.EntitySelectorConfig(
+                        domain=[SWITCH_DOMAIN, "input_boolean"]
+                    )
+                )
             )
 
         return self.async_show_form(
@@ -409,7 +440,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             # Only save timeout if room type uses timer (corridor, bathroom)
             if room_type in [ROOM_TYPE_CORRIDOR, ROOM_TYPE_BATHROOM]:
-                self._current_room[CONF_LIGHT_TIMEOUT] = user_input.get(CONF_LIGHT_TIMEOUT)
+                self._current_room[CONF_LIGHT_TIMEOUT] = user_input.get(
+                    CONF_LIGHT_TIMEOUT
+                )
             return await self.async_step_room_climate_config()
 
         # Show timeout config only for corridor/bathroom
@@ -425,7 +458,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     {
                         vol.Optional(
                             CONF_LIGHT_TIMEOUT,
-                            default=self._current_room.get(CONF_LIGHT_TIMEOUT, default_timeout),
+                            default=self._current_room.get(
+                                CONF_LIGHT_TIMEOUT, default_timeout
+                            ),
                         ): selector.NumberSelector(
                             selector.NumberSelectorConfig(
                                 min=60,
@@ -453,9 +488,13 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             self._current_room.update(
                 {
-                    CONF_TEMP_COMFORT: user_input.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT),
+                    CONF_TEMP_COMFORT: user_input.get(
+                        CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
+                    ),
                     CONF_TEMP_ECO: user_input.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO),
-                    CONF_TEMP_NIGHT: user_input.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT),
+                    CONF_TEMP_NIGHT: user_input.get(
+                        CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT
+                    ),
                     CONF_TEMP_FROST_PROTECTION: user_input.get(
                         CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
                     ),
@@ -478,7 +517,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_TEMP_COMFORT,
-                        default=self._current_room.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT),
+                        default=self._current_room.get(
+                            CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
+                        ),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=15,
@@ -502,7 +543,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     ),
                     vol.Optional(
                         CONF_TEMP_NIGHT,
-                        default=self._current_room.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT),
+                        default=self._current_room.get(
+                            CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT
+                        ),
                     ): selector.NumberSelector(
                         selector.NumberSelectorConfig(
                             min=15,
@@ -587,10 +630,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     if "-" in range_str:
                         try:
                             start, end = range_str.split("-")
-                            comfort_ranges.append({
-                                "start": start.strip(),
-                                "end": end.strip(),
-                            })
+                            comfort_ranges.append(
+                                {
+                                    "start": start.strip(),
+                                    "end": end.strip(),
+                                }
+                            )
                         except Exception:
                             _LOGGER.warning("Invalid time range format: %s", range_str)
 
@@ -616,7 +661,11 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         # Format existing comfort ranges for display
         comfort_ranges = self._current_room.get(CONF_COMFORT_TIME_RANGES, [])
         comfort_ranges_text = ",".join(
-            [f"{r['start']}-{r['end']}" for r in comfort_ranges if r.get("start") and r.get("end")]
+            [
+                f"{r['start']}-{r['end']}"
+                for r in comfort_ranges
+                if r.get("start") and r.get("end")
+            ]
         )
 
         return self.async_show_form(
@@ -625,7 +674,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 {
                     vol.Optional(
                         CONF_NIGHT_START,
-                        default=self._current_room.get(CONF_NIGHT_START, DEFAULT_NIGHT_START),
+                        default=self._current_room.get(
+                            CONF_NIGHT_START, DEFAULT_NIGHT_START
+                        ),
                     ): selector.TimeSelector(),
                     vol.Optional(
                         "comfort_ranges",
