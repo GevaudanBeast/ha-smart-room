@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2025-11-16
+
+### Added
+- MIT License file
+- Badges to README (Version, License, Home Assistant compatibility, HACS)
+
+### Changed
+- Version bump to 0.2.4
+- Improved documentation
+
 ## [0.2.3] - 2025-01-14
 
 ### Fixed
