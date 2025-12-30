@@ -97,6 +97,13 @@ CONF_COMFORT_TIME_RANGES: Final = (
 CONF_ALARM_ENTITY: Final = "alarm_entity"
 CONF_SEASON_CALENDAR: Final = "season_calendar"
 
+# X4FP preset modes (IPX800 fil pilote)
+# Real preset names from IPX800: comfort, eco, away, none
+X4FP_PRESET_COMFORT: Final = "comfort"
+X4FP_PRESET_ECO: Final = "eco"
+X4FP_PRESET_AWAY: Final = "away"  # Hors-gel/frost protection mode
+X4FP_PRESET_OFF: Final = "none"
+
 # Default values - Heating
 DEFAULT_TEMP_COMFORT: Final = 20.0
 DEFAULT_TEMP_ECO: Final = 18.0
@@ -225,13 +232,6 @@ HYSTERESIS_DEADBAND: Final = "deadband"
 # Climate types
 CLIMATE_TYPE_X4FP: Final = "x4fp"
 CLIMATE_TYPE_THERMOSTAT: Final = "thermostat"
-
-# X4FP preset modes (IPX800 fil pilote)
-# Real preset names from IPX800: comfort, eco, away, none
-X4FP_PRESET_COMFORT: Final = "comfort"
-X4FP_PRESET_ECO: Final = "eco"
-X4FP_PRESET_AWAY: Final = "away"  # Hors-gel/frost protection mode
-X4FP_PRESET_OFF: Final = "none"
 
 # Alarm states
 ALARM_STATE_DISARMED: Final = "disarmed"
