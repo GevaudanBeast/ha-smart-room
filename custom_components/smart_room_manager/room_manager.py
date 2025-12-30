@@ -27,6 +27,10 @@ from .const import (
     ROOM_TYPE_BATHROOM,
     TIME_PERIOD_DAY,
     TIME_PERIOD_NIGHT,
+    # v0.3.0 additions
+    CONF_SCHEDULE_ENTITY,
+    CONF_PRESET_SCHEDULE_ON,
+    CONF_PRESET_SCHEDULE_OFF,
 )
 from .climate_control import ClimateController
 from .light_control import LightController
@@ -257,6 +261,40 @@ class RoomManager:
             "enabled" if enabled else "disabled",
         )
 
+    def is_paused(self) -> bool:
+        """Check if manual pause is active (v0.3.0)."""
+        # Get pause switch state from HA
+        pause_switch_id = f"switch.smart_room_{self.room_id}_pause"
+        pause_state = self.hass.states.get(pause_switch_id)
+        return pause_state and pause_state.state == STATE_ON
+
+    def get_schedule_mode(self) -> str | None:
+        """Get mode from schedule calendar (v0.3.0).
+
+        Returns:
+            MODE_COMFORT if event active and preset_schedule_on is comfort
+            MODE_ECO if no event and preset_schedule_off is eco
+            None if no schedule configured
+        """
+        schedule_entity = self.room_config.get(CONF_SCHEDULE_ENTITY)
+        if not schedule_entity:
+            return None
+
+        # Check if calendar entity exists
+        calendar_state = self.hass.states.get(schedule_entity)
+        if not calendar_state:
+            return None
+
+        # Get presets for on/off states
+        preset_on = self.room_config.get(CONF_PRESET_SCHEDULE_ON, MODE_COMFORT)
+        preset_off = self.room_config.get(CONF_PRESET_SCHEDULE_OFF, MODE_ECO)
+
+        # Calendar state ON = event active
+        if calendar_state.state == STATE_ON:
+            return preset_on
+        else:
+            return preset_off
+
     def get_state(self) -> dict[str, Any]:
         """Get current room state."""
         # Get alarm state for state reporting
@@ -288,6 +326,10 @@ class RoomManager:
         # Lights are manual or via external automation
         light_state_data["should_be_on"] = False
 
+        # v0.3.0: Get schedule and pause status
+        schedule_active = self.get_schedule_mode() is not None
+        pause_active = self.is_paused()
+
         return {
             "room_id": self.room_id,
             "room_name": self.room_name,
@@ -302,6 +344,9 @@ class RoomManager:
             "automation_enabled": self._automation_enabled,
             "light_state": light_state_data,
             "climate_state": self.climate_controller.get_state(),
+            # v0.3.0 additions
+            "schedule_active": schedule_active,
+            "pause_active": pause_active,
         }
 
     async def async_shutdown(self) -> None:
