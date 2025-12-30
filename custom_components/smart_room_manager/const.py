@@ -4,7 +4,7 @@ from typing import Final
 
 # Integration domain
 DOMAIN: Final = "smart_room_manager"
-VERSION: Final = "0.2.3"
+VERSION: Final = "0.3.0"
 
 # Configuration and options
 CONF_ROOMS: Final = "rooms"
@@ -29,6 +29,29 @@ CONF_HUMIDITY_SENSOR: Final = "humidity_sensor"
 CONF_LIGHTS: Final = "lights"
 CONF_CLIMATE_ENTITY: Final = "climate_entity"
 CONF_CLIMATE_BYPASS_SWITCH: Final = "climate_bypass_switch"
+
+# X4FP Hysteresis configuration (Type 3b)
+CONF_SETPOINT_INPUT: Final = "setpoint_input"  # input_number entity for setpoint
+CONF_HYSTERESIS: Final = "hysteresis"  # Hysteresis value in °C
+CONF_MIN_SETPOINT: Final = "min_setpoint"  # Minimum temperature setpoint
+CONF_MAX_SETPOINT: Final = "max_setpoint"  # Maximum temperature setpoint
+CONF_PRESET_HEAT: Final = "preset_heat"  # Preset when heating needed
+CONF_PRESET_IDLE: Final = "preset_idle"  # Preset when temperature OK
+
+# External Control configuration (Solar Optimizer, etc.)
+CONF_EXTERNAL_CONTROL_SWITCH: Final = "external_control_switch"  # Switch/binary_sensor
+CONF_EXTERNAL_CONTROL_PRESET: Final = "external_control_preset"  # X4FP preset
+CONF_EXTERNAL_CONTROL_TEMP: Final = "external_control_temp"  # Thermostat temperature
+CONF_ALLOW_EXTERNAL_IN_AWAY: Final = "allow_external_in_away"  # Boolean
+
+# Schedule/Calendar configuration
+CONF_SCHEDULE_ENTITY: Final = "schedule_entity"  # calendar entity
+CONF_PRESET_SCHEDULE_ON: Final = "preset_schedule_on"  # Mode when event active
+CONF_PRESET_SCHEDULE_OFF: Final = "preset_schedule_off"  # Mode when no event
+
+# Manual Pause configuration
+CONF_PAUSE_DURATION_MINUTES: Final = "pause_duration_minutes"  # 15, 30, 60, 120, 240, 480
+CONF_PAUSE_INFINITE: Final = "pause_infinite"  # Boolean
 
 # Light behavior configuration
 CONF_LIGHT_TIMEOUT: Final = "light_timeout"
@@ -76,11 +99,34 @@ DEFAULT_LIGHT_DAY_BRIGHTNESS: Final = 100
 # Default values - Schedule
 DEFAULT_NIGHT_START: Final = "22:00:00"
 
+# Default values - Hysteresis
+DEFAULT_HYSTERESIS: Final = 0.5  # °C
+DEFAULT_MIN_SETPOINT: Final = 17.0  # °C
+DEFAULT_MAX_SETPOINT: Final = 23.0  # °C
+DEFAULT_PRESET_HEAT: Final = X4FP_PRESET_COMFORT
+DEFAULT_PRESET_IDLE: Final = X4FP_PRESET_ECO
+
+# Default values - External Control
+DEFAULT_EXTERNAL_CONTROL_PRESET: Final = X4FP_PRESET_COMFORT
+DEFAULT_EXTERNAL_CONTROL_TEMP: Final = 20.0  # °C
+DEFAULT_ALLOW_EXTERNAL_IN_AWAY: Final = False
+
+# Default values - Manual Pause
+DEFAULT_PAUSE_DURATION: Final = 30  # minutes
+DEFAULT_PAUSE_INFINITE: Final = False
+
 # Entity ID formats
 SENSOR_FORMAT: Final = "sensor.smart_room_{room_id}_state"
 BINARY_SENSOR_NIGHT_FORMAT: Final = "binary_sensor.smart_room_{room_id}_night"
 BINARY_SENSOR_BYPASS_FORMAT: Final = "binary_sensor.smart_room_{room_id}_climate_bypass"
 SWITCH_AUTOMATION_FORMAT: Final = "switch.smart_room_{room_id}_automation"
+SWITCH_PAUSE_FORMAT: Final = "switch.smart_room_{room_id}_pause"
+
+# Debug sensor formats
+SENSOR_PRIORITY_FORMAT: Final = "sensor.smart_room_{room_id}_current_priority"
+BINARY_SENSOR_EXTERNAL_CONTROL_FORMAT: Final = "binary_sensor.smart_room_{room_id}_external_control_active"
+SENSOR_HYSTERESIS_FORMAT: Final = "sensor.smart_room_{room_id}_hysteresis_state"
+BINARY_SENSOR_SCHEDULE_FORMAT: Final = "binary_sensor.smart_room_{room_id}_schedule_active"
 
 # Attributes
 ATTR_ROOM_ID: Final = "room_id"
@@ -105,6 +151,14 @@ ATTR_TEMPERATURE: Final = "temperature"
 ATTR_HUMIDITY: Final = "humidity"
 ATTR_LUMINOSITY: Final = "luminosity"
 ATTR_OCCUPIED: Final = "occupied"
+# Debug attributes (v0.3.0)
+ATTR_CURRENT_PRIORITY: Final = "current_priority"
+ATTR_EXTERNAL_CONTROL_ACTIVE: Final = "external_control_active"
+ATTR_HYSTERESIS_STATE: Final = "hysteresis_state"
+ATTR_SCHEDULE_ACTIVE: Final = "schedule_active"
+ATTR_PAUSE_ACTIVE: Final = "pause_active"
+ATTR_PAUSE_UNTIL: Final = "pause_until"
+ATTR_REMAINING_MINUTES: Final = "remaining_minutes"
 
 # Update intervals
 UPDATE_INTERVAL: Final = 30  # seconds
@@ -118,6 +172,20 @@ MODE_COMFORT: Final = "comfort"
 MODE_ECO: Final = "eco"
 MODE_NIGHT: Final = "night"
 MODE_FROST_PROTECTION: Final = "frost_protection"
+
+# Priority states (for debug sensor)
+PRIORITY_PAUSED: Final = "paused"
+PRIORITY_BYPASS: Final = "bypass"
+PRIORITY_WINDOWS_OPEN: Final = "windows_open"
+PRIORITY_EXTERNAL_CONTROL: Final = "external_control"
+PRIORITY_AWAY: Final = "away"
+PRIORITY_SCHEDULE: Final = "schedule"
+PRIORITY_NORMAL: Final = "normal"
+
+# Hysteresis states (for debug sensor)
+HYSTERESIS_HEATING: Final = "heating"
+HYSTERESIS_IDLE: Final = "idle"
+HYSTERESIS_DEADBAND: Final = "deadband"
 
 # Climate types
 CLIMATE_TYPE_X4FP: Final = "x4fp"
