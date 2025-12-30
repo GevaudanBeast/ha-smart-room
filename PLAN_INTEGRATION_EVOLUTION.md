@@ -513,117 +513,154 @@ def detect_climate_type(hass, climate_entity: str) -> dict:
     }
 ```
 
-**5. Interface Wizard**
+**5. Interface Wizard** (Détection SANS auto-validation)
 ```yaml
-┌─ Smart Room Manager - Configuration Wizard ──────────────┐
+┌─ Smart Room Manager - Configuration Assistée ────────────┐
 │                                                           │
-│ 🏠 Détection automatique des zones                       │
+│ 🏠 Détection des zones Home Assistant                    │
 │                                                           │
-│ J'ai trouvé 12 zones configurées dans Home Assistant :   │
+│ J'ai trouvé 12 zones configurées. Cochez celles que      │
+│ vous souhaitez configurer (vous vérifierez ensuite) :    │
 │                                                           │
-│ ☑️ Salon                        [Détails ▼]              │
-│    └─ Type: Normal                                        │
-│    └─ Chauffage: climate.salon_poele (Thermostat)        │
+│ ☐ Salon                         [Détails ▼]              │
+│    └─ Type proposé: Normal                                │
+│    └─ Chauffage détecté: climate.salon_poele             │
 │    └─ Lumières: 3 détectées                              │
 │    └─ Fenêtres: 4 capteurs détectés                      │
 │                                                           │
-│ ☑️ Chambre d'amis               [Détails ▼]              │
-│    └─ Type: Normal                                        │
-│    └─ Chauffage: climate.x4fp_fp_1 (X4FP)                │
+│ ☐ Chambre d'amis                [Détails ▼]              │
+│    └─ Type proposé: Normal                                │
+│    └─ Chauffage détecté: climate.x4fp_fp_1 (X4FP)        │
 │    └─ Température: sensor.temperature_chambre_d_amis     │
 │    └─ Fenêtres: 2 capteurs détectés                      │
 │                                                           │
-│ ☑️ Salle de bain                [Détails ▼]              │
-│    └─ Type: Bathroom (auto-détecté)                      │
-│    └─ Chauffage: climate.x4fp_fp_4 (X4FP)                │
+│ ☐ Salle de bain                 [Détails ▼]              │
+│    └─ Type proposé: Bathroom                              │
+│    └─ Chauffage détecté: climate.x4fp_fp_4 (X4FP)        │
 │    └─ Lumière confort: light.x8r_ndeg1_relais_6          │
 │                                                           │
-│ ☐ Grenier                       [Non géré]               │
+│ ☐ Grenier                       [Détails ▼]              │
+│    └─ Aucun chauffage détecté                             │
 │                                                           │
-│ [Tout sélectionner] [Tout désélectionner]                │
+│ ⚠️ Rien n'est configuré automatiquement. Vous            │
+│    devrez vérifier chaque pièce à l'étape suivante.      │
+│                                                           │
+│ [Tout cocher] [Tout décocher]                            │
 │                                                           │
 │ ┌──────────────────────────────────────────────────────┐ │
-│ │ ⚙️ Options globales                                  │ │
+│ │ ⚙️ Options globales (optionnel)                      │ │
 │ │                                                       │ │
-│ │ Alarme: [alarm_control_panel.maison            ▼]    │ │
-│ │ Calendrier été/hiver: [calendar.ete_hiver      ▼]    │ │
+│ │ Alarme: [Aucun                                 ▼]    │ │
+│ │ Calendrier été/hiver: [Aucun                   ▼]    │ │
 │ │                                                       │ │
 │ └──────────────────────────────────────────────────────┘ │
 │                                                           │
-│            [Précédent]  [Valider et Configurer]          │
+│      [Annuler]  [Suivant : Vérifier les pièces]          │
 │                                                           │
 └───────────────────────────────────────────────────────────┘
 ```
 
-**6. Écran de Validation par Pièce**
+**6. Écran de Vérification par Pièce** (L'utilisateur DOIT vérifier)
 ```yaml
-┌─ Configuration : Salon ───────────────────────────────────┐
+┌─ Vérification : Salon (Pièce 1/3) ────────────────────────┐
+│                                                           │
+│ ⚠️ Configuration PROPOSÉE - Vérifiez tous les champs     │
 │                                                           │
 │ 📋 Informations de base                                  │
 │    Nom: [Salon                                      ]    │
+│         └─ ✏️ Modifiable                                 │
 │    Type: [Normal                                 ▼]    │
+│         └─ 💡 Normal / Corridor / Bathroom               │
 │    Icône: [mdi:sofa                               ]    │
+│         └─ ✏️ Optionnel                                  │
 │                                                           │
 │ 🌡️ Chauffage                                             │
 │    Entité: [climate.salon_poele                  ▼]    │
-│    Type détecté: Thermostat (heat only)                  │
+│           └─ 🔍 Type détecté: Thermostat (heat only)     │
+│    💡 Vous pouvez changer l'entité si détection fausse   │
 │                                                           │
-│    ☑️ Températures                                        │
+│    Températures (vérifiez les valeurs) :                 │
 │       Confort: [20°C]  Eco: [18°C]  Nuit: [17°C]         │
 │       Hors-gel: [12°C]                                    │
 │                                                           │
-│ 🪟 Fenêtres/Portes                                       │
+│ 🪟 Fenêtres/Portes (vérifiez la sélection)              │
 │    [✓] binary_sensor.x24d_10_fenetre_cuisine             │
 │    [✓] binary_sensor.x24d_09_baie_vitree_cuisine         │
 │    [✓] binary_sensor.x24d_08_baie_vitree_2m_salon        │
 │    [✓] binary_sensor.x24d_07_baie_vitree_3m_salon        │
+│    💡 Décochez si erreur de détection                    │
 │                                                           │
 │ 🔌 Contrôle Externe (optionnel)                          │
 │    Switch: [Aucun                                 ▼]    │
 │    💡 Ex: Solar Optimizer, tarif dynamique               │
 │                                                           │
-│ ⏰ Plages Horaires                                        │
+│ ⏰ Plages Horaires (modifiables)                         │
 │    Début nuit: [22:00]                                    │
 │    Plages confort: [07:00-09:00,18:00-22:00       ]    │
 │                                                           │
-│         [Ignorer cette pièce]  [Valider]  [Suivant]      │
+│ ┌─────────────────────────────────────────────────────┐  │
+│ │ ⚠️ IMPORTANT : Cette configuration est une          │  │
+│ │    PROPOSITION basée sur la détection automatique.  │  │
+│ │    Vérifiez TOUS les champs avant de valider !      │  │
+│ └─────────────────────────────────────────────────────┘  │
+│                                                           │
+│   [Ignorer cette pièce]  [Valider et Suivant]            │
 │                                                           │
 └───────────────────────────────────────────────────────────┘
 ```
 
-**7. Flow du Wizard**
+**7. Flow du Wizard** (SANS auto-validation)
 ```
 Étape 1: Choix mode
-  ├─ "Configuration automatique (recommandé)"
-  └─ "Configuration manuelle"
+  ├─ "Configuration assistée (recommandé)" - détecte et propose
+  └─ "Configuration manuelle" - saisie complète
 
-Étape 2: Détection zones (si auto)
-  ├─ Scan toutes les areas HA
+Étape 2: Détection zones (si assistée)
+  ├─ Scan toutes les areas HA (2 sec)
   ├─ Scan entités par area
   ├─ Détection types
-  └─ Affichage liste avec checkboxes
+  └─ Affichage liste avec checkboxes (TOUTES DÉCOCHÉES par défaut)
+      💡 L'utilisateur coche manuellement ce qu'il veut configurer
 
 Étape 3: Configuration globale
-  ├─ Alarme
-  └─ Calendrier été/hiver
+  ├─ Alarme (optionnel)
+  └─ Calendrier été/hiver (optionnel)
 
-Étape 4: Validation par pièce (pour chaque cochée)
-  ├─ Afficher config détectée
-  ├─ Permettre modification
-  └─ Valider et passer à la suivante
+Étape 4: Validation MANUELLE par pièce (pour CHAQUE cochée)
+  ├─ Afficher config PROPOSÉE (pas validée)
+  ├─ L'utilisateur DOIT vérifier chaque champ
+  ├─ L'utilisateur peut modifier tout ce qu'il veut
+  ├─ Boutons : [Ignorer] [Valider] [Suivant]
+  └─ ⚠️ Aucune validation automatique, tout est proposition
 
 Étape 5: Résumé
-  ├─ 8 pièces configurées
-  ├─ 12 entités climate gérées
+  ├─ X pièces configurées (celles validées par l'utilisateur)
+  ├─ Y entités climate gérées
   └─ [Terminer]
+
+POST-INSTALLATION:
+  ├─ Via "Options" : Ajouter d'autres pièces
+  ├─ Via "Options" : Modifier pièces existantes
+  └─ Via "Options" : Supprimer pièces
 ```
 
+**Important** : Le wizard est une **assistance**, pas une auto-configuration. L'utilisateur garde le contrôle total.
+
+**Principes Importants** :
+- ⚠️ **JAMAIS d'auto-validation** : Le wizard détecte et propose, l'utilisateur DOIT valider
+- ✅ Chaque pièce doit être vérifiée manuellement
+- ✅ L'utilisateur peut tout modifier (entités, températures, types)
+- ✅ L'utilisateur peut ignorer des pièces détectées
+- ✅ Configuration modifiable après coup (via options)
+- ✅ Ajout de pièces ultérieur possible
+
 **Avantages** :
-- ✅ Configuration ultra-rapide (5 min au lieu de 30 min)
+- ✅ Configuration facilitée (5 min au lieu de 30 min)
 - ✅ Pas d'erreur de saisie (entités déjà existantes)
-- ✅ Détection intelligente des types
-- ✅ Utilisateur peut tout modifier
+- ✅ Détection intelligente des types (mais utilisateur valide)
+- ✅ Contrôle total de l'utilisateur
 - ✅ Fallback mode manuel si besoin
+- ✅ Non intrusif (proposition, pas imposition)
 
 #### 3.2 - Type "VMC"
 **Pour ventilation automatique**
@@ -813,8 +850,9 @@ class ClimateController:
 2. 🔵 Wizard installation intelligent (3h)
    - Détection zones HA (areas)
    - Scan entités par zone
-   - Pré-remplissage configuration
-   - Interface validation/modification
+   - Pré-remplissage configuration (PROPOSITION)
+   - Interface vérification/modification obligatoire
+   - Ajout/modification ultérieure via Options
 3. 🔵 Documentation (1h)
 
 **Total estimé : 13-18h**
