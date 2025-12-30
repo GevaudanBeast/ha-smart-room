@@ -34,6 +34,9 @@ async def async_setup_entry(
             [
                 SmartRoomOccupiedSensor(coordinator, room_manager.room_id),
                 SmartRoomLightNeededSensor(coordinator, room_manager.room_id),
+                # v0.3.0 debug sensors
+                SmartRoomExternalControlActiveSensor(coordinator, room_manager.room_id),
+                SmartRoomScheduleActiveSensor(coordinator, room_manager.room_id),
             ]
         )
 
@@ -93,6 +96,81 @@ class SmartRoomLightNeededSensor(SmartRoomEntity, BinarySensorEntity):
             light_state = room_data.get("light_state", {})
             return light_state.get("should_be_on", False)
         return None
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+
+class SmartRoomExternalControlActiveSensor(SmartRoomEntity, BinarySensorEntity):
+    """Binary sensor indicating if external control is active (v0.3.0 debug)."""
+
+    def __init__(self, coordinator: SmartRoomCoordinator, room_id: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, room_id)
+
+        room_manager = coordinator.get_room_manager(room_id)
+        if room_manager:
+            room_name = room_manager.room_name
+            self._attr_name = f"{room_name} External Control Active"
+            self._attr_unique_id = f"smart_room_{room_id}_external_control_active"
+            self._attr_icon = "mdi:solar-power"
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if external control is active."""
+        if self.coordinator.data and self._room_id in self.coordinator.data:
+            room_data = self.coordinator.data[self._room_id]
+            climate_state = room_data.get("climate_state", {})
+            return climate_state.get("external_control_active", False)
+        return False
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        return {
+            "description": "Contrôle externe actif (Solar Optimizer, tarif dynamique, etc.)"
+            if self.is_on
+            else "Aucun contrôle externe actif"
+        }
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+
+class SmartRoomScheduleActiveSensor(SmartRoomEntity, BinarySensorEntity):
+    """Binary sensor indicating if schedule/calendar is active (v0.3.0 debug)."""
+
+    def __init__(self, coordinator: SmartRoomCoordinator, room_id: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, room_id)
+
+        room_manager = coordinator.get_room_manager(room_id)
+        if room_manager:
+            room_name = room_manager.room_name
+            self._attr_name = f"{room_name} Schedule Active"
+            self._attr_unique_id = f"smart_room_{room_id}_schedule_active"
+            self._attr_icon = "mdi:calendar-clock"
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if schedule is configured and active."""
+        if self.coordinator.data and self._room_id in self.coordinator.data:
+            room_data = self.coordinator.data[self._room_id]
+            return room_data.get("schedule_active", False)
+        return False
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        return {
+            "description": "Planning/calendrier contrôle le chauffage"
+            if self.is_on
+            else "Pas de calendrier configuré ou actif"
+        }
 
     @callback
     def _handle_coordinator_update(self) -> None:
