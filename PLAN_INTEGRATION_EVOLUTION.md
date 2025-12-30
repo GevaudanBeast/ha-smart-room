@@ -396,16 +396,239 @@ CONF_TICK_MINUTES = "tick_minutes"  # 0, 5, 10, 15 (0 = disabled)
 
 ### Priority 3 : BONUS (wizard, extensions)
 
-#### 3.1 - Wizard d'Installation FR/EN
-**Fichiers** : `config_flow.py`, `translations/`
+#### 3.1 - Wizard d'Installation Intelligent ⭐⭐⭐
+**Fichiers** : `config_flow.py`, `translations/fr.json`, `translations/en.json`
 
-#### 3.2 - Détection Automatique Entités
-**Lors de l'ajout** : proposer toutes les entités détectées
+**Concept** : Détecter les zones HA existantes et pré-remplir la configuration
 
-#### 3.3 - Type "VMC"
+**Fonctionnalités** :
+
+**1. Détection Zones (Areas)**
+```python
+from homeassistant.helpers import area_registry as ar
+
+async def detect_existing_areas(hass):
+    """Détecte toutes les zones configurées dans HA."""
+    area_registry = ar.async_get(hass)
+    areas = area_registry.async_list_areas()
+
+    return [
+        {
+            "area_id": area.id,
+            "name": area.name,  # "Salon", "Cuisine", etc.
+            "aliases": area.aliases,
+        }
+        for area in areas
+    ]
+```
+
+**2. Scan Entités par Zone**
+```python
+from homeassistant.helpers import entity_registry as er, device_registry as dr
+
+async def scan_area_entities(hass, area_id):
+    """Scan entités dans une zone."""
+    entity_reg = er.async_get(hass)
+    device_reg = dr.async_get(hass)
+
+    # Trouver tous les devices dans cette area
+    devices = dr.async_entries_for_area(device_reg, area_id)
+    device_ids = {device.id for device in devices}
+
+    # Trouver toutes les entités de ces devices
+    entities = {
+        "climate": [],
+        "lights": [],
+        "window_sensors": [],
+        "temperature_sensors": [],
+        "humidity_sensors": [],
+    }
+
+    for entity in entity_reg.entities.values():
+        if entity.device_id in device_ids or entity.area_id == area_id:
+            # Climate entities
+            if entity.domain == "climate":
+                entities["climate"].append(entity.entity_id)
+
+            # Light entities
+            elif entity.domain in ["light", "switch"]:
+                if "light" in entity.entity_id or "lumiere" in entity.entity_id:
+                    entities["lights"].append(entity.entity_id)
+
+            # Binary sensors (windows, doors)
+            elif entity.domain == "binary_sensor":
+                if any(x in entity.entity_id.lower() for x in ["fenetre", "window", "porte", "door", "baie"]):
+                    entities["window_sensors"].append(entity.entity_id)
+
+            # Temperature sensors
+            elif entity.domain == "sensor":
+                if entity.original_device_class == "temperature":
+                    entities["temperature_sensors"].append(entity.entity_id)
+                elif entity.original_device_class == "humidity":
+                    entities["humidity_sensors"].append(entity.entity_id)
+
+    return entities
+```
+
+**3. Détection Type de Pièce**
+```python
+def detect_room_type(area_name: str, entities: dict) -> str:
+    """Devine le type de pièce selon le nom."""
+    area_lower = area_name.lower()
+
+    # Bathroom detection
+    if any(x in area_lower for x in ["bain", "bath", "sdb", "douche", "shower", "wc", "toilette"]):
+        return "bathroom"
+
+    # Corridor detection
+    if any(x in area_lower for x in ["couloir", "corridor", "hall", "entree", "entry", "passage"]):
+        return "corridor"
+
+    # Normal room (default)
+    return "normal"
+```
+
+**4. Détection Type de Chauffage**
+```python
+def detect_climate_type(hass, climate_entity: str) -> dict:
+    """Détecte le type et capacités du chauffage."""
+    state = hass.states.get(climate_entity)
+    if not state:
+        return None
+
+    preset_modes = state.attributes.get("preset_modes", [])
+    hvac_modes = state.attributes.get("hvac_modes", [])
+
+    # X4FP detection
+    is_x4fp = "comfort" in preset_modes or "eco" in preset_modes
+
+    # Reversible detection
+    is_reversible = "heat" in hvac_modes and "cool" in hvac_modes
+
+    return {
+        "type": "x4fp" if is_x4fp else "thermostat",
+        "reversible": is_reversible,
+        "presets": preset_modes,
+        "hvac_modes": hvac_modes,
+    }
+```
+
+**5. Interface Wizard**
+```yaml
+┌─ Smart Room Manager - Configuration Wizard ──────────────┐
+│                                                           │
+│ 🏠 Détection automatique des zones                       │
+│                                                           │
+│ J'ai trouvé 12 zones configurées dans Home Assistant :   │
+│                                                           │
+│ ☑️ Salon                        [Détails ▼]              │
+│    └─ Type: Normal                                        │
+│    └─ Chauffage: climate.salon_poele (Thermostat)        │
+│    └─ Lumières: 3 détectées                              │
+│    └─ Fenêtres: 4 capteurs détectés                      │
+│                                                           │
+│ ☑️ Chambre d'amis               [Détails ▼]              │
+│    └─ Type: Normal                                        │
+│    └─ Chauffage: climate.x4fp_fp_1 (X4FP)                │
+│    └─ Température: sensor.temperature_chambre_d_amis     │
+│    └─ Fenêtres: 2 capteurs détectés                      │
+│                                                           │
+│ ☑️ Salle de bain                [Détails ▼]              │
+│    └─ Type: Bathroom (auto-détecté)                      │
+│    └─ Chauffage: climate.x4fp_fp_4 (X4FP)                │
+│    └─ Lumière confort: light.x8r_ndeg1_relais_6          │
+│                                                           │
+│ ☐ Grenier                       [Non géré]               │
+│                                                           │
+│ [Tout sélectionner] [Tout désélectionner]                │
+│                                                           │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ ⚙️ Options globales                                  │ │
+│ │                                                       │ │
+│ │ Alarme: [alarm_control_panel.maison            ▼]    │ │
+│ │ Calendrier été/hiver: [calendar.ete_hiver      ▼]    │ │
+│ │                                                       │ │
+│ └──────────────────────────────────────────────────────┘ │
+│                                                           │
+│            [Précédent]  [Valider et Configurer]          │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+**6. Écran de Validation par Pièce**
+```yaml
+┌─ Configuration : Salon ───────────────────────────────────┐
+│                                                           │
+│ 📋 Informations de base                                  │
+│    Nom: [Salon                                      ]    │
+│    Type: [Normal                                 ▼]    │
+│    Icône: [mdi:sofa                               ]    │
+│                                                           │
+│ 🌡️ Chauffage                                             │
+│    Entité: [climate.salon_poele                  ▼]    │
+│    Type détecté: Thermostat (heat only)                  │
+│                                                           │
+│    ☑️ Températures                                        │
+│       Confort: [20°C]  Eco: [18°C]  Nuit: [17°C]         │
+│       Hors-gel: [12°C]                                    │
+│                                                           │
+│ 🪟 Fenêtres/Portes                                       │
+│    [✓] binary_sensor.x24d_10_fenetre_cuisine             │
+│    [✓] binary_sensor.x24d_09_baie_vitree_cuisine         │
+│    [✓] binary_sensor.x24d_08_baie_vitree_2m_salon        │
+│    [✓] binary_sensor.x24d_07_baie_vitree_3m_salon        │
+│                                                           │
+│ 🔌 Contrôle Externe (optionnel)                          │
+│    Switch: [Aucun                                 ▼]    │
+│    💡 Ex: Solar Optimizer, tarif dynamique               │
+│                                                           │
+│ ⏰ Plages Horaires                                        │
+│    Début nuit: [22:00]                                    │
+│    Plages confort: [07:00-09:00,18:00-22:00       ]    │
+│                                                           │
+│         [Ignorer cette pièce]  [Valider]  [Suivant]      │
+│                                                           │
+└───────────────────────────────────────────────────────────┘
+```
+
+**7. Flow du Wizard**
+```
+Étape 1: Choix mode
+  ├─ "Configuration automatique (recommandé)"
+  └─ "Configuration manuelle"
+
+Étape 2: Détection zones (si auto)
+  ├─ Scan toutes les areas HA
+  ├─ Scan entités par area
+  ├─ Détection types
+  └─ Affichage liste avec checkboxes
+
+Étape 3: Configuration globale
+  ├─ Alarme
+  └─ Calendrier été/hiver
+
+Étape 4: Validation par pièce (pour chaque cochée)
+  ├─ Afficher config détectée
+  ├─ Permettre modification
+  └─ Valider et passer à la suivante
+
+Étape 5: Résumé
+  ├─ 8 pièces configurées
+  ├─ 12 entités climate gérées
+  └─ [Terminer]
+```
+
+**Avantages** :
+- ✅ Configuration ultra-rapide (5 min au lieu de 30 min)
+- ✅ Pas d'erreur de saisie (entités déjà existantes)
+- ✅ Détection intelligente des types
+- ✅ Utilisateur peut tout modifier
+- ✅ Fallback mode manuel si besoin
+
+#### 3.2 - Type "VMC"
 **Pour ventilation automatique**
 
-#### 3.4 - Type "Utility"
+#### 3.3 - Type "Utility"
 **Pour prises/appareils horaires**
 
 ---
@@ -587,9 +810,12 @@ class ClimateController:
 
 ### Phase 3 : Wizard & Extensions (Priority 3) - 4-6h
 1. 🔵 Traductions FR/EN (1h)
-2. 🔵 Wizard installation (2h)
-3. 🔵 Détection auto entités (1h)
-4. 🔵 Documentation (1h)
+2. 🔵 Wizard installation intelligent (3h)
+   - Détection zones HA (areas)
+   - Scan entités par zone
+   - Pré-remplissage configuration
+   - Interface validation/modification
+3. 🔵 Documentation (1h)
 
 **Total estimé : 13-18h**
 
