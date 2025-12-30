@@ -53,6 +53,23 @@ CONF_PRESET_SCHEDULE_OFF: Final = "preset_schedule_off"  # Mode when no event
 CONF_PAUSE_DURATION_MINUTES: Final = "pause_duration_minutes"  # 15, 30, 60, 120, 240, 480
 CONF_PAUSE_INFINITE: Final = "pause_infinite"  # Boolean
 
+# Window delays (Priority 2)
+CONF_WINDOW_DELAY_OPEN: Final = "window_delay_open"  # Minutes before reacting to open
+CONF_WINDOW_DELAY_CLOSE: Final = "window_delay_close"  # Minutes before resuming after close
+
+# Configurable presets (Priority 2)
+CONF_PRESET_COMFORT: Final = "preset_comfort"  # X4FP preset for comfort mode
+CONF_PRESET_ECO: Final = "preset_eco"  # X4FP preset for eco mode
+CONF_PRESET_NIGHT: Final = "preset_night"  # X4FP preset for night mode
+CONF_PRESET_AWAY: Final = "preset_away"  # X4FP preset for away/frost protection
+CONF_PRESET_WINDOW: Final = "preset_window"  # X4FP preset for windows open
+
+# Summer policy (Priority 2)
+CONF_SUMMER_POLICY: Final = "summer_policy"  # "off" or "eco" for X4FP in summer
+
+# Tick configuration (Priority 2)
+CONF_TICK_MINUTES: Final = "tick_minutes"  # 0, 5, 10, 15 (0 = disabled)
+
 # Light behavior configuration
 CONF_LIGHT_TIMEOUT: Final = "light_timeout"
 CONF_LIGHT_NIGHT_MODE: Final = "light_night_mode"
@@ -114,6 +131,24 @@ DEFAULT_ALLOW_EXTERNAL_IN_AWAY: Final = False
 # Default values - Manual Pause
 DEFAULT_PAUSE_DURATION: Final = 30  # minutes
 DEFAULT_PAUSE_INFINITE: Final = False
+
+# Default values - Window delays (Priority 2)
+DEFAULT_WINDOW_DELAY_OPEN: Final = 2  # minutes
+DEFAULT_WINDOW_DELAY_CLOSE: Final = 2  # minutes
+
+# Default values - Configurable presets (Priority 2)
+# These default to standard X4FP presets, but can be overridden per room
+DEFAULT_PRESET_COMFORT: Final = X4FP_PRESET_COMFORT
+DEFAULT_PRESET_ECO: Final = X4FP_PRESET_ECO
+DEFAULT_PRESET_NIGHT: Final = X4FP_PRESET_ECO  # Often same as eco
+DEFAULT_PRESET_AWAY: Final = X4FP_PRESET_AWAY
+DEFAULT_PRESET_WINDOW: Final = X4FP_PRESET_AWAY  # Frost protection when windows open
+
+# Default values - Summer policy (Priority 2)
+DEFAULT_SUMMER_POLICY: Final = "off"  # "off" or "eco"
+
+# Default values - Tick (Priority 2)
+DEFAULT_TICK_MINUTES: Final = 0  # 0 = disabled
 
 # Entity ID formats
 SENSOR_FORMAT: Final = "sensor.smart_room_{room_id}_state"

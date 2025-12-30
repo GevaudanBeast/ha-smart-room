@@ -77,6 +77,19 @@ from .const import (
     PRIORITY_NORMAL,
     ALARM_STATE_ARMED_AWAY,
     CONF_ALARM_ENTITY,
+    # Priority 2 additions
+    CONF_SUMMER_POLICY,
+    CONF_PRESET_COMFORT,
+    CONF_PRESET_ECO,
+    CONF_PRESET_NIGHT,
+    CONF_PRESET_AWAY,
+    CONF_PRESET_WINDOW,
+    DEFAULT_SUMMER_POLICY,
+    DEFAULT_PRESET_COMFORT,
+    DEFAULT_PRESET_ECO,
+    DEFAULT_PRESET_NIGHT,
+    DEFAULT_PRESET_AWAY,
+    DEFAULT_PRESET_WINDOW,
 )
 
 if TYPE_CHECKING:
@@ -159,7 +172,7 @@ class ClimateController:
 
         # PRIORITY 2: Check windows
         if self.room_config.get(CONF_CLIMATE_WINDOW_CHECK, True):
-            if self.room_manager.is_windows_open():
+            if self.room_manager.is_windows_open_delayed():
                 _LOGGER.debug(
                     "🪟 Windows open in %s - setting frost protection",
                     self.room_manager.room_name,
@@ -241,11 +254,19 @@ class ClimateController:
         self, climate_entity: str, mode: str, is_summer: bool
     ) -> None:
         """Control X4FP climate entity via preset_mode."""
-        # Summer: turn off (except frost protection)
+        # Summer: apply summer policy (off or eco)
         if is_summer:
             if mode != MODE_FROST_PROTECTION:
-                target_preset = X4FP_PRESET_OFF
+                # Use configured summer policy
+                summer_policy = self.room_config.get(
+                    CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
+                )
+                if summer_policy == "eco":
+                    target_preset = X4FP_PRESET_ECO
+                else:  # "off"
+                    target_preset = X4FP_PRESET_OFF
             else:
+                # Frost protection always uses away
                 target_preset = X4FP_PRESET_AWAY
         else:
             # Winter: map mode to preset
@@ -389,12 +410,16 @@ class ClimateController:
         """Set frost protection when windows open."""
         try:
             if self._climate_type == CLIMATE_TYPE_X4FP:
+                # Use configurable preset for windows open
+                window_preset = self.room_config.get(
+                    CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW
+                )
                 await self.hass.services.async_call(
                     CLIMATE_DOMAIN,
                     SERVICE_SET_PRESET_MODE,
                     {
                         "entity_id": climate_entity,
-                        ATTR_PRESET_MODE: X4FP_PRESET_AWAY,
+                        ATTR_PRESET_MODE: window_preset,
                     },
                     blocking=True,
                 )
@@ -416,13 +441,15 @@ class ClimateController:
             )
 
     def _get_x4fp_preset(self, mode: str) -> str:
-        """Map mode to X4FP preset."""
+        """Map mode to X4FP preset (configurable per room)."""
         if mode == MODE_FROST_PROTECTION:
-            return X4FP_PRESET_AWAY
+            return self.room_config.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY)
         elif mode == MODE_COMFORT:
-            return X4FP_PRESET_COMFORT
-        else:  # eco, night
-            return X4FP_PRESET_ECO
+            return self.room_config.get(CONF_PRESET_COMFORT, DEFAULT_PRESET_COMFORT)
+        elif mode == MODE_NIGHT:
+            return self.room_config.get(CONF_PRESET_NIGHT, DEFAULT_PRESET_NIGHT)
+        else:  # MODE_ECO
+            return self.room_config.get(CONF_PRESET_ECO, DEFAULT_PRESET_ECO)
 
     def _get_target_temperature(self, mode: str) -> float:
         """Get target temperature based on mode."""
@@ -589,8 +616,14 @@ class ClimateController:
     ) -> None:
         """Control X4FP with temperature hysteresis (Type 3b)."""
         if is_summer:
-            # Summer: turn off (or eco depending on policy - for now OFF)
-            target_preset = X4FP_PRESET_OFF
+            # Summer: apply summer policy (off or eco)
+            summer_policy = self.room_config.get(
+                CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
+            )
+            if summer_policy == "eco":
+                target_preset = X4FP_PRESET_ECO
+            else:  # "off"
+                target_preset = X4FP_PRESET_OFF
             self._hysteresis_state = HYSTERESIS_DEADBAND
         else:
             # Winter: use hysteresis control
