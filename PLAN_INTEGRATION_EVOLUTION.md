@@ -73,6 +73,54 @@ Remplacer complètement les blueprints chauffage par l'intégration Smart Room M
 
 ---
 
+## 🔧 Concepts Clés : Bypass vs External Control
+
+L'intégration supporte **deux modes de contrôle externe** :
+
+### 1. Bypass (déjà implémenté ✅)
+**CONF_CLIMATE_BYPASS_SWITCH** = "climate_bypass_switch"
+
+- **Comportement** : Quand ON → l'intégration **ne fait absolument rien**
+- **Usage** : Désactivation complète du contrôle automatique
+- **Exemple** : Switch manuel "Mode Manuel" pour reprendre le contrôle total
+- **Priorité** : Absolue (PRIORITY 1)
+
+```python
+if bypass_switch == ON:
+    return  # Arrêt complet, intégration désactivée
+```
+
+### 2. External Control (à implémenter ⭐⭐⭐)
+**CONF_EXTERNAL_CONTROL_SWITCH** = "external_control_switch"
+
+- **Comportement** : Quand actif → l'intégration **applique un mode spécifique**
+- **Usage** : Contrôle externe avec priorité (Solar Optimizer, tarif EDF, etc.)
+- **Exemple** : Solar Optimizer chauffe → force preset comfort
+- **Priorité** : Haute (PRIORITY 3, après fenêtres)
+- **Override Away** : Configurable via case à cocher
+
+```python
+if external_control_switch.is_active == True:
+    if is_away and not allow_external_in_away:
+        pass  # Continue vers away
+    else:
+        set_preset(external_control_preset)  # Applique mode externe
+        return
+```
+
+### Tableau Comparatif
+
+| Aspect | Bypass | External Control |
+|--------|--------|------------------|
+| **État** | ✅ Implémenté | ❌ À implémenter |
+| **Intégration fait** | RIEN | Applique mode externe |
+| **Utilisateur voit** | Aucun changement auto | Changements auto selon externe |
+| **Override Away** | N/A | ☑️ Configurable |
+| **Cas d'usage** | Mode manuel total | Solar Optimizer, tarif dynamique |
+| **Générique** | Oui | Oui (tout switch avec is_active) |
+
+---
+
 ## 🔥 Gaps Critiques par Priority
 
 ### Priority 1 : BLOQUANT (remplacer blueprints impossible sans ça)
@@ -120,17 +168,45 @@ def _control_x4fp_with_temp():
 
 ---
 
-#### 1.2 - Solar Optimizer Avancé ⭐⭐⭐
-**Impact** : Toutes les pièces avec SO
+#### 1.2 - Contrôle Externe Avancé (External Control) ⭐⭐⭐
+**Impact** : Toutes les pièces avec contrôle externe (Solar Optimizer, etc.)
 **Fichiers** : `climate_control.py`, `config_flow.py`
+
+**Concept** : Système **générique** pour tout contrôle externe (Solar Optimizer aujourd'hui, autre intégration demain)
+
+**Différence avec Bypass** :
+- **Bypass** (déjà présent) = Désactivation complète → intégration ne fait RIEN
+- **External Control** (nouveau) = Contrôle externe prioritaire → intégration applique un mode spécifique
 
 **Ajouts nécessaires** :
 ```python
 # Config
-CONF_SOLAR_SWITCH = "solar_switch"  # Déjà présent (bypass)
-CONF_SOLAR_PRESET = "solar_preset"  # comfort/eco/etc. (X4FP)
-CONF_SOLAR_TEMP = "solar_temp"  # Température (thermostat)
-CONF_ALLOW_SOLAR_IN_AWAY = "allow_solar_in_away"  # Boolean
+CONF_EXTERNAL_CONTROL_SWITCH = "external_control_switch"  # Switch générique (Solar Optimizer, etc.)
+CONF_EXTERNAL_CONTROL_PRESET = "external_control_preset"  # comfort/eco/etc. (X4FP)
+CONF_EXTERNAL_CONTROL_TEMP = "external_control_temp"  # Température (thermostat)
+CONF_ALLOW_EXTERNAL_IN_AWAY = "allow_external_in_away"  # Boolean (case à cocher)
+```
+
+**Interface utilisateur** :
+```yaml
+External Control Switch:
+  - Label: "External Control Switch (Solar Optimizer, etc.)"
+  - Description: "Switch indicating an external system is actively controlling heating"
+  - Optional: true
+  - Selector: entity (switch/binary_sensor domain)
+
+External Control Preset (X4FP):
+  - Label: "Preset when external control active"
+  - Options: comfort, eco, comfort-1, comfort-2, boost, none
+  - Default: comfort
+
+External Control Temperature (Thermostat):
+  - Label: "Temperature when external control active"
+  - Default: 20°C
+
+☑️ Allow external control to override Away mode:
+  - Description: "When checked, external control can heat even when alarm is armed (away)"
+  - Default: false
 ```
 
 **Logique priorité** :
@@ -144,21 +220,24 @@ if windows_open:
     frost_protection()
     return
 
-# PRIORITY 3: Solar Optimizer actif → NOUVEAU
-if solar_is_heating():
-    # Vérifier is_active attribute ou state
-    is_active = state_attr(solar_switch, 'is_active') or state(solar_switch) == 'on'
+# PRIORITY 3: External Control actif → NOUVEAU
+if external_control_switch:
+    # Vérifier is_active attribute OU state
+    is_active = (
+        state_attr(external_control_switch, 'is_active') or
+        state(external_control_switch).lower() == 'on'
+    )
 
     if is_active:
-        # Override away si autorisé
-        if is_away and not allow_solar_in_away:
-            pass  # Continue vers away
+        # Override away si autorisé (case cochée)
+        if is_away and not allow_external_in_away:
+            pass  # Continue vers away mode
         else:
-            # Appliquer preset/temp solar
+            # Appliquer preset/temp configuré
             if X4FP:
-                set_preset(solar_preset)
+                set_preset(external_control_preset)
             else:
-                set_temperature(solar_temp)
+                set_temperature(external_control_temp)
             return
 
 # PRIORITY 4: Away mode
@@ -168,6 +247,12 @@ if is_away:
 
 # PRIORITY 5: Reste de la logique normale...
 ```
+
+**Cas d'usage** :
+- Solar Optimizer : chauffe avec surplus solaire
+- Future intégration : chauffage base tarif EDF
+- Future intégration : gestionnaire d'énergie tiers
+- Tout switch/binary_sensor avec attribut `is_active`
 
 ---
 
@@ -330,7 +415,7 @@ CONF_TICK_MINUTES = "tick_minutes"  # 0, 5, 10, 15 (0 = disabled)
 ### Critiques (Priority 1)
 1. ✅ **const.py** - Ajouter toutes les nouvelles constantes
 2. ✅ **config_flow.py** - Ajouter champs configuration
-3. ✅ **climate_control.py** - Logique hystérésis + Solar avancé + été
+3. ✅ **climate_control.py** - Logique hystérésis + External Control avancé + été
 4. ✅ **room_manager.py** - Logique calendrier
 
 ### Importants (Priority 2)
@@ -355,7 +440,7 @@ class ClimateController:
         if self._climate_type is None:
             self._detect_climate_type()
 
-        # PRIORITY 1: Bypass (Solar Optimizer OFF = contrôle externe)
+        # PRIORITY 1: Bypass (contrôle externe complet = intégration OFF)
         if self._is_bypass_active():
             return
 
@@ -364,9 +449,9 @@ class ClimateController:
             await self._set_frost_protection()
             return
 
-        # PRIORITY 3: Solar Optimizer actif
-        if self._is_solar_heating():
-            await self._apply_solar_control()
+        # PRIORITY 3: External Control actif (Solar Optimizer, etc.)
+        if self._is_external_control_active():
+            await self._apply_external_control()
             return
 
         # PRIORITY 4: Away mode (alarme)
@@ -441,41 +526,45 @@ class ClimateController:
 
 ## ✅ Checklist Migration Blueprints → Intégration
 
-### Chambre d'amis (X4FP + temp + solar)
+### Chambre d'amis (X4FP + temp + external control)
 - [ ] Ajouter capteur température
 - [ ] Ajouter consigne (input_number)
 - [ ] Configurer hystérésis
-- [ ] Configurer Solar Optimizer (is_active)
+- [ ] Configurer External Control (switch.solar_optimizer_xxx)
+- [ ] ☑️ Cocher "Allow external control in away" si souhaité
 - [ ] Tester hystérésis fonctionne
-- [ ] Tester Solar override
+- [ ] Tester External Control override
 
-### Suite parentale (X4FP + temp + solar + schedule)
+### Suite parentale (X4FP + temp + external control + schedule)
 - [ ] Ajouter capteur température
 - [ ] Ajouter consigne (input_number)
 - [ ] Configurer hystérésis
 - [ ] Ajouter calendrier pièce
-- [ ] Configurer Solar Optimizer
+- [ ] Configurer External Control (switch.solar_optimizer_xxx)
+- [ ] ☑️ Cocher "Allow external control in away" si souhaité
 - [ ] Tester planning fonctionne
 
-### Sèche-serviettes SdB (X4FP + light + solar + schedule)
+### Sèche-serviettes SdB (X4FP + light + external control + schedule)
 - [ ] Lumière → confort (déjà OK)
 - [ ] Ajouter calendrier
-- [ ] Configurer Solar Optimizer
+- [ ] Configurer External Control (switch.solar_optimizer_xxx)
 - [ ] Tester calendrier bloque lumières
 
 ### Poêle salon (Thermostat heat only)
 - [ ] Déjà OK, juste configurer fenêtres
 
-### Clim Livia (Thermostat heat/cool + solar + schedule)
+### Clim Livia (Thermostat heat/cool + external control + schedule)
 - [ ] Corriger été eco → COOL 26°C
 - [ ] Ajouter calendrier
-- [ ] Configurer Solar Optimizer
+- [ ] Configurer External Control (switch.solar_optimizer_xxx)
+- [ ] ☑️ Cocher "Allow external control in away" si souhaité
 - [ ] Tester été fonctionne
 
-### Clim Thomas (Thermostat heat/cool + solar + schedule)
+### Clim Thomas (Thermostat heat/cool + external control + schedule)
 - [ ] Corriger été eco → COOL 26°C
 - [ ] Ajouter calendrier
-- [ ] Configurer Solar Optimizer
+- [ ] Configurer External Control (switch.solar_optimizer_xxx)
+- [ ] ☑️ Cocher "Allow external control in away" si souhaité
 - [ ] Tester été fonctionne
 
 ---
@@ -484,7 +573,7 @@ class ClimateController:
 
 ### Phase 1 : Gaps Critiques (Priority 1) - 6-8h
 1. ✅ Hystérésis X4FP (2h)
-2. ✅ Solar Optimizer avancé (2h)
+2. ✅ External Control avancé (2h)
 3. ✅ Calendrier par pièce (1h)
 4. ✅ Été thermostats réversibles (1h)
 5. ✅ Tests sur 1 pièce de chaque type (2h)
@@ -519,10 +608,11 @@ class ClimateController:
    - Type 3a : X4FP sans capteur
    - Type 3b : X4FP avec capteur + hystérésis
 
-3. **Logique priorités Solar Optimizer OK ?**
-   - Bypass ON → arrêt total
-   - Solar actif → override (sauf away si non autorisé)
-   - Détection via is_active attribute
+3. **Logique priorités External Control OK ?**
+   - Bypass ON → arrêt total (intégration ne fait rien)
+   - External Control actif → override (sauf away si case non cochée)
+   - Détection via is_active attribute OU state ON
+   - Générique (Solar Optimizer, future intégration, etc.)
 
 4. **Migration progressive ?**
    - Pièce par pièce ?
