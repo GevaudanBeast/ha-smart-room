@@ -27,6 +27,15 @@ from .const import (
     ROOM_TYPE_BATHROOM,
     TIME_PERIOD_DAY,
     TIME_PERIOD_NIGHT,
+    # v0.3.0 additions
+    CONF_SCHEDULE_ENTITY,
+    CONF_PRESET_SCHEDULE_ON,
+    CONF_PRESET_SCHEDULE_OFF,
+    # Priority 2 additions
+    CONF_WINDOW_DELAY_OPEN,
+    CONF_WINDOW_DELAY_CLOSE,
+    DEFAULT_WINDOW_DELAY_OPEN,
+    DEFAULT_WINDOW_DELAY_CLOSE,
 )
 from .climate_control import ClimateController
 from .light_control import LightController
@@ -69,6 +78,10 @@ class RoomManager:
         self._is_night: bool = False
         self._current_mode: str = MODE_COMFORT
         self._automation_enabled: bool = True
+
+        # Window delay tracking (Priority 2)
+        self._windows_opened_at = None  # Timestamp when windows opened
+        self._windows_closed_at = None  # Timestamp when windows closed
 
         # Controllers
         self.light_controller = LightController(hass, room_config, self)
@@ -119,22 +132,39 @@ class RoomManager:
         return self.get_state()
 
     def _update_window_states(self) -> None:
-        """Update window/door open states."""
+        """Update window/door open states with delay tracking."""
         # Use 'or []' to handle None values (dict.get returns None if value is None)
         door_window_sensors = self.room_config.get(CONF_DOOR_WINDOW_SENSORS) or []
 
         if not door_window_sensors:
+            previous_state = self._windows_open
             self._windows_open = False
+            # Track close timestamp if changed
+            if previous_state and not self._windows_open:
+                self._windows_closed_at = dt_util.now()
             return
 
         # Check if any door/window sensor is open
+        any_open = False
         for entity_id in door_window_sensors:
             state = self.hass.states.get(entity_id)
             if state and state.state == STATE_ON:
-                self._windows_open = True
-                return
+                any_open = True
+                break
 
-        self._windows_open = False
+        # Track state changes with timestamps
+        previous_state = self._windows_open
+        self._windows_open = any_open
+
+        # Track open/close timestamps
+        if not previous_state and self._windows_open:
+            # Windows just opened
+            self._windows_opened_at = dt_util.now()
+            self._windows_closed_at = None
+        elif previous_state and not self._windows_open:
+            # Windows just closed
+            self._windows_closed_at = dt_util.now()
+            self._windows_opened_at = None
 
     def _update_night_period(self) -> None:
         """Update night period status."""
@@ -240,6 +270,41 @@ class RoomManager:
         """Check if any windows/doors are open."""
         return self._windows_open
 
+    def is_windows_open_delayed(self) -> bool:
+        """Check if windows are open with delay (Priority 2).
+
+        Returns True only if windows have been open longer than delay_open.
+        Returns False only if windows have been closed longer than delay_close.
+        """
+        # Get configured delays
+        delay_open = self.room_config.get(
+            CONF_WINDOW_DELAY_OPEN, DEFAULT_WINDOW_DELAY_OPEN
+        )
+        delay_close = self.room_config.get(
+            CONF_WINDOW_DELAY_CLOSE, DEFAULT_WINDOW_DELAY_CLOSE
+        )
+
+        now = dt_util.now()
+
+        # If windows are currently open
+        if self._windows_open:
+            # Check if we have an open timestamp and delay has elapsed
+            if self._windows_opened_at:
+                elapsed = (now - self._windows_opened_at).total_seconds() / 60
+                return elapsed >= delay_open
+            # No timestamp yet (first check), assume not delayed
+            return False
+
+        # If windows are currently closed
+        else:
+            # Check if we have a close timestamp and delay has elapsed
+            if self._windows_closed_at:
+                elapsed = (now - self._windows_closed_at).total_seconds() / 60
+                # Return False (not open) only after delay has elapsed
+                return elapsed < delay_close
+            # No timestamp, windows were already closed
+            return False
+
     def get_current_mode(self) -> str:
         """Get current operating mode."""
         return self._current_mode
@@ -256,6 +321,40 @@ class RoomManager:
             self.room_name,
             "enabled" if enabled else "disabled",
         )
+
+    def is_paused(self) -> bool:
+        """Check if manual pause is active (v0.3.0)."""
+        # Get pause switch state from HA
+        pause_switch_id = f"switch.smart_room_{self.room_id}_pause"
+        pause_state = self.hass.states.get(pause_switch_id)
+        return pause_state and pause_state.state == STATE_ON
+
+    def get_schedule_mode(self) -> str | None:
+        """Get mode from schedule calendar (v0.3.0).
+
+        Returns:
+            MODE_COMFORT if event active and preset_schedule_on is comfort
+            MODE_ECO if no event and preset_schedule_off is eco
+            None if no schedule configured
+        """
+        schedule_entity = self.room_config.get(CONF_SCHEDULE_ENTITY)
+        if not schedule_entity:
+            return None
+
+        # Check if calendar entity exists
+        calendar_state = self.hass.states.get(schedule_entity)
+        if not calendar_state:
+            return None
+
+        # Get presets for on/off states
+        preset_on = self.room_config.get(CONF_PRESET_SCHEDULE_ON, MODE_COMFORT)
+        preset_off = self.room_config.get(CONF_PRESET_SCHEDULE_OFF, MODE_ECO)
+
+        # Calendar state ON = event active
+        if calendar_state.state == STATE_ON:
+            return preset_on
+        else:
+            return preset_off
 
     def get_state(self) -> dict[str, Any]:
         """Get current room state."""
@@ -288,6 +387,10 @@ class RoomManager:
         # Lights are manual or via external automation
         light_state_data["should_be_on"] = False
 
+        # v0.3.0: Get schedule and pause status
+        schedule_active = self.get_schedule_mode() is not None
+        pause_active = self.is_paused()
+
         return {
             "room_id": self.room_id,
             "room_name": self.room_name,
@@ -302,6 +405,9 @@ class RoomManager:
             "automation_enabled": self._automation_enabled,
             "light_state": light_state_data,
             "climate_state": self.climate_controller.get_state(),
+            # v0.3.0 additions
+            "schedule_active": schedule_active,
+            "pause_active": pause_active,
         }
 
     async def async_shutdown(self) -> None:

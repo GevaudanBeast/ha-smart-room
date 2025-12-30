@@ -45,6 +45,51 @@ from .const import (
     X4FP_PRESET_ECO,
     X4FP_PRESET_AWAY,
     X4FP_PRESET_OFF,
+    # New v0.3.0 constants
+    CONF_EXTERNAL_CONTROL_SWITCH,
+    CONF_EXTERNAL_CONTROL_PRESET,
+    CONF_EXTERNAL_CONTROL_TEMP,
+    CONF_ALLOW_EXTERNAL_IN_AWAY,
+    CONF_TEMPERATURE_SENSOR,
+    CONF_SETPOINT_INPUT,
+    CONF_HYSTERESIS,
+    CONF_MIN_SETPOINT,
+    CONF_MAX_SETPOINT,
+    CONF_PRESET_HEAT,
+    CONF_PRESET_IDLE,
+    DEFAULT_HYSTERESIS,
+    DEFAULT_MIN_SETPOINT,
+    DEFAULT_MAX_SETPOINT,
+    DEFAULT_PRESET_HEAT,
+    DEFAULT_PRESET_IDLE,
+    DEFAULT_EXTERNAL_CONTROL_PRESET,
+    DEFAULT_EXTERNAL_CONTROL_TEMP,
+    DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
+    HYSTERESIS_HEATING,
+    HYSTERESIS_IDLE,
+    HYSTERESIS_DEADBAND,
+    PRIORITY_PAUSED,
+    PRIORITY_BYPASS,
+    PRIORITY_WINDOWS_OPEN,
+    PRIORITY_EXTERNAL_CONTROL,
+    PRIORITY_AWAY,
+    PRIORITY_SCHEDULE,
+    PRIORITY_NORMAL,
+    ALARM_STATE_ARMED_AWAY,
+    CONF_ALARM_ENTITY,
+    # Priority 2 additions
+    CONF_SUMMER_POLICY,
+    CONF_PRESET_COMFORT,
+    CONF_PRESET_ECO,
+    CONF_PRESET_NIGHT,
+    CONF_PRESET_AWAY,
+    CONF_PRESET_WINDOW,
+    DEFAULT_SUMMER_POLICY,
+    DEFAULT_PRESET_COMFORT,
+    DEFAULT_PRESET_ECO,
+    DEFAULT_PRESET_NIGHT,
+    DEFAULT_PRESET_AWAY,
+    DEFAULT_PRESET_WINDOW,
 )
 
 if TYPE_CHECKING:
@@ -72,6 +117,13 @@ class ClimateController:
         self._current_preset: str | None = None
         self._current_hvac_mode: str | None = None
 
+        # v0.3.0 state tracking
+        self._current_priority: str = PRIORITY_NORMAL
+        self._external_control_active: bool = False
+        self._hysteresis_state: str = HYSTERESIS_DEADBAND
+        self._hysteresis_current_temp: float | None = None
+        self._hysteresis_setpoint: float | None = None
+
     def update_config(self, room_config: dict[str, Any]) -> None:
         """Update configuration."""
         self.room_config = room_config
@@ -79,23 +131,12 @@ class ClimateController:
         self._climate_type = None
 
     async def async_update(self) -> None:
-        """Update climate control logic."""
+        """Update climate control logic with v0.3.0 priority system."""
         climate_entity = self.room_config.get(CONF_CLIMATE_ENTITY)
 
         if not climate_entity:
+            self._current_priority = PRIORITY_NORMAL
             return
-
-        # PRIORITY 1: Check bypass switch (Solar Optimizer, manual control, etc.)
-        bypass_switch = self.room_config.get(CONF_CLIMATE_BYPASS_SWITCH)
-        if bypass_switch:
-            bypass_state = self.hass.states.get(bypass_switch)
-            if bypass_state and bypass_state.state == STATE_ON:
-                _LOGGER.debug(
-                    "🔌 Climate bypass active (%s ON) in %s - skipping control",
-                    bypass_switch,
-                    self.room_manager.room_name,
-                )
-                return
 
         # Detect climate type if not already done
         if self._climate_type is None:
@@ -107,26 +148,78 @@ class ClimateController:
                 climate_entity,
             )
 
+        # PRIORITY 0.5: Check manual pause
+        if self.room_manager.is_paused():
+            _LOGGER.debug(
+                "⏸️ Manual pause active in %s - skipping automation",
+                self.room_manager.room_name,
+            )
+            self._current_priority = PRIORITY_PAUSED
+            return
+
+        # PRIORITY 1: Check bypass switch
+        bypass_switch = self.room_config.get(CONF_CLIMATE_BYPASS_SWITCH)
+        if bypass_switch:
+            bypass_state = self.hass.states.get(bypass_switch)
+            if bypass_state and bypass_state.state == STATE_ON:
+                _LOGGER.debug(
+                    "🔌 Climate bypass active (%s ON) in %s - skipping control",
+                    bypass_switch,
+                    self.room_manager.room_name,
+                )
+                self._current_priority = PRIORITY_BYPASS
+                return
+
         # PRIORITY 2: Check windows
         if self.room_config.get(CONF_CLIMATE_WINDOW_CHECK, True):
-            if self.room_manager.is_windows_open():
+            if self.room_manager.is_windows_open_delayed():
                 _LOGGER.debug(
                     "🪟 Windows open in %s - setting frost protection",
                     self.room_manager.room_name,
                 )
+                self._current_priority = PRIORITY_WINDOWS_OPEN
                 await self._set_frost_protection(climate_entity)
                 return
 
-        # PRIORITY 3: Check summer mode
-        is_summer = self._is_summer_mode()
+        # PRIORITY 3: Check External Control (Solar Optimizer, etc.)
+        if await self._is_external_control_active():
+            _LOGGER.debug(
+                "🌞 External control active in %s - applying external control",
+                self.room_manager.room_name,
+            )
+            self._current_priority = PRIORITY_EXTERNAL_CONTROL
+            await self._apply_external_control(climate_entity)
+            return
 
-        # PRIORITY 4: Get current mode and apply
+        # PRIORITY 4: Check away mode (alarm armed_away)
+        if self._is_away_mode():
+            _LOGGER.debug(
+                "🏠 Away mode active in %s - setting frost protection",
+                self.room_manager.room_name,
+            )
+            self._current_priority = PRIORITY_AWAY
+            await self._set_frost_protection(climate_entity)
+            return
+
+        # PRIORITY 5: Check schedule (calendar)
+        schedule_mode = self.room_manager.get_schedule_mode()
+        if schedule_mode is not None:
+            _LOGGER.debug(
+                "📅 Schedule active in %s - mode: %s",
+                self.room_manager.room_name,
+                schedule_mode,
+            )
+            self._current_priority = PRIORITY_SCHEDULE
+            is_summer = self._is_summer_mode()
+            await self._apply_mode(climate_entity, schedule_mode, is_summer)
+            return
+
+        # PRIORITY 6: Normal logic
+        self._current_priority = PRIORITY_NORMAL
+        is_summer = self._is_summer_mode()
         mode = self.room_manager.get_current_mode()
 
-        if self._climate_type == CLIMATE_TYPE_X4FP:
-            await self._control_x4fp(climate_entity, mode, is_summer)
-        else:
-            await self._control_thermostat(climate_entity, mode, is_summer)
+        await self._apply_mode(climate_entity, mode, is_summer)
 
     def _detect_climate_type(self, climate_entity: str) -> str:
         """Detect if climate entity is X4FP (preset_mode) or thermostat (hvac_mode)."""
@@ -161,11 +254,19 @@ class ClimateController:
         self, climate_entity: str, mode: str, is_summer: bool
     ) -> None:
         """Control X4FP climate entity via preset_mode."""
-        # Summer: turn off (except frost protection)
+        # Summer: apply summer policy (off or eco)
         if is_summer:
             if mode != MODE_FROST_PROTECTION:
-                target_preset = X4FP_PRESET_OFF
+                # Use configured summer policy
+                summer_policy = self.room_config.get(
+                    CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
+                )
+                if summer_policy == "eco":
+                    target_preset = X4FP_PRESET_ECO
+                else:  # "off"
+                    target_preset = X4FP_PRESET_OFF
             else:
+                # Frost protection always uses away
                 target_preset = X4FP_PRESET_AWAY
         else:
             # Winter: map mode to preset
@@ -207,19 +308,37 @@ class ClimateController:
     ) -> None:
         """Control thermostat climate entity via hvac_mode + temperature."""
         if is_summer:
-            # Summer mode
+            # Summer mode - Check if thermostat is reversible (has COOL mode)
+            state = self.hass.states.get(climate_entity)
+            is_reversible = False
+            if state:
+                hvac_modes = state.attributes.get("hvac_modes", [])
+                is_reversible = HVACMode.COOL in hvac_modes
+
             if mode == MODE_FROST_PROTECTION:
                 target_hvac = HVACMode.OFF
                 target_temp = None
             elif mode == MODE_COMFORT:
-                target_hvac = HVACMode.COOL
-                target_temp = self.room_config.get(
-                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
-                )
+                if is_reversible:
+                    target_hvac = HVACMode.COOL
+                    target_temp = self.room_config.get(
+                        CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
+                    )
+                else:
+                    # Heat-only thermostat in summer comfort → OFF
+                    target_hvac = HVACMode.OFF
+                    target_temp = None
             else:  # eco, night
-                # Option: cool à température plus haute ou OFF
-                target_hvac = HVACMode.OFF
-                target_temp = None
+                if is_reversible:
+                    # Reversible: use COOL with higher temperature (eco cooling)
+                    target_hvac = HVACMode.COOL
+                    target_temp = self.room_config.get(
+                        CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO
+                    )
+                else:
+                    # Heat-only: turn OFF
+                    target_hvac = HVACMode.OFF
+                    target_temp = None
         else:
             # Winter mode
             target_hvac = HVACMode.HEAT
@@ -291,12 +410,16 @@ class ClimateController:
         """Set frost protection when windows open."""
         try:
             if self._climate_type == CLIMATE_TYPE_X4FP:
+                # Use configurable preset for windows open
+                window_preset = self.room_config.get(
+                    CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW
+                )
                 await self.hass.services.async_call(
                     CLIMATE_DOMAIN,
                     SERVICE_SET_PRESET_MODE,
                     {
                         "entity_id": climate_entity,
-                        ATTR_PRESET_MODE: X4FP_PRESET_AWAY,
+                        ATTR_PRESET_MODE: window_preset,
                     },
                     blocking=True,
                 )
@@ -318,13 +441,15 @@ class ClimateController:
             )
 
     def _get_x4fp_preset(self, mode: str) -> str:
-        """Map mode to X4FP preset."""
+        """Map mode to X4FP preset (configurable per room)."""
         if mode == MODE_FROST_PROTECTION:
-            return X4FP_PRESET_AWAY
+            return self.room_config.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY)
         elif mode == MODE_COMFORT:
-            return X4FP_PRESET_COMFORT
-        else:  # eco, night
-            return X4FP_PRESET_ECO
+            return self.room_config.get(CONF_PRESET_COMFORT, DEFAULT_PRESET_COMFORT)
+        elif mode == MODE_NIGHT:
+            return self.room_config.get(CONF_PRESET_NIGHT, DEFAULT_PRESET_NIGHT)
+        else:  # MODE_ECO
+            return self.room_config.get(CONF_PRESET_ECO, DEFAULT_PRESET_ECO)
 
     def _get_target_temperature(self, mode: str) -> float:
         """Get target temperature based on mode."""
@@ -339,14 +464,304 @@ class ClimateController:
         else:  # MODE_ECO
             return self.room_config.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
 
+    async def _is_external_control_active(self) -> bool:
+        """Check if external control (Solar Optimizer, etc.) is active."""
+        external_switch = self.room_config.get(CONF_EXTERNAL_CONTROL_SWITCH)
+        if not external_switch:
+            self._external_control_active = False
+            return False
+
+        # Check if entity exists
+        state = self.hass.states.get(external_switch)
+        if not state:
+            self._external_control_active = False
+            return False
+
+        # Check is_active attribute (primary) or state ON (fallback)
+        is_active = state.attributes.get("is_active", False)
+        if not is_active:
+            is_active = state.state.lower() == STATE_ON.lower()
+
+        # Check if we should override away mode
+        if is_active:
+            allow_in_away = self.room_config.get(
+                CONF_ALLOW_EXTERNAL_IN_AWAY, DEFAULT_ALLOW_EXTERNAL_IN_AWAY
+            )
+            if not allow_in_away and self._is_away_mode():
+                # External control wants to activate, but away mode blocks it
+                self._external_control_active = False
+                return False
+
+        self._external_control_active = is_active
+        return is_active
+
+    async def _apply_external_control(self, climate_entity: str) -> None:
+        """Apply external control preset/temperature."""
+        if self._climate_type == CLIMATE_TYPE_X4FP:
+            # X4FP: use preset
+            preset = self.room_config.get(
+                CONF_EXTERNAL_CONTROL_PRESET, DEFAULT_EXTERNAL_CONTROL_PRESET
+            )
+            if self._current_preset == preset:
+                return
+
+            _LOGGER.debug(
+                "Setting External Control preset for %s to %s",
+                self.room_manager.room_name,
+                preset,
+            )
+            try:
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN,
+                    SERVICE_SET_PRESET_MODE,
+                    {
+                        "entity_id": climate_entity,
+                        ATTR_PRESET_MODE: preset,
+                    },
+                    blocking=True,
+                )
+                self._current_preset = preset
+            except Exception as err:
+                _LOGGER.error(
+                    "Error setting external control preset for %s: %s",
+                    climate_entity,
+                    err,
+                )
+        else:
+            # Thermostat: use temperature
+            target_temp = self.room_config.get(
+                CONF_EXTERNAL_CONTROL_TEMP, DEFAULT_EXTERNAL_CONTROL_TEMP
+            )
+
+            # Set to HEAT mode and target temperature
+            state = self.hass.states.get(climate_entity)
+            if state:
+                current_hvac = state.state
+                if current_hvac != HVACMode.HEAT:
+                    try:
+                        await self.hass.services.async_call(
+                            CLIMATE_DOMAIN,
+                            SERVICE_SET_HVAC_MODE,
+                            {
+                                "entity_id": climate_entity,
+                                ATTR_HVAC_MODE: HVACMode.HEAT,
+                            },
+                            blocking=True,
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Error setting HVAC mode for external control %s: %s",
+                            climate_entity,
+                            err,
+                        )
+                        return
+
+                current_temp = state.attributes.get(ATTR_TEMPERATURE)
+                if current_temp is None or abs(current_temp - target_temp) >= 0.5:
+                    _LOGGER.debug(
+                        "Setting External Control temperature for %s to %.1f°C",
+                        self.room_manager.room_name,
+                        target_temp,
+                    )
+                    try:
+                        await self.hass.services.async_call(
+                            CLIMATE_DOMAIN,
+                            SERVICE_SET_TEMPERATURE,
+                            {
+                                "entity_id": climate_entity,
+                                ATTR_TEMPERATURE: target_temp,
+                            },
+                            blocking=True,
+                        )
+                        self._target_temperature = target_temp
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Error setting external control temperature for %s: %s",
+                            climate_entity,
+                            err,
+                        )
+
+    def _is_away_mode(self) -> bool:
+        """Check if alarm is in armed_away mode."""
+        alarm_entity = self.room_manager.coordinator.entry.data.get(CONF_ALARM_ENTITY)
+        if not alarm_entity:
+            return False
+
+        alarm_state = self.hass.states.get(alarm_entity)
+        return alarm_state and alarm_state.state == ALARM_STATE_ARMED_AWAY
+
+    async def _apply_mode(
+        self, climate_entity: str, mode: str, is_summer: bool
+    ) -> None:
+        """Unified method to apply a mode (normal or schedule)."""
+        if self._climate_type == CLIMATE_TYPE_X4FP:
+            # Check if hysteresis control is configured
+            if self._has_hysteresis_control():
+                await self._control_x4fp_with_hysteresis(
+                    climate_entity, mode, is_summer
+                )
+            else:
+                await self._control_x4fp(climate_entity, mode, is_summer)
+        else:
+            await self._control_thermostat(climate_entity, mode, is_summer)
+
+    def _has_hysteresis_control(self) -> bool:
+        """Check if X4FP has temperature sensor and setpoint configured."""
+        temp_sensor = self.room_config.get(CONF_TEMPERATURE_SENSOR)
+        setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
+        return temp_sensor is not None and setpoint_input is not None
+
+    async def _control_x4fp_with_hysteresis(
+        self, climate_entity: str, mode: str, is_summer: bool
+    ) -> None:
+        """Control X4FP with temperature hysteresis (Type 3b)."""
+        if is_summer:
+            # Summer: apply summer policy (off or eco)
+            summer_policy = self.room_config.get(
+                CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
+            )
+            if summer_policy == "eco":
+                target_preset = X4FP_PRESET_ECO
+            else:  # "off"
+                target_preset = X4FP_PRESET_OFF
+            self._hysteresis_state = HYSTERESIS_DEADBAND
+        else:
+            # Winter: use hysteresis control
+            # Get current temperature
+            temp_sensor = self.room_config.get(CONF_TEMPERATURE_SENSOR)
+            temp_state = self.hass.states.get(temp_sensor)
+            if not temp_state:
+                _LOGGER.warning(
+                    "Temperature sensor %s not found for %s",
+                    temp_sensor,
+                    self.room_manager.room_name,
+                )
+                # Fallback to preset-only control
+                await self._control_x4fp(climate_entity, mode, is_summer)
+                return
+
+            try:
+                current_temp = float(temp_state.state)
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    "Invalid temperature value from %s: %s",
+                    temp_sensor,
+                    temp_state.state,
+                )
+                await self._control_x4fp(climate_entity, mode, is_summer)
+                return
+
+            # Get setpoint
+            setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
+            setpoint_state = self.hass.states.get(setpoint_input)
+            if not setpoint_state:
+                _LOGGER.warning(
+                    "Setpoint input %s not found for %s",
+                    setpoint_input,
+                    self.room_manager.room_name,
+                )
+                await self._control_x4fp(climate_entity, mode, is_summer)
+                return
+
+            try:
+                setpoint = float(setpoint_state.state)
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    "Invalid setpoint value from %s: %s",
+                    setpoint_input,
+                    setpoint_state.state,
+                )
+                await self._control_x4fp(climate_entity, mode, is_summer)
+                return
+
+            # Clamp setpoint to min/max
+            min_setpoint = self.room_config.get(
+                CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT
+            )
+            max_setpoint = self.room_config.get(
+                CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT
+            )
+            setpoint = max(min_setpoint, min(max_setpoint, setpoint))
+
+            # Get hysteresis
+            hysteresis = self.room_config.get(CONF_HYSTERESIS, DEFAULT_HYSTERESIS)
+
+            # Store for debug sensor
+            self._hysteresis_current_temp = current_temp
+            self._hysteresis_setpoint = setpoint
+
+            # Calculate hysteresis
+            if current_temp <= setpoint - hysteresis:
+                # Too cold - heat
+                target_preset = self.room_config.get(
+                    CONF_PRESET_HEAT, DEFAULT_PRESET_HEAT
+                )
+                self._hysteresis_state = HYSTERESIS_HEATING
+            elif current_temp >= setpoint + hysteresis:
+                # Too hot - idle
+                target_preset = self.room_config.get(
+                    CONF_PRESET_IDLE, DEFAULT_PRESET_IDLE
+                )
+                self._hysteresis_state = HYSTERESIS_IDLE
+            else:
+                # In deadband - keep current preset
+                self._hysteresis_state = HYSTERESIS_DEADBAND
+                return
+
+        # Apply preset
+        if self._current_preset == target_preset:
+            return
+
+        _LOGGER.debug(
+            "Setting X4FP hysteresis preset for %s to %s (temp: %.1f°C, setpoint: %.1f°C, state: %s)",
+            self.room_manager.room_name,
+            target_preset,
+            self._hysteresis_current_temp or 0,
+            self._hysteresis_setpoint or 0,
+            self._hysteresis_state,
+        )
+
+        try:
+            await self.hass.services.async_call(
+                CLIMATE_DOMAIN,
+                SERVICE_SET_PRESET_MODE,
+                {
+                    "entity_id": climate_entity,
+                    ATTR_PRESET_MODE: target_preset,
+                },
+                blocking=True,
+            )
+            self._current_preset = target_preset
+        except Exception as err:
+            _LOGGER.error(
+                "Error setting hysteresis preset for %s: %s",
+                climate_entity,
+                err,
+            )
+
     def get_state(self) -> dict[str, Any]:
         """Get current climate controller state."""
-        return {
+        state = {
             "climate_type": self._climate_type,
             "target_temperature": self._target_temperature,
             "current_preset": self._current_preset,
             "current_hvac_mode": self._current_hvac_mode,
+            # v0.3.0 debug info
+            "current_priority": self._current_priority,
+            "external_control_active": self._external_control_active,
+            "hysteresis_state": self._hysteresis_state,
         }
+
+        # Add hysteresis details if active
+        if self._hysteresis_current_temp is not None:
+            state["hysteresis_current_temp"] = self._hysteresis_current_temp
+            state["hysteresis_setpoint"] = self._hysteresis_setpoint
+            hysteresis = self.room_config.get(CONF_HYSTERESIS, DEFAULT_HYSTERESIS)
+            state["hysteresis_value"] = hysteresis
+            state["hysteresis_lower_threshold"] = self._hysteresis_setpoint - hysteresis if self._hysteresis_setpoint else None
+            state["hysteresis_upper_threshold"] = self._hysteresis_setpoint + hysteresis if self._hysteresis_setpoint else None
+
+        return state
 
     async def async_shutdown(self) -> None:
         """Shutdown climate controller."""
