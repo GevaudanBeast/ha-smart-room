@@ -257,8 +257,10 @@ if is_away:
 ---
 
 #### 1.3 - Calendrier par Pièce (schedule_entity) ⭐⭐
-**Impact** : Salles de bain, chambres avec planning spécifique
+**Impact** : Chambres, salles de bain avec planning spécifique
 **Fichiers** : `room_manager.py`, `climate_control.py`, `config_flow.py`
+
+**Usage** : Chauffer selon habitudes (ex: chambre chaude pour le réveil 7h-8h et le coucher 22h-23h)
 
 **Ajouts nécessaires** :
 ```python
@@ -266,7 +268,7 @@ if is_away:
 CONF_SCHEDULE_ENTITY = "schedule_entity"  # calendar.xxx
 CONF_PRESET_SCHEDULE_ON = "preset_schedule_on"  # comfort
 CONF_PRESET_SCHEDULE_OFF = "preset_schedule_off"  # eco
-CONF_SCHEDULE_BLOCKS_LIGHT = "schedule_blocks_light"  # Boolean
+# REMOVED: CONF_SCHEDULE_BLOCKS_LIGHT (pas besoin, calendrier = chauffage only)
 ```
 
 **Logique** :
@@ -278,18 +280,25 @@ if schedule_entity:
     event_active = is_state(schedule_entity, 'on')
 
     if event_active:
-        # Calendrier actif → force mode
+        # Calendrier actif → force mode confort
         self._current_mode = MODE_COMFORT  # ou preset_schedule_on
         return
     else:
         # Pas d'event → force eco
         self._current_mode = MODE_ECO  # ou preset_schedule_off
-
-        # Bloquer lumières si configuré (salles de bain)
-        if schedule_blocks_light:
-            self.light_controller.block_automation = True
-
         return
+
+# ⚠️ IMPORTANT : Le calendrier NE BLOQUE PAS les lumières
+# Les lumières fonctionnent normalement (timer, confort SdB, etc.)
+```
+
+**Exemple concret** :
+```
+Chambre avec calendrier "Chauffage chambre"
+- Event 07:00-08:00 → MODE_COMFORT (20°C)
+- Event 22:00-23:00 → MODE_COMFORT (20°C)
+- Reste du temps → MODE_ECO (18°C)
+- Lumières → fonctionnent indépendamment du calendrier
 ```
 
 ---
@@ -326,6 +335,53 @@ if is_summer:
         target_hvac = COOL
         target_temp = temp_cool_eco  # 26°C
 ```
+
+---
+
+#### 1.5 - Sensors de Debug/État ⭐⭐
+**Impact** : Tous les utilisateurs (troubleshooting)
+**Fichiers** : `sensor.py`, `const.py`
+
+**Objectif** : Aider au diagnostic et comprendre le comportement de l'intégration
+
+**Nouveaux sensors par pièce** :
+```python
+# Sensor : État de priorité actuelle
+sensor.smart_room_[nom]_current_priority
+  States: "bypass", "windows_open", "external_control", "away", "schedule", "normal"
+
+# Sensor : External Control actif
+binary_sensor.smart_room_[nom]_external_control_active
+  State: ON si external control actif
+
+# Sensor : Hystérésis (X4FP Type 3b uniquement)
+sensor.smart_room_[nom]_hysteresis_state
+  States: "heating" (preset_heat), "idle" (preset_idle), "deadband" (zone morte)
+  Attributes:
+    - current_temp: 19.5°C
+    - setpoint: 20.0°C
+    - hysteresis: 0.5°C
+    - lower_threshold: 19.5°C
+    - upper_threshold: 20.5°C
+
+# Sensor : Calendrier actif
+binary_sensor.smart_room_[nom]_schedule_active
+  State: ON si event calendrier actif
+
+# Sensor : Détails climat (existant, enrichi)
+sensor.smart_room_[nom]_state
+  Attributes ajoutés:
+    - current_priority: "external_control"
+    - external_control_active: true
+    - hysteresis_state: "heating"
+    - schedule_active: true
+```
+
+**Bénéfices** :
+- ✅ Comprendre pourquoi un mode est appliqué
+- ✅ Déboguer problèmes de priorité
+- ✅ Voir l'hystérésis en action
+- ✅ Créer automatisations basées sur ces états
 
 ---
 
@@ -883,8 +939,14 @@ class ClimateController:
    - Ou tout d'un coup après tests ?
 
 5. **Calendrier bloque lumières ?**
-   - Uniquement pour salles de bain ?
-   - Ou option générale ?
+   - ❌ NON : Le calendrier contrôle UNIQUEMENT le chauffage
+   - ✅ Lumières fonctionnent toujours normalement
+   - 💡 Usage : Chauffer chambres/SdB selon habitudes (levé/couché)
+
+6. **Sensors de debug** ⭐ NOUVEAU
+   - ✅ Ajouter sensors montrant états internes
+   - 💡 Pour troubleshooting et compréhension du comportement
+   - Exemples : current_priority, external_control_active, hysteresis_state
 
 6. **VMC & Prises → intégration ou automations ?**
    - Phase 3 vraiment utile ?
