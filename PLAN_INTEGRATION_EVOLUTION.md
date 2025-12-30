@@ -385,6 +385,188 @@ sensor.smart_room_[nom]_state
 
 ---
 
+#### 1.6 - Switch Pause Manuelle ⭐⭐⭐
+**Impact** : Tous les utilisateurs (contrôle manuel temporaire)
+**Fichiers** : `switch.py`, `climate_control.py`, `room_manager.py`, `config_flow.py`, `const.py`
+
+**Objectif** : Permettre à l'utilisateur de mettre en pause l'automation pour reprendre le contrôle manuel, sans la désactiver complètement.
+
+**Problème actuel** : Avec les blueprints, toute modification manuelle est immédiatement écrasée par l'automation. L'utilisateur perd le contrôle.
+
+**Solution** : Switch de pause avec durée configurable
+
+**Ajouts nécessaires** :
+```python
+# Config
+CONF_PAUSE_DURATION_MINUTES = "pause_duration_minutes"  # 15, 30, 60, 120, 240, 480
+CONF_PAUSE_INFINITE = "pause_infinite"  # boolean
+```
+
+**Entité créée** :
+```python
+# Switch par pièce
+switch.smart_room_[nom]_pause
+  State: ON (pause active) / OFF (automation active)
+  Attributes:
+    - duration_minutes: 30
+    - infinite_enabled: false
+    - pause_until: "2025-01-15 14:30:00" (si durée définie)
+    - remaining_minutes: 25 (si pause active)
+```
+
+**Interface configuration** :
+```yaml
+⏸️ Contrôle Manuel (optionnel)
+
+  Durée pause par défaut: [30 minutes          ▼]
+    └─ Options: 15 min, 30 min, 1h, 2h, 4h, 8h
+
+  ☑️ Permettre pause infinie
+     └─ Switch reste ON indéfiniment jusqu'à désactivation manuelle
+```
+
+**Logique implémentation** :
+```python
+class SmartRoomPauseSwitch(SmartRoomEntity, SwitchEntity):
+    """Switch pour mettre automation en pause."""
+
+    def __init__(self, ...):
+        self._pause_timer = None
+        self._pause_until = None
+
+    async def async_turn_on(self):
+        """Activer la pause."""
+        duration = self.room_config.get(CONF_PAUSE_DURATION_MINUTES, 30)
+        infinite = self.room_config.get(CONF_PAUSE_INFINITE, False)
+
+        if infinite or duration == 0:
+            # Pause infinie
+            self._pause_timer = None
+            self._pause_until = None
+            _LOGGER.info("Pause infinie activée pour %s", self.room_name)
+        else:
+            # Pause avec durée
+            self._pause_until = dt_util.now() + timedelta(minutes=duration)
+            self._pause_timer = async_call_later(
+                self.hass,
+                duration * 60,
+                self._auto_turn_off
+            )
+            _LOGGER.info(
+                "Pause activée pour %s pendant %d minutes (jusqu'à %s)",
+                self.room_name,
+                duration,
+                self._pause_until
+            )
+
+        self._attr_is_on = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs):
+        """Désactiver la pause."""
+        if self._pause_timer:
+            self._pause_timer()  # Cancel timer
+            self._pause_timer = None
+
+        self._pause_until = None
+        self._attr_is_on = False
+        _LOGGER.info("Pause désactivée pour %s", self.room_name)
+        self.async_write_ha_state()
+
+    async def _auto_turn_off(self, _):
+        """Auto-désactivation après expiration."""
+        _LOGGER.info("Pause expirée pour %s", self.room_name)
+        await self.async_turn_off()
+
+    @property
+    def extra_state_attributes(self):
+        """Attributs du switch."""
+        attrs = {
+            "duration_minutes": self.room_config.get(CONF_PAUSE_DURATION_MINUTES, 30),
+            "infinite_enabled": self.room_config.get(CONF_PAUSE_INFINITE, False),
+        }
+
+        if self._pause_until:
+            attrs["pause_until"] = self._pause_until.isoformat()
+            remaining = (self._pause_until - dt_util.now()).total_seconds() / 60
+            attrs["remaining_minutes"] = max(0, int(remaining))
+
+        return attrs
+```
+
+**Intégration dans climate_control.py** :
+```python
+async def async_update(self):
+    """Update climate control logic."""
+    climate_entity = self.room_config.get(CONF_CLIMATE_ENTITY)
+    if not climate_entity:
+        return
+
+    # PRIORITY 0.5: Check manual pause ⭐ NOUVEAU
+    if self.room_manager.is_paused():
+        _LOGGER.debug(
+            "⏸️ Manual pause active in %s - skipping automation",
+            self.room_manager.room_name,
+        )
+        return
+
+    # PRIORITY 1: Check bypass switch
+    bypass_switch = self.room_config.get(CONF_CLIMATE_BYPASS_SWITCH)
+    # ... reste du code
+```
+
+**Intégration dans room_manager.py** :
+```python
+def is_paused(self) -> bool:
+    """Check if manual pause is active."""
+    # Récupérer l'état du switch depuis le coordinator
+    pause_switch_id = f"switch.smart_room_{self.room_id}_pause"
+    pause_state = self.hass.states.get(pause_switch_id)
+    return pause_state and pause_state.state == STATE_ON
+```
+
+**Enrichissement sensor de debug** :
+```python
+sensor.smart_room_[nom]_current_priority
+  States: "paused", "bypass", "windows_open", "external_control", "away", "schedule", "normal"
+  # "paused" devient la priorité la plus haute (après bypass)
+```
+
+**Cas d'usage** :
+1. **Ajustement ponctuel** : Utilisateur veut monter temporairement le chauffage
+   - Active switch pause → monte température manuellement → automation désactivée 30 min
+   - Après 30 min → automation reprend automatiquement
+
+2. **Nuit exceptionnelle** : Invités dans la chambre, besoin de confort toute la nuit
+   - Active pause infinie → ajuste manuellement → désactive au matin
+
+3. **Maintenance** : Besoin de tester le chauffage sans interférence
+   - Active pause → tests manuels → désactive quand terminé
+
+**Différences avec Bypass** :
+| Aspect | Bypass | Pause Switch |
+|--------|--------|--------------|
+| **Durée** | Indéfinie | Configurable avec auto-OFF |
+| **Visibilité** | Switch externe | Switch intégré intégration |
+| **Usage** | Désactivation longue durée | Contrôle ponctuel |
+| **Auto-réactivation** | Non | Oui (sauf si infini) |
+
+**Avantages** :
+- ✅ Contrôle manuel temporaire sans désactiver complètement
+- ✅ Auto-réactivation après durée (pas besoin de penser à rallumer)
+- ✅ Pause infinie optionnelle pour cas exceptionnels
+- ✅ Visible dans l'interface (switch par pièce)
+- ✅ Attributs informatifs (temps restant, etc.)
+- ✅ Pas de détection automatique confuse (contrôle explicite)
+
+**Notes importantes** :
+- ⚠️ Pas de détection automatique des changements manuels (trop complexe, faux positifs)
+- ⚠️ L'utilisateur DOIT activer le switch manuellement
+- ⚠️ Durée configurable au niveau de la pièce (pas global)
+- ⚠️ Option infinie désactivée par défaut (sécurité)
+
+---
+
 ### Priority 2 : IMPORTANT (améliore flexibilité)
 
 #### 2.1 - Délais Fenêtres (delay_open/close) ⭐
@@ -731,8 +913,10 @@ POST-INSTALLATION:
 ### Critiques (Priority 1)
 1. ✅ **const.py** - Ajouter toutes les nouvelles constantes
 2. ✅ **config_flow.py** - Ajouter champs configuration
-3. ✅ **climate_control.py** - Logique hystérésis + External Control avancé + été
-4. ✅ **room_manager.py** - Logique calendrier
+3. ✅ **climate_control.py** - Logique hystérésis + External Control avancé + été + check pause
+4. ✅ **room_manager.py** - Logique calendrier + méthode is_paused()
+5. ✅ **switch.py** - Switch pause manuelle avec timer
+6. ✅ **sensor.py** - Debug sensors (priority, hysteresis, etc.)
 
 ### Importants (Priority 2)
 5. ⚠️ **coordinator.py** - Tick configurable
@@ -755,6 +939,11 @@ class ClimateController:
         # PRIORITY 0: Détection type
         if self._climate_type is None:
             self._detect_climate_type()
+
+        # PRIORITY 0.5: Manual Pause (contrôle manuel temporaire) ⭐ NOUVEAU
+        if self.room_manager.is_paused():
+            _LOGGER.debug("⏸️ Manual pause active - skipping automation")
+            return
 
         # PRIORITY 1: Bypass (contrôle externe complet = intégration OFF)
         if self._is_bypass_active():
@@ -887,12 +1076,14 @@ class ClimateController:
 
 ## 🚀 Plan d'Implémentation
 
-### Phase 1 : Gaps Critiques (Priority 1) - 6-8h
+### Phase 1 : Gaps Critiques (Priority 1) - 8-10h
 1. ✅ Hystérésis X4FP (2h)
 2. ✅ External Control avancé (2h)
 3. ✅ Calendrier par pièce (1h)
 4. ✅ Été thermostats réversibles (1h)
-5. ✅ Tests sur 1 pièce de chaque type (2h)
+5. ✅ Debug sensors (1h)
+6. ✅ Switch pause manuelle (1-2h)
+7. ✅ Tests sur 1 pièce de chaque type (2h)
 
 ### Phase 2 : Améliorations (Priority 2) - 3-4h
 1. ⚠️ Délais fenêtres (1h)
@@ -911,7 +1102,7 @@ class ClimateController:
    - Ajout/modification ultérieure via Options
 3. 🔵 Documentation (1h)
 
-**Total estimé : 13-18h**
+**Total estimé : 15-20h**
 
 ---
 
