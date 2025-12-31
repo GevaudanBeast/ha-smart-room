@@ -109,6 +109,24 @@ from .const import (
     MODE_FROST_PROTECTION,
 )
 
+from .config_flow.schemas import (
+    build_global_settings_schema,
+    build_room_basic_schema,
+    build_room_sensors_schema,
+    build_room_actuators_schema,
+    build_light_config_schema,
+    build_climate_config_schema,
+    build_climate_advanced_schema,
+    build_schedule_schema,
+    build_room_control_schema,
+)
+from .config_flow.helpers import (
+    parse_comfort_ranges,
+    format_comfort_ranges,
+    should_save_field,
+    build_room_list_choices,
+)
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -227,13 +245,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 return await self.async_step_delete_room()
 
         # Build room list for selection
-        room_choices = {}
-        for idx, room in enumerate(rooms):
-            room_name = room.get(CONF_ROOM_NAME, f"Room {idx + 1}")
-            room_type = room.get(CONF_ROOM_TYPE, "normal")
-            room_choices[f"edit_{idx}"] = f"✏️ Modifier: {room_name} ({room_type})"
-            room_choices[f"delete_{idx}"] = f"🗑️ Supprimer: {room_name}"
-        room_choices["back"] = "⬅️ Retour au menu"
+        room_choices = build_room_list_choices(rooms)
 
         return self.async_show_form(
             step_id="list_rooms",
@@ -261,21 +273,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="add_room",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_ROOM_NAME): cv.string,
-                    vol.Optional(CONF_ROOM_TYPE, default=ROOM_TYPE_NORMAL): vol.In(
-                        {
-                            ROOM_TYPE_NORMAL: "Normal (chambres - pas de timer lumière)",
-                            ROOM_TYPE_CORRIDOR: "Couloir (timer 5min)",
-                            ROOM_TYPE_BATHROOM: "Salle de bain (timer 15min + lumière pilote chauffage)",
-                        }
-                    ),
-                    vol.Optional(
-                        CONF_ROOM_ICON, default="mdi:home"
-                    ): selector.IconSelector(),
-                }
-            ),
+            data_schema=build_room_basic_schema(None),
             errors=errors,
             description_placeholders={
                 "info": "Type normal: pas de timer. Couloir/SdB: timer auto-off."
@@ -300,30 +298,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="edit_room_basic",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_ROOM_NAME,
-                        default=self._current_room.get(CONF_ROOM_NAME, ""),
-                    ): cv.string,
-                    vol.Optional(
-                        CONF_ROOM_TYPE,
-                        default=self._current_room.get(
-                            CONF_ROOM_TYPE, ROOM_TYPE_NORMAL
-                        ),
-                    ): vol.In(
-                        {
-                            ROOM_TYPE_NORMAL: "Normal (chambres)",
-                            ROOM_TYPE_CORRIDOR: "Couloir (timer 5min)",
-                            ROOM_TYPE_BATHROOM: "Salle de bain (timer 15min + pilote chauffage)",
-                        }
-                    ),
-                    vol.Optional(
-                        CONF_ROOM_ICON,
-                        default=self._current_room.get(CONF_ROOM_ICON, "mdi:home"),
-                    ): selector.IconSelector(),
-                }
-            ),
+            data_schema=build_room_basic_schema(self._current_room),
             errors=errors,
         )
 
@@ -349,54 +324,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             self._current_room.update(update_data)
             return await self.async_step_room_actuators()
 
-        # Build schema conditionally to avoid None defaults
-        schema_dict = {}
-
-        # Door/window sensors (always show, default to empty list)
-        # Use 'or []' to handle None values (dict.get returns None if value is None)
-        schema_dict[
-            vol.Optional(
-                CONF_DOOR_WINDOW_SENSORS,
-                default=self._current_room.get(CONF_DOOR_WINDOW_SENSORS) or [],
-            )
-        ] = selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                domain=[BINARY_SENSOR_DOMAIN],
-                multiple=True,
-            )
-        )
-
-        # Temperature sensor (only set default if it exists and is not None)
-        temp_sensor = self._current_room.get(CONF_TEMPERATURE_SENSOR)
-        if temp_sensor is not None:
-            schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR, default=temp_sensor)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-                )
-            )
-        else:
-            schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-                )
-            )
-
-        # Humidity sensor (only set default if it exists and is not None)
-        humidity_sensor = self._current_room.get(CONF_HUMIDITY_SENSOR)
-        if humidity_sensor is not None:
-            schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR, default=humidity_sensor)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-                )
-            )
-        else:
-            schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-            )
-
         return self.async_show_form(
             step_id="room_sensors",
-            data_schema=vol.Schema(schema_dict),
+            data_schema=build_room_sensors_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Tous optionnels. Fenêtres → hors-gel si ouvertes.",
@@ -432,73 +362,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             self._current_room.update(update_data)
             return await self.async_step_room_light_config()
 
-        # Build schema conditionally to avoid None defaults
-        schema_dict = {}
-
-        # Lights (always show, default to empty list)
-        # Use 'or []' to handle None values (dict.get returns None if value is None)
-        schema_dict[
-            vol.Optional(
-                CONF_LIGHTS,
-                default=self._current_room.get(CONF_LIGHTS) or [],
-            )
-        ] = selector.EntitySelector(
-            selector.EntitySelectorConfig(
-                domain=[LIGHT_DOMAIN, SWITCH_DOMAIN],
-                multiple=True,
-            )
-        )
-
-        # Climate entity (only set default if it exists and is not None)
-        climate_entity = self._current_room.get(CONF_CLIMATE_ENTITY)
-        if climate_entity is not None:
-            schema_dict[vol.Optional(CONF_CLIMATE_ENTITY, default=climate_entity)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
-                )
-            )
-        else:
-            schema_dict[vol.Optional(CONF_CLIMATE_ENTITY)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
-            )
-
-        # Bypass switch (only set default if it exists and is not None)
-        bypass_switch = self._current_room.get(CONF_CLIMATE_BYPASS_SWITCH)
-        if bypass_switch is not None:
-            schema_dict[
-                vol.Optional(CONF_CLIMATE_BYPASS_SWITCH, default=bypass_switch)
-            ] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
-            )
-        else:
-            schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(
-                        domain=[SWITCH_DOMAIN, "input_boolean"]
-                    )
-                )
-            )
-
-        # External control switch (only set default if it exists and is not None) - v0.3.0
-        external_switch = self._current_room.get(CONF_EXTERNAL_CONTROL_SWITCH)
-        if external_switch is not None:
-            schema_dict[
-                vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH, default=external_switch)
-            ] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
-            )
-        else:
-            schema_dict[vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(
-                        domain=[SWITCH_DOMAIN, "input_boolean"]
-                    )
-                )
-            )
-
         return self.async_show_form(
             step_id="room_actuators",
-            data_schema=vol.Schema(schema_dict),
+            data_schema=build_room_actuators_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Bypass: désactive tout contrôle. External Control: Solar Optimizer, etc. (priorité haute)",
@@ -521,31 +387,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         # Show timeout config only for corridor/bathroom
         if room_type in [ROOM_TYPE_CORRIDOR, ROOM_TYPE_BATHROOM]:
-            default_timeout = (
-                DEFAULT_LIGHT_TIMEOUT_BATHROOM
-                if room_type == ROOM_TYPE_BATHROOM
-                else DEFAULT_LIGHT_TIMEOUT
-            )
             return self.async_show_form(
                 step_id="room_light_config",
-                data_schema=vol.Schema(
-                    {
-                        vol.Optional(
-                            CONF_LIGHT_TIMEOUT,
-                            default=self._current_room.get(
-                                CONF_LIGHT_TIMEOUT, default_timeout
-                            ),
-                        ): selector.NumberSelector(
-                            selector.NumberSelectorConfig(
-                                min=60,
-                                max=1800,
-                                step=30,
-                                mode=selector.NumberSelectorMode.SLIDER,
-                                unit_of_measurement="s",
-                            )
-                        ),
-                    }
-                ),
+                data_schema=build_light_config_schema(self._current_room, room_type),
                 description_placeholders={
                     "room_name": self._current_room[CONF_ROOM_NAME],
                     "info": f"Type {room_type}: auto-off après timeout",
@@ -597,136 +441,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="room_climate_config",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_TEMP_COMFORT,
-                        default=self._current_room.get(
-                            CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=15,
-                            max=25,
-                            step=0.5,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="°C",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_TEMP_ECO,
-                        default=self._current_room.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=15,
-                            max=25,
-                            step=0.5,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="°C",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_TEMP_NIGHT,
-                        default=self._current_room.get(
-                            CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=15,
-                            max=25,
-                            step=0.5,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="°C",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_TEMP_FROST_PROTECTION,
-                        default=self._current_room.get(
-                            CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=5,
-                            max=15,
-                            step=0.5,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="°C",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_TEMP_COOL_COMFORT,
-                        default=self._current_room.get(
-                            CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=20,
-                            max=28,
-                            step=0.5,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="°C",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_TEMP_COOL_ECO,
-                        default=self._current_room.get(
-                            CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=20,
-                            max=30,
-                            step=0.5,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="°C",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_CLIMATE_WINDOW_CHECK,
-                        default=self._current_room.get(CONF_CLIMATE_WINDOW_CHECK, True),
-                    ): selector.BooleanSelector(),
-                    # v0.3.0 Priority 2 additions
-                    vol.Optional(
-                        CONF_WINDOW_DELAY_OPEN,
-                        default=self._current_room.get(
-                            CONF_WINDOW_DELAY_OPEN, DEFAULT_WINDOW_DELAY_OPEN
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=0,
-                            max=30,
-                            step=1,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="min",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_WINDOW_DELAY_CLOSE,
-                        default=self._current_room.get(
-                            CONF_WINDOW_DELAY_CLOSE, DEFAULT_WINDOW_DELAY_CLOSE
-                        ),
-                    ): selector.NumberSelector(
-                        selector.NumberSelectorConfig(
-                            min=0,
-                            max=30,
-                            step=1,
-                            mode=selector.NumberSelectorMode.SLIDER,
-                            unit_of_measurement="min",
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_SUMMER_POLICY,
-                        default=self._current_room.get(
-                            CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
-                        ),
-                    ): vol.In(
-                        {
-                            "off": "Off (éteindre radiateurs en été)",
-                            "eco": "Eco (garder radiateurs en eco en été)",
-                        }
-                    ),
-                }
-            ),
+            data_schema=build_climate_config_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Températures hiver/été. Window delays: temps avant réaction fenêtres. Summer policy: X4FP en été.",
@@ -791,173 +506,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             self._current_room.update(update_data)
             return await self.async_step_room_schedule()
 
-        # Build schema conditionally to avoid None defaults
-        schema_dict = {}
-
-        # Hysteresis configuration (X4FP Type 3b)
-        setpoint_input = self._current_room.get(CONF_SETPOINT_INPUT)
-        if setpoint_input is not None:
-            schema_dict[vol.Optional(CONF_SETPOINT_INPUT, default=setpoint_input)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=["input_number", SENSOR_DOMAIN])
-                )
-            )
-        else:
-            schema_dict[vol.Optional(CONF_SETPOINT_INPUT)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=["input_number", SENSOR_DOMAIN])
-            )
-
-        schema_dict[vol.Optional(
-            CONF_HYSTERESIS,
-            default=self._current_room.get(CONF_HYSTERESIS, DEFAULT_HYSTERESIS),
-        )] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.1,
-                max=5.0,
-                step=0.1,
-                mode=selector.NumberSelectorMode.SLIDER,
-                unit_of_measurement="°C",
-            )
-        )
-
-        schema_dict[vol.Optional(
-            CONF_MIN_SETPOINT,
-            default=self._current_room.get(CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT),
-        )] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=10,
-                max=25,
-                step=0.5,
-                mode=selector.NumberSelectorMode.SLIDER,
-                unit_of_measurement="°C",
-            )
-        )
-
-        schema_dict[vol.Optional(
-            CONF_MAX_SETPOINT,
-            default=self._current_room.get(CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT),
-        )] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=15,
-                max=30,
-                step=0.5,
-                mode=selector.NumberSelectorMode.SLIDER,
-                unit_of_measurement="°C",
-            )
-        )
-
-        schema_dict[vol.Optional(
-            CONF_PRESET_HEAT,
-            default=self._current_room.get(CONF_PRESET_HEAT, DEFAULT_PRESET_HEAT),
-        )] = vol.In(
-            {
-                X4FP_PRESET_COMFORT: "Comfort",
-                X4FP_PRESET_ECO: "Eco",
-            }
-        )
-
-        schema_dict[vol.Optional(
-            CONF_PRESET_IDLE,
-            default=self._current_room.get(CONF_PRESET_IDLE, DEFAULT_PRESET_IDLE),
-        )] = vol.In(
-            {
-                X4FP_PRESET_ECO: "Eco",
-                X4FP_PRESET_OFF: "Off (none)",
-            }
-        )
-
-        # External Control configuration
-        schema_dict[vol.Optional(
-            CONF_EXTERNAL_CONTROL_PRESET,
-            default=self._current_room.get(
-                CONF_EXTERNAL_CONTROL_PRESET, DEFAULT_EXTERNAL_CONTROL_PRESET
-            ),
-        )] = vol.In(
-            {
-                X4FP_PRESET_COMFORT: "Comfort",
-                X4FP_PRESET_ECO: "Eco",
-            }
-        )
-
-        schema_dict[vol.Optional(
-            CONF_EXTERNAL_CONTROL_TEMP,
-            default=self._current_room.get(
-                CONF_EXTERNAL_CONTROL_TEMP, DEFAULT_EXTERNAL_CONTROL_TEMP
-            ),
-        )] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=15,
-                max=25,
-                step=0.5,
-                mode=selector.NumberSelectorMode.SLIDER,
-                unit_of_measurement="°C",
-            )
-        )
-
-        schema_dict[vol.Optional(
-            CONF_ALLOW_EXTERNAL_IN_AWAY,
-            default=self._current_room.get(
-                CONF_ALLOW_EXTERNAL_IN_AWAY, DEFAULT_ALLOW_EXTERNAL_IN_AWAY
-            ),
-        )] = selector.BooleanSelector()
-
-        # X4FP Configurable Presets
-        schema_dict[vol.Optional(
-            CONF_PRESET_COMFORT,
-            default=self._current_room.get(CONF_PRESET_COMFORT, DEFAULT_PRESET_COMFORT),
-        )] = vol.In(
-            {
-                X4FP_PRESET_COMFORT: "Comfort",
-                X4FP_PRESET_ECO: "Eco",
-            }
-        )
-
-        schema_dict[vol.Optional(
-            CONF_PRESET_ECO,
-            default=self._current_room.get(CONF_PRESET_ECO, DEFAULT_PRESET_ECO),
-        )] = vol.In(
-            {
-                X4FP_PRESET_ECO: "Eco",
-                X4FP_PRESET_COMFORT: "Comfort",
-            }
-        )
-
-        schema_dict[vol.Optional(
-            CONF_PRESET_NIGHT,
-            default=self._current_room.get(CONF_PRESET_NIGHT, DEFAULT_PRESET_NIGHT),
-        )] = vol.In(
-            {
-                X4FP_PRESET_ECO: "Eco",
-                X4FP_PRESET_COMFORT: "Comfort",
-                X4FP_PRESET_AWAY: "Away",
-            }
-        )
-
-        schema_dict[vol.Optional(
-            CONF_PRESET_AWAY,
-            default=self._current_room.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY),
-        )] = vol.In(
-            {
-                X4FP_PRESET_AWAY: "Away (hors-gel)",
-                X4FP_PRESET_ECO: "Eco",
-                X4FP_PRESET_OFF: "Off (none)",
-            }
-        )
-
-        schema_dict[vol.Optional(
-            CONF_PRESET_WINDOW,
-            default=self._current_room.get(CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW),
-        )] = vol.In(
-            {
-                X4FP_PRESET_AWAY: "Away (hors-gel)",
-                X4FP_PRESET_ECO: "Eco",
-                X4FP_PRESET_OFF: "Off (none)",
-            }
-        )
-
         return self.async_show_form(
             step_id="room_climate_advanced",
-            data_schema=vol.Schema(schema_dict),
+            data_schema=build_climate_advanced_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Hysteresis: contrôle X4FP via temp (setpoint requis). External Control: config Solar Optimizer. Presets: personnaliser X4FP.",
@@ -974,26 +525,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 CONF_NIGHT_START, DEFAULT_NIGHT_START
             )
 
-            # Parse comfort time ranges (simplified: user enters as text for now)
-            # TODO: In future, could use a more sophisticated multi-time-range selector
+            # Parse comfort time ranges using helper
             comfort_ranges_text = user_input.get("comfort_ranges", "")
-            comfort_ranges = []
-            if comfort_ranges_text:
-                # Format: "HH:MM-HH:MM,HH:MM-HH:MM"
-                for range_str in comfort_ranges_text.split(","):
-                    range_str = range_str.strip()
-                    if "-" in range_str:
-                        try:
-                            start, end = range_str.split("-")
-                            comfort_ranges.append(
-                                {
-                                    "start": start.strip(),
-                                    "end": end.strip(),
-                                }
-                            )
-                        except Exception:
-                            _LOGGER.warning("Invalid time range format: %s", range_str)
-
+            comfort_ranges = parse_comfort_ranges(comfort_ranges_text)
             self._current_room[CONF_COMFORT_TIME_RANGES] = comfort_ranges
 
             # v0.3.0 - Schedule entity (calendar) support
@@ -1012,69 +546,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
             return await self.async_step_room_control()
 
-        # Format existing comfort ranges for display
-        comfort_ranges = self._current_room.get(CONF_COMFORT_TIME_RANGES, [])
-        comfort_ranges_text = ",".join(
-            [
-                f"{r['start']}-{r['end']}"
-                for r in comfort_ranges
-                if r.get("start") and r.get("end")
-            ]
-        )
-
-        # Build schema
-        schema_dict = {
-            vol.Optional(
-                CONF_NIGHT_START,
-                default=self._current_room.get(
-                    CONF_NIGHT_START, DEFAULT_NIGHT_START
-                ),
-            ): selector.TimeSelector(),
-            vol.Optional(
-                "comfort_ranges",
-                default=comfort_ranges_text,
-            ): cv.string,
-        }
-
-        # v0.3.0 - Calendar/Schedule entity support
-        schedule_entity = self._current_room.get(CONF_SCHEDULE_ENTITY)
-        if schedule_entity is not None:
-            schema_dict[vol.Optional(CONF_SCHEDULE_ENTITY, default=schedule_entity)] = (
-                selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain=["calendar", "schedule"])
-                )
-            )
-        else:
-            schema_dict[vol.Optional(CONF_SCHEDULE_ENTITY)] = selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=["calendar", "schedule"])
-            )
-
-        # Presets for schedule on/off (only if schedule entity is present)
-        schema_dict[vol.Optional(
-            CONF_PRESET_SCHEDULE_ON,
-            default=self._current_room.get(CONF_PRESET_SCHEDULE_ON, MODE_COMFORT),
-        )] = vol.In(
-            {
-                MODE_COMFORT: "Comfort",
-                MODE_ECO: "Eco",
-                MODE_NIGHT: "Night",
-            }
-        )
-
-        schema_dict[vol.Optional(
-            CONF_PRESET_SCHEDULE_OFF,
-            default=self._current_room.get(CONF_PRESET_SCHEDULE_OFF, MODE_ECO),
-        )] = vol.In(
-            {
-                MODE_ECO: "Eco",
-                MODE_NIGHT: "Night",
-                MODE_FROST_PROTECTION: "Frost Protection",
-            }
-        )
-
         return self.async_show_form(
             step_id="room_schedule",
-            data_schema=vol.Schema(schema_dict),
+            data_schema=build_schedule_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Night start + comfort ranges (time-based). Calendar: externe (Google, etc.). Presets: mode si calendar ON/OFF",
@@ -1113,31 +587,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="room_control",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_PAUSE_DURATION_MINUTES,
-                        default=self._current_room.get(
-                            CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION
-                        ),
-                    ): vol.In(
-                        {
-                            15: "15 minutes",
-                            30: "30 minutes",
-                            60: "1 heure",
-                            120: "2 heures",
-                            240: "4 heures",
-                            480: "8 heures",
-                        }
-                    ),
-                    vol.Optional(
-                        CONF_PAUSE_INFINITE,
-                        default=self._current_room.get(
-                            CONF_PAUSE_INFINITE, DEFAULT_PAUSE_INFINITE
-                        ),
-                    ): selector.BooleanSelector(),
-                }
-            ),
+            data_schema=build_room_control_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Pause manuelle: durée par défaut du switch pause. Infinite: pause sans limite de temps.",
@@ -1197,26 +647,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="global_settings",
-            data_schema=vol.Schema(
-                {
-                    vol.Optional(
-                        CONF_ALARM_ENTITY,
-                        default=self.config_entry.data.get(CONF_ALARM_ENTITY),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=["alarm_control_panel"],
-                        )
-                    ),
-                    vol.Optional(
-                        CONF_SEASON_CALENDAR,
-                        default=self.config_entry.data.get(CONF_SEASON_CALENDAR),
-                    ): selector.EntitySelector(
-                        selector.EntitySelectorConfig(
-                            domain=["calendar", "binary_sensor"],
-                        )
-                    ),
-                }
-            ),
+            data_schema=build_global_settings_schema(self.config_entry.data),
             description_placeholders={
                 "info": "Alarme: armed_away → hors-gel. Calendrier été: clim cool, hiver: heat.",
             },
