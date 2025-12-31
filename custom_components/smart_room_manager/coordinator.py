@@ -93,8 +93,10 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
         for room_manager in self.room_managers.values():
             await room_manager.async_shutdown()
 
-        # Call parent shutdown to cancel timers and cleanup listeners
-        await super().async_shutdown()
+        # Call parent shutdown to cancel timers and cleanup listeners (HA 2024.x+)
+        # For HA 2023.x compatibility, check if method exists
+        if hasattr(super(), "async_shutdown"):
+            await super().async_shutdown()
 
     async def async_config_entry_first_refresh(self) -> None:
         """Refresh data for the first time when a config entry is setup."""
