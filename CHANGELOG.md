@@ -106,6 +106,13 @@ New 7-level priority hierarchy (0.5 = highest, 6 = lowest):
 
 #### Technical Improvements
 
+- **Code Refactoring**: Modularized codebase for better maintainability
+  - `config_flow.py`: Reduced from 1223 to 654 lines (-47%) by extracting schemas and helpers
+  - `climate_control.py`: Reduced from 768 to 392 lines (-49%) by extracting specialized controllers
+  - Created `config_flow/` module: schemas.py (715 lines), helpers.py (70 lines)
+  - Created `climate/` module: x4fp_controller.py (337 lines), thermostat_controller.py (201 lines)
+  - Improved testability and separation of concerns
+  - Lazy-loaded controllers for better performance
 - Fixed forward reference bug in const.py (X4FP_PRESET_* used before definition)
 - Proper timestamp tracking for window states
 - Improved logging with emojis for better visibility
