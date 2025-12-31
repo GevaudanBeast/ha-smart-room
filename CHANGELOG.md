@@ -7,6 +7,124 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-01-31
+
+### 🎯 Major Feature Release - Advanced Climate Control
+
+#### Priority 1 Features Added
+
+- **External Control (Solar Optimizer, etc.)**
+  - Generic external control support via switch entity
+  - `CONF_EXTERNAL_CONTROL_SWITCH`: Entity to monitor (input_boolean, switch)
+  - `CONF_EXTERNAL_CONTROL_PRESET`: X4FP preset when active (default: comfort)
+  - `CONF_EXTERNAL_CONTROL_TEMP`: Thermostat temperature when active (default: 20°C)
+  - `CONF_ALLOW_EXTERNAL_IN_AWAY`: Allow external control override when away (default: false)
+  - Priority: Higher than away mode, lower than windows open
+  - Monitors `is_active` attribute or state ON
+
+- **Hysteresis X4FP Type 3b**
+  - Temperature-based control for X4FP radiators with hysteresis
+  - `CONF_SETPOINT_INPUT`: Input number or sensor for target temperature
+  - `CONF_HYSTERESIS`: Temperature deadband (default: 0.5°C)
+  - `CONF_MIN_SETPOINT`, `CONF_MAX_SETPOINT`: Limits for setpoint clamping (17-23°C)
+  - `CONF_PRESET_HEAT`: Preset when heating needed (default: comfort)
+  - `CONF_PRESET_IDLE`: Preset when temperature reached (default: eco)
+  - Three states: heating, idle, deadband (no change)
+  - Hysteresis state available via debug sensor
+
+- **Schedule/Calendar per Room**
+  - Per-room calendar/schedule entity support
+  - `CONF_SCHEDULE_ENTITY`: Calendar or schedule entity
+  - `CONF_PRESET_SCHEDULE_ON`: Mode when calendar event active (default: comfort)
+  - `CONF_PRESET_SCHEDULE_OFF`: Mode when no event (default: eco)
+  - Priority: Higher than normal mode, lower than away
+  - Overrides time-based comfort ranges when configured
+  - Schedule active status via debug sensor
+
+- **Manual Pause Switch**
+  - Per-room pause switch to temporarily disable automation
+  - `CONF_PAUSE_DURATION_MINUTES`: Auto-resume duration (15, 30, 60, 120, 240, 480 minutes)
+  - `CONF_PAUSE_INFINITE`: Enable infinite pause (no auto-resume)
+  - Highest priority (paused = 0.5, above bypass)
+  - Switch entity: `switch.smart_room_{room_id}_pause`
+  - Attributes: duration_minutes, infinite_enabled, pause_until, remaining_minutes
+  - Auto-turn off after duration or manual turn off
+
+- **Debug Sensors**
+  - `sensor.smart_room_{room_id}_current_priority`: Current priority level (paused, bypass, windows_open, external_control, away, schedule, normal)
+  - `binary_sensor.smart_room_{room_id}_external_control_active`: External control status
+  - `sensor.smart_room_{room_id}_hysteresis_state`: Hysteresis state (heating, idle, deadband)
+  - `binary_sensor.smart_room_{room_id}_schedule_active`: Schedule active status
+  - Detailed hysteresis attributes: current_temp, setpoint, hysteresis_value, lower/upper thresholds
+
+#### Priority 2 Features Added
+
+- **Window Delays**
+  - Configurable delays before reacting to windows open/close
+  - `CONF_WINDOW_DELAY_OPEN`: Minutes before setting frost protection (default: 2)
+  - `CONF_WINDOW_DELAY_CLOSE`: Minutes before resuming after close (default: 2)
+  - Prevents false reactions to brief window openings
+  - Timestamp-based tracking with `is_windows_open_delayed()` method
+
+- **Configurable X4FP Presets**
+  - Customize X4FP presets per room
+  - `CONF_PRESET_COMFORT`: Preset for comfort mode (default: comfort)
+  - `CONF_PRESET_ECO`: Preset for eco mode (default: eco)
+  - `CONF_PRESET_NIGHT`: Preset for night mode (default: eco)
+  - `CONF_PRESET_AWAY`: Preset for away/frost protection (default: away)
+  - `CONF_PRESET_WINDOW`: Preset for windows open (default: away)
+  - Adapts to different radiator types
+
+- **Summer Policy**
+  - Configurable X4FP behavior in summer mode
+  - `CONF_SUMMER_POLICY`: "off" or "eco" (default: "off")
+  - "off": Turn off radiators completely in summer
+  - "eco": Keep radiators on eco preset in summer
+  - Applied in both normal and hysteresis control modes
+
+#### Priority System (v0.3.0)
+
+New 7-level priority hierarchy (0.5 = highest, 6 = lowest):
+1. **Priority 0.5 - Paused**: Manual pause active
+2. **Priority 1 - Bypass**: Climate bypass switch ON
+3. **Priority 2 - Windows Open**: Windows detected open (with delay)
+4. **Priority 3 - External Control**: Solar Optimizer or similar active
+5. **Priority 4 - Away**: Alarm armed_away
+6. **Priority 5 - Schedule**: Calendar event active
+7. **Priority 6 - Normal**: Time-based or default mode
+
+#### Config Flow Updated
+
+- Wizard updated from v0.2.0 to v0.3.0 (6 → 8 steps)
+- **Step 3 (Actuators)**: Added external_control_switch field
+- **Step 5 (Climate Config)**: Added window_delay_open, window_delay_close, summer_policy
+- **Step 6 (Climate Advanced)**: NEW - Hysteresis, External Control config, X4FP Presets
+- **Step 7 (Schedule)**: Added schedule_entity, preset_schedule_on, preset_schedule_off
+- **Step 8 (Room Control)**: NEW - Pause duration, pause infinite
+- All features configurable via UI
+- Sensible defaults for all optional features
+
+#### Technical Improvements
+
+- **Code Refactoring**: Modularized codebase for better maintainability
+  - `config_flow.py`: Reduced from 1223 to 654 lines (-47%) by extracting schemas and helpers
+  - `climate_control.py`: Reduced from 768 to 392 lines (-49%) by extracting specialized controllers
+  - Created `config_flow/` module: schemas.py (715 lines), helpers.py (70 lines)
+  - Created `climate/` module: x4fp_controller.py (337 lines), thermostat_controller.py (201 lines)
+  - Improved testability and separation of concerns
+  - Lazy-loaded controllers for better performance
+- Fixed forward reference bug in const.py (X4FP_PRESET_* used before definition)
+- Proper timestamp tracking for window states
+- Improved logging with emojis for better visibility
+- Comprehensive state tracking for debug purposes
+- All features have proper defaults and validation
+
+### Migration from v0.2.x
+
+No breaking changes. All new features are optional with sensible defaults.
+Existing configurations continue to work without modification.
+Reconfigure rooms via UI to enable new v0.3.0 features.
+
 ## [0.2.4] - 2025-11-16
 
 ### Added

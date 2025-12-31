@@ -1,0 +1,337 @@
+"""X4FP climate controller (Fil Pilote)."""
+
+from __future__ import annotations
+
+import logging
+from typing import Any, TYPE_CHECKING
+
+from homeassistant.components.climate import (
+    ATTR_PRESET_MODE,
+    DOMAIN as CLIMATE_DOMAIN,
+    SERVICE_SET_PRESET_MODE,
+)
+from homeassistant.core import HomeAssistant
+
+from ..const import (
+    CONF_HYSTERESIS,
+    CONF_MAX_SETPOINT,
+    CONF_MIN_SETPOINT,
+    CONF_PRESET_AWAY,
+    CONF_PRESET_COMFORT,
+    CONF_PRESET_ECO,
+    CONF_PRESET_HEAT,
+    CONF_PRESET_IDLE,
+    CONF_PRESET_NIGHT,
+    CONF_PRESET_WINDOW,
+    CONF_SETPOINT_INPUT,
+    CONF_SUMMER_POLICY,
+    CONF_TEMPERATURE_SENSOR,
+    DEFAULT_HYSTERESIS,
+    DEFAULT_MAX_SETPOINT,
+    DEFAULT_MIN_SETPOINT,
+    DEFAULT_PRESET_AWAY,
+    DEFAULT_PRESET_COMFORT,
+    DEFAULT_PRESET_ECO,
+    DEFAULT_PRESET_HEAT,
+    DEFAULT_PRESET_IDLE,
+    DEFAULT_PRESET_NIGHT,
+    DEFAULT_PRESET_WINDOW,
+    DEFAULT_SUMMER_POLICY,
+    HYSTERESIS_DEADBAND,
+    HYSTERESIS_HEATING,
+    HYSTERESIS_IDLE,
+    MODE_COMFORT,
+    MODE_ECO,
+    MODE_FROST_PROTECTION,
+    MODE_NIGHT,
+    X4FP_PRESET_AWAY,
+    X4FP_PRESET_ECO,
+    X4FP_PRESET_OFF,
+)
+
+if TYPE_CHECKING:
+    from ..room_manager import RoomManager
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class X4FPController:
+    """Controller for X4FP (Fil Pilote) climate entities."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        room_config: dict[str, Any],
+        room_manager: RoomManager,
+    ) -> None:
+        """Initialize X4FP controller."""
+        self.hass = hass
+        self.room_config = room_config
+        self.room_manager = room_manager
+
+        self._current_preset: str | None = None
+        self._hysteresis_state: str = HYSTERESIS_DEADBAND
+        self._hysteresis_current_temp: float | None = None
+        self._hysteresis_setpoint: float | None = None
+
+    async def control(
+        self, climate_entity: str, mode: str, is_summer: bool
+    ) -> None:
+        """Control X4FP climate entity via preset_mode."""
+        # Check if hysteresis control is configured
+        if self._has_hysteresis_control():
+            await self._control_with_hysteresis(climate_entity, mode, is_summer)
+        else:
+            await self._control_normal(climate_entity, mode, is_summer)
+
+    async def _control_normal(
+        self, climate_entity: str, mode: str, is_summer: bool
+    ) -> None:
+        """Control X4FP without hysteresis (preset-based)."""
+        # Summer: apply summer policy (off or eco)
+        if is_summer:
+            if mode != MODE_FROST_PROTECTION:
+                # Use configured summer policy
+                summer_policy = self.room_config.get(
+                    CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
+                )
+                if summer_policy == "eco":
+                    target_preset = X4FP_PRESET_ECO
+                else:  # "off"
+                    target_preset = X4FP_PRESET_OFF
+            else:
+                # Frost protection always uses away
+                target_preset = X4FP_PRESET_AWAY
+        else:
+            # Winter: map mode to preset
+            target_preset = self._get_preset_for_mode(mode)
+
+        # Only change if different
+        if self._current_preset == target_preset:
+            return
+
+        _LOGGER.debug(
+            "Setting X4FP preset for %s in %s to %s (mode: %s, summer: %s)",
+            climate_entity,
+            self.room_manager.room_name,
+            target_preset,
+            mode,
+            is_summer,
+        )
+
+        try:
+            await self.hass.services.async_call(
+                CLIMATE_DOMAIN,
+                SERVICE_SET_PRESET_MODE,
+                {
+                    "entity_id": climate_entity,
+                    ATTR_PRESET_MODE: target_preset,
+                },
+                blocking=True,
+            )
+            self._current_preset = target_preset
+        except Exception as err:
+            _LOGGER.error(
+                "Error setting preset mode for %s: %s",
+                climate_entity,
+                err,
+            )
+
+    async def _control_with_hysteresis(
+        self, climate_entity: str, mode: str, is_summer: bool
+    ) -> None:
+        """Control X4FP with temperature hysteresis (Type 3b)."""
+        if is_summer:
+            # Summer: apply summer policy (off or eco)
+            summer_policy = self.room_config.get(
+                CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
+            )
+            if summer_policy == "eco":
+                target_preset = X4FP_PRESET_ECO
+            else:  # "off"
+                target_preset = X4FP_PRESET_OFF
+            self._hysteresis_state = HYSTERESIS_DEADBAND
+        else:
+            # Winter: use hysteresis control
+            # Get current temperature
+            temp_sensor = self.room_config.get(CONF_TEMPERATURE_SENSOR)
+            temp_state = self.hass.states.get(temp_sensor)
+            if not temp_state:
+                _LOGGER.warning(
+                    "Temperature sensor %s not found for %s",
+                    temp_sensor,
+                    self.room_manager.room_name,
+                )
+                # Fallback to preset-only control
+                await self._control_normal(climate_entity, mode, is_summer)
+                return
+
+            try:
+                current_temp = float(temp_state.state)
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    "Invalid temperature value from %s: %s",
+                    temp_sensor,
+                    temp_state.state,
+                )
+                await self._control_normal(climate_entity, mode, is_summer)
+                return
+
+            # Get setpoint
+            setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
+            setpoint_state = self.hass.states.get(setpoint_input)
+            if not setpoint_state:
+                _LOGGER.warning(
+                    "Setpoint input %s not found for %s",
+                    setpoint_input,
+                    self.room_manager.room_name,
+                )
+                await self._control_normal(climate_entity, mode, is_summer)
+                return
+
+            try:
+                setpoint = float(setpoint_state.state)
+            except (ValueError, TypeError):
+                _LOGGER.warning(
+                    "Invalid setpoint value from %s: %s",
+                    setpoint_input,
+                    setpoint_state.state,
+                )
+                await self._control_normal(climate_entity, mode, is_summer)
+                return
+
+            # Clamp setpoint to min/max
+            min_setpoint = self.room_config.get(
+                CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT
+            )
+            max_setpoint = self.room_config.get(
+                CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT
+            )
+            setpoint = max(min_setpoint, min(max_setpoint, setpoint))
+
+            # Get hysteresis
+            hysteresis = self.room_config.get(CONF_HYSTERESIS, DEFAULT_HYSTERESIS)
+
+            # Store for debug sensor
+            self._hysteresis_current_temp = current_temp
+            self._hysteresis_setpoint = setpoint
+
+            # Calculate hysteresis
+            if current_temp <= setpoint - hysteresis:
+                # Too cold - heat
+                target_preset = self.room_config.get(
+                    CONF_PRESET_HEAT, DEFAULT_PRESET_HEAT
+                )
+                self._hysteresis_state = HYSTERESIS_HEATING
+            elif current_temp >= setpoint + hysteresis:
+                # Too hot - idle
+                target_preset = self.room_config.get(
+                    CONF_PRESET_IDLE, DEFAULT_PRESET_IDLE
+                )
+                self._hysteresis_state = HYSTERESIS_IDLE
+            else:
+                # In deadband - keep current preset
+                self._hysteresis_state = HYSTERESIS_DEADBAND
+                return
+
+        # Apply preset
+        if self._current_preset == target_preset:
+            return
+
+        _LOGGER.debug(
+            "Setting X4FP hysteresis preset for %s to %s (temp: %.1f°C, setpoint: %.1f°C, state: %s)",
+            self.room_manager.room_name,
+            target_preset,
+            self._hysteresis_current_temp or 0,
+            self._hysteresis_setpoint or 0,
+            self._hysteresis_state,
+        )
+
+        try:
+            await self.hass.services.async_call(
+                CLIMATE_DOMAIN,
+                SERVICE_SET_PRESET_MODE,
+                {
+                    "entity_id": climate_entity,
+                    ATTR_PRESET_MODE: target_preset,
+                },
+                blocking=True,
+            )
+            self._current_preset = target_preset
+        except Exception as err:
+            _LOGGER.error(
+                "Error setting hysteresis preset for %s: %s",
+                climate_entity,
+                err,
+            )
+
+    async def set_frost_protection(self, climate_entity: str) -> None:
+        """Set frost protection preset."""
+        # Use configurable preset for windows open
+        window_preset = self.room_config.get(
+            CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW
+        )
+
+        if self._current_preset == window_preset:
+            return
+
+        try:
+            await self.hass.services.async_call(
+                CLIMATE_DOMAIN,
+                SERVICE_SET_PRESET_MODE,
+                {
+                    "entity_id": climate_entity,
+                    ATTR_PRESET_MODE: window_preset,
+                },
+                blocking=True,
+            )
+            self._current_preset = window_preset
+        except Exception as err:
+            _LOGGER.error(
+                "Error setting frost protection for %s: %s",
+                climate_entity,
+                err,
+            )
+
+    def _get_preset_for_mode(self, mode: str) -> str:
+        """Map mode to X4FP preset (configurable per room)."""
+        if mode == MODE_FROST_PROTECTION:
+            return self.room_config.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY)
+        elif mode == MODE_COMFORT:
+            return self.room_config.get(CONF_PRESET_COMFORT, DEFAULT_PRESET_COMFORT)
+        elif mode == MODE_NIGHT:
+            return self.room_config.get(CONF_PRESET_NIGHT, DEFAULT_PRESET_NIGHT)
+        else:  # MODE_ECO
+            return self.room_config.get(CONF_PRESET_ECO, DEFAULT_PRESET_ECO)
+
+    def _has_hysteresis_control(self) -> bool:
+        """Check if hysteresis control is configured."""
+        temp_sensor = self.room_config.get(CONF_TEMPERATURE_SENSOR)
+        setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
+        return temp_sensor is not None and setpoint_input is not None
+
+    def get_state(self) -> dict[str, Any]:
+        """Get current controller state."""
+        state = {
+            "current_preset": self._current_preset,
+            "hysteresis_state": self._hysteresis_state,
+        }
+
+        # Add hysteresis details if active
+        if self._hysteresis_current_temp is not None:
+            state["hysteresis_current_temp"] = self._hysteresis_current_temp
+            state["hysteresis_setpoint"] = self._hysteresis_setpoint
+            hysteresis = self.room_config.get(CONF_HYSTERESIS, DEFAULT_HYSTERESIS)
+            state["hysteresis_value"] = hysteresis
+            state["hysteresis_lower_threshold"] = (
+                self._hysteresis_setpoint - hysteresis
+                if self._hysteresis_setpoint
+                else None
+            )
+            state["hysteresis_upper_threshold"] = (
+                self._hysteresis_setpoint + hysteresis
+                if self._hysteresis_setpoint
+                else None
+            )
+
+        return state

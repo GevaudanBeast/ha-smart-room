@@ -1,11 +1,11 @@
 # Smart Room Manager - Home Assistant Integration
 
-[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-**Version 0.2.4** - 🎯 Simplified and Optimized Architecture!
+**Version 0.3.0** - 🚀 Advanced Climate Control Features!
 
 [English](#english) | [Français](#français)
 
@@ -17,24 +17,26 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 ### 🆕 What's New
 
-**v0.2.3** (Latest) - Critical Fix:
-- 🔧 **Automatic migration** : Auto-fixes None values from v0.2.1/v0.2.2 configurations
-- ✅ **No action required** : Migration runs transparently on restart
-- 🐛 **Fixes** : "Entity None is neither a valid entity ID nor a valid UUID" error
+**v0.3.0** (Latest) - Advanced Climate Control:
+- 🌞 **External Control** : Solar Optimizer and other external control systems support
+- 🌡️ **Hysteresis X4FP** : Temperature-based control with hysteresis for X4FP radiators
+- 📅 **Room Calendars** : Per-room schedule/calendar support (Google Calendar, etc.)
+- ⏸️ **Manual Pause** : Pause automation temporarily per room (15min to 8h)
+- 🪟 **Window Delays** : Configurable delays before reacting to windows open/close
+- 🎯 **Configurable Presets** : Customize X4FP presets per room
+- ☀️ **Summer Policy** : Choose "off" or "eco" for X4FP in summer
+- 🔍 **Debug Sensors** : Priority, external control, hysteresis state, schedule active
+- 🎛️ **7-Level Priority System** : Paused, Bypass, Windows, External, Away, Schedule, Normal
+- ✅ **Fully Configurable** : All features available in UI wizard (8 steps)
 
-**v0.2.2** :
-- ✅ **Optional fields** : Temperature/humidity sensors no longer saved as None when not configured
-- 📝 **Cleaner config** : Only configured fields are stored
+See [CHANGELOG.md](CHANGELOG.md) for complete details.
 
-**v0.2.1** :
-- 🐛 **Fixed** : Critical ALARM_STATE_ARMED_AWAY import error
-
-**v0.2.0** - Simplified Architecture:
-- 🔄 **No presence sensors** : Alarm determines presence (armed_away = absent)
-- 💡 **Manual light control** : Auto-off timer only for corridors/bathrooms
-- 🎛️ **Generic bypass** : Single switch to disable heating (Solar Optimizer, manual, etc.)
-- 📊 **4 modes instead of 6** : Simplified architecture
-- ⏰ **Simplified schedules** : Night period + configurable comfort time ranges
+**Previous versions:**
+- **v0.2.4**: Documentation improvements and MIT license
+- **v0.2.3**: Critical fixes for None values and deprecated warnings
+- **v0.2.2**: Cleaner configuration with optional fields
+- **v0.2.1**: Fixed ALARM_STATE_ARMED_AWAY import
+- **v0.2.0**: Simplified architecture (4 modes, alarm-based presence, manual lights)
 
 ### 📋 Features
 
