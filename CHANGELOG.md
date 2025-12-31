@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2025-12-31
+
+### 🐛 Bug Fixes - Critical Compatibility Issues
+
+#### Fix: Config Flow "Invalid handler specified" error (HA 2025.12 compatibility)
+- **Problem**: Config flow failed to load with "Invalid handler specified" error in Home Assistant 2025.12+
+- **Root Cause**: `OptionsFlow.__init__()` accepted `config_entry` parameter which is now deprecated
+- **Fix**: Remove `config_entry` parameter from both `async_get_options_flow()` and `OptionsFlow.__init__()`
+- **Impact**: Config flow now loads correctly on HA 2025.12+
+- **File**: `config_flow.py:191, 197`
+- **Change**:
+  ```python
+  # Before (deprecated)
+  return SmartRoomManagerOptionsFlow(config_entry)
+  def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+
+  # After (HA 2025.12+ compatible)
+  return SmartRoomManagerOptionsFlow()
+  def __init__(self) -> None:
+  ```
+
+#### Fix: Home Assistant 2023.x compatibility for async_shutdown
+- **Problem**: `AttributeError: 'super' object has no attribute 'async_shutdown'` on HA 2023.x
+- **Root Cause**: `DataUpdateCoordinator.async_shutdown()` was added in HA 2024.x
+- **Fix**: Check if method exists before calling using `hasattr()`
+- **Impact**: Integration now works on both HA 2023.1+ and 2024.x+
+- **File**: `coordinator.py:98`
+- **Change**:
+  ```python
+  # Before (HA 2024.x only)
+  await super().async_shutdown()
+
+  # After (HA 2023.1+ compatible)
+  if hasattr(super(), "async_shutdown"):
+      await super().async_shutdown()
+  ```
+
+### 📊 Compatibility Matrix
+- ✅ **Home Assistant 2023.1+** - Minimum supported (with async_shutdown check)
+- ✅ **Home Assistant 2024.x** - Fully supported
+- ✅ **Home Assistant 2025.12+** - Latest tested (with OptionsFlow fix)
+
+### 🔄 Migration from v0.3.0
+No configuration changes required. This is a compatibility patch release.
+
+**Recommended actions:**
+1. Update integration via HACS or manual installation
+2. Restart Home Assistant completely
+3. Clear Python cache if issues persist:
+   ```bash
+   cd /config/custom_components/smart_room_manager
+   find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
+   find . -name "*.pyc" -delete
+   ha core restart
+   ```
+
 ## [0.3.0] - 2025-01-31
 
 ### 🎯 Major Feature Release - Advanced Climate Control
