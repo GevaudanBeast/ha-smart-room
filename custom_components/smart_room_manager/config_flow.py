@@ -188,16 +188,15 @@ class SmartRoomManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         config_entry: config_entries.ConfigEntry,
     ) -> SmartRoomManagerOptionsFlow:
         """Get the options flow for this handler."""
-        return SmartRoomManagerOptionsFlow(config_entry)
+        return SmartRoomManagerOptionsFlow()
 
 
 class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Smart Room Manager (v0.3.0)."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+    def __init__(self) -> None:
         """Initialize options flow."""
-        # Note: self.config_entry is already provided by OptionsFlow parent class
-        # Setting it explicitly is deprecated and will be removed in HA 2025.12
+        # Note: self.config_entry is automatically provided by OptionsFlow parent class (HA 2025.12+)
         super().__init__()
         self._current_room: dict[str, Any] | None = None
         self._room_index: int | None = None
