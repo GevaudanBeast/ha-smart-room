@@ -1,11 +1,11 @@
 # Smart Room Manager - Home Assistant Integration
 
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
+[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-**Version 0.3.0** - 🚀 Advanced Climate Control Features!
+**Version 0.3.1** - 🐛 Critical Compatibility Fixes!
 
 [English](#english) | [Français](#français)
 
@@ -17,7 +17,12 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 ### 🆕 What's New
 
-**v0.3.0** (Latest) - Advanced Climate Control:
+**v0.3.1** (Latest) - Critical Compatibility Fixes:
+- 🐛 **Fix "Invalid handler specified"** : Config flow now works on HA 2025.12+
+- 🐛 **Fix HA 2023.x compatibility** : async_shutdown compatibility check added
+- ✅ **Tested**: HA 2023.1+ through 2025.12
+
+**v0.3.0** - Advanced Climate Control:
 - 🌞 **External Control** : Solar Optimizer and other external control systems support
 - 🌡️ **Hysteresis X4FP** : Temperature-based control with hysteresis for X4FP radiators
 - 📅 **Room Calendars** : Per-room schedule/calendar support (Google Calendar, etc.)
