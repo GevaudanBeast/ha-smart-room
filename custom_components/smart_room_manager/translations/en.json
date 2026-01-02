@@ -3,13 +3,10 @@
     "step": {
       "user": {
         "title": "Configure Smart Room Manager",
-        "description": "Set up global settings for Smart Room Manager",
+        "description": "Simplified v0.2.0 configuration - Alarm determines presence, no presence/luminosity sensors",
         "data": {
-          "name": "Integration name",
-          "guest_mode_entity": "Guest mode entity",
-          "vacation_mode_entity": "Vacation mode entity",
           "alarm_entity": "Alarm entity",
-          "season_sensor": "Season sensor"
+          "season_calendar": "Season calendar"
         }
       }
     }
@@ -26,76 +23,105 @@
       },
       "list_rooms": {
         "title": "Manage Rooms",
-        "description": "Select a room to edit or delete"
+        "description": "No rooms configured. Return to the menu to add a room."
       },
       "add_room": {
-        "title": "Add Room",
-        "description": "Enter the room name",
+        "title": "Add Room - Basic Info",
+        "description": "Normal type: no timer. Corridor/Bathroom: auto-off timer.",
         "data": {
-          "room_name": "Room name"
+          "room_name": "Room name",
+          "room_type": "Room type",
+          "room_icon": "Room icon"
         }
       },
-      "edit_room": {
-        "title": "Edit Room",
-        "description": "Modify room name",
+      "edit_room_basic": {
+        "title": "Edit Room - Basic Info",
+        "description": "Modify room basic information",
         "data": {
-          "room_name": "Room name"
+          "room_name": "Room name",
+          "room_type": "Room type",
+          "room_icon": "Room icon"
         }
       },
       "room_sensors": {
         "title": "Configure Sensors",
-        "description": "Select sensors for {room_name}",
+        "description": "All optional. Windows → frost protection if open.",
         "data": {
-          "presence_sensors": "Presence sensors",
           "door_window_sensors": "Door/window sensors",
-          "luminosity_sensor": "Luminosity sensor",
           "temperature_sensor": "Temperature sensor",
           "humidity_sensor": "Humidity sensor"
         }
       },
       "room_actuators": {
         "title": "Configure Actuators",
-        "description": "Select lights and climate for {room_name}",
+        "description": "Bypass: disables all control. External Control: Solar Optimizer, etc. (high priority)",
         "data": {
           "lights": "Lights",
           "climate_entity": "Climate entity",
-          "heating_switches": "Heating switches",
-          "solar_optimizer_switch": "Solar Optimizer switch (optional)"
+          "climate_bypass_switch": "Bypass switch",
+          "external_control_switch": "External Control switch"
         }
       },
       "room_light_config": {
         "title": "Light Configuration",
-        "description": "Configure light behavior for {room_name}",
+        "description": "Type {room_type}: auto-off after timeout",
         "data": {
-          "light_lux_threshold": "Luminosity threshold",
-          "light_timeout": "Light timeout",
-          "light_night_mode": "Night mode",
-          "light_night_brightness": "Night brightness",
-          "light_day_brightness": "Day brightness"
+          "light_timeout": "Light timeout (seconds)"
         }
       },
       "room_climate_config": {
         "title": "Climate Configuration",
-        "description": "Configure climate behavior for {room_name}",
+        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: X4FP in summer.",
         "data": {
-          "temp_comfort": "Comfort temperature",
-          "temp_eco": "Eco temperature",
-          "temp_night": "Night temperature",
-          "temp_away": "Away temperature",
+          "temp_comfort": "Comfort temperature (winter)",
+          "temp_eco": "Eco temperature (winter)",
+          "temp_night": "Night temperature (winter)",
           "temp_frost_protection": "Frost protection temperature",
-          "climate_presence_required": "Presence required for heating",
-          "climate_window_check": "Check window status",
-          "climate_unoccupied_delay": "Unoccupied delay"
+          "temp_cool_comfort": "Comfort temperature (summer)",
+          "temp_cool_eco": "Eco temperature (summer)",
+          "climate_window_check": "Enable window check",
+          "window_delay_open": "Window open delay (minutes)",
+          "window_delay_close": "Window close delay (minutes)",
+          "summer_policy": "Summer policy for X4FP"
+        }
+      },
+      "room_climate_advanced": {
+        "title": "Advanced Climate Configuration",
+        "description": "Hysteresis: X4FP control via temp (setpoint required). External Control: Solar Optimizer config. Presets: customize X4FP.",
+        "data": {
+          "setpoint_input": "Setpoint input entity",
+          "hysteresis": "Hysteresis (°C)",
+          "min_setpoint": "Minimum setpoint (°C)",
+          "max_setpoint": "Maximum setpoint (°C)",
+          "preset_heat": "Preset when heating",
+          "preset_idle": "Preset when idle",
+          "external_control_preset": "External control preset",
+          "external_control_temp": "External control temperature (°C)",
+          "allow_external_in_away": "Allow external control in away mode",
+          "preset_comfort": "X4FP preset for Comfort mode",
+          "preset_eco": "X4FP preset for Eco mode",
+          "preset_night": "X4FP preset for Night mode",
+          "preset_away": "X4FP preset for Away mode",
+          "preset_window": "X4FP preset for Window open"
         }
       },
       "room_schedule": {
         "title": "Schedule Configuration",
-        "description": "Configure time periods for {room_name}",
+        "description": "Night start + comfort ranges (time-based). Calendar: external (Google, etc.). Presets: mode when calendar ON/OFF",
         "data": {
-          "morning_start": "Morning start time",
-          "day_start": "Day start time",
-          "evening_start": "Evening start time",
-          "night_start": "Night start time"
+          "night_start": "Night start time",
+          "comfort_ranges": "Comfort time ranges (HH:MM-HH:MM,HH:MM-HH:MM)",
+          "schedule_entity": "Schedule/Calendar entity",
+          "preset_schedule_on": "Preset when calendar ON",
+          "preset_schedule_off": "Preset when calendar OFF"
+        }
+      },
+      "room_control": {
+        "title": "Room Control Options",
+        "description": "Manual pause: default duration of pause switch. Infinite: pause without time limit.",
+        "data": {
+          "pause_duration_minutes": "Pause duration (minutes)",
+          "pause_infinite": "Allow infinite pause"
         }
       },
       "delete_room": {
@@ -107,12 +133,10 @@
       },
       "global_settings": {
         "title": "Global Settings",
-        "description": "Configure global settings",
+        "description": "Alarm: armed_away → frost protection. Summer calendar: cool mode, winter: heat mode.",
         "data": {
-          "guest_mode_entity": "Guest mode entity",
-          "vacation_mode_entity": "Vacation mode entity",
           "alarm_entity": "Alarm entity",
-          "season_sensor": "Season sensor"
+          "season_calendar": "Season calendar"
         }
       }
     }
