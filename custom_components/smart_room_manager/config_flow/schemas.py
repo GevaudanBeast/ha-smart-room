@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
@@ -11,21 +12,22 @@ from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.helpers import selector
-import homeassistant.helpers.config_validation as cv
 
 from ..const import (
     CONF_ALARM_ENTITY,
+    CONF_ALLOW_EXTERNAL_IN_AWAY,
     CONF_CLIMATE_BYPASS_SWITCH,
     CONF_CLIMATE_ENTITY,
     CONF_CLIMATE_WINDOW_CHECK,
+    CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
     CONF_EXTERNAL_CONTROL_PRESET,
     CONF_EXTERNAL_CONTROL_SWITCH,
     CONF_EXTERNAL_CONTROL_TEMP,
     CONF_HUMIDITY_SENSOR,
     CONF_HYSTERESIS,
-    CONF_LIGHTS,
     CONF_LIGHT_TIMEOUT,
+    CONF_LIGHTS,
     CONF_MAX_SETPOINT,
     CONF_MIN_SETPOINT,
     CONF_NIGHT_START,
@@ -47,19 +49,18 @@ from ..const import (
     CONF_SEASON_CALENDAR,
     CONF_SETPOINT_INPUT,
     CONF_SUMMER_POLICY,
-    CONF_TEMPERATURE_SENSOR,
     CONF_TEMP_COMFORT,
     CONF_TEMP_COOL_COMFORT,
     CONF_TEMP_COOL_ECO,
     CONF_TEMP_ECO,
     CONF_TEMP_FROST_PROTECTION,
     CONF_TEMP_NIGHT,
+    CONF_TEMPERATURE_SENSOR,
     CONF_WINDOW_DELAY_CLOSE,
     CONF_WINDOW_DELAY_OPEN,
-    CONF_ALLOW_EXTERNAL_IN_AWAY,
+    DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
     DEFAULT_EXTERNAL_CONTROL_PRESET,
     DEFAULT_EXTERNAL_CONTROL_TEMP,
-    DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
     DEFAULT_HYSTERESIS,
     DEFAULT_LIGHT_TIMEOUT,
     DEFAULT_LIGHT_TIMEOUT_BATHROOM,
@@ -191,10 +192,8 @@ def build_room_sensors_schema(room_data: dict[str, Any]) -> vol.Schema:
             )
         )
     else:
-        schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-            )
+        schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
         )
 
     # Humidity sensor (only set default if it exists and is not None)
@@ -246,18 +245,14 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
     # Bypass switch
     bypass_switch = room_data.get(CONF_CLIMATE_BYPASS_SWITCH)
     if bypass_switch is not None:
-        schema_dict[
-            vol.Optional(CONF_CLIMATE_BYPASS_SWITCH, default=bypass_switch)
-        ] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+        schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH, default=bypass_switch)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+            )
         )
     else:
-        schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(
-                    domain=[SWITCH_DOMAIN, "input_boolean"]
-                )
-            )
+        schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
         )
 
     # External control switch (v0.3.0)
@@ -271,9 +266,7 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
     else:
         schema_dict[vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH)] = (
             selector.EntitySelector(
-                selector.EntitySelectorConfig(
-                    domain=[SWITCH_DOMAIN, "input_boolean"]
-                )
+                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
             )
         )
 

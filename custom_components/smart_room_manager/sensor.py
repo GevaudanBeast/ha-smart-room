@@ -10,10 +10,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
+from .const import ATTR_CLIMATE_STATE  # v0.3.0 debug sensors
 from .const import (
-    ATTR_CLIMATE_STATE,
     ATTR_CURRENT_MODE,
+    ATTR_CURRENT_PRIORITY,
     ATTR_HUMIDITY,
+    ATTR_HYSTERESIS_STATE,
     ATTR_LIGHT_STATE,
     ATTR_LUMINOSITY,
     ATTR_OCCUPIED,
@@ -23,11 +25,8 @@ from .const import (
     ATTR_TEMPERATURE,
     ATTR_WINDOWS_OPEN,
     DOMAIN,
-    # v0.3.0 debug sensors
-    ATTR_CURRENT_PRIORITY,
-    ATTR_HYSTERESIS_STATE,
-    PRIORITY_NORMAL,
     HYSTERESIS_DEADBAND,
+    PRIORITY_NORMAL,
 )
 from .coordinator import SmartRoomCoordinator
 from .entity import SmartRoomEntity
@@ -47,7 +46,9 @@ async def async_setup_entry(
     for room_manager in coordinator.get_all_room_managers():
         entities.append(SmartRoomStateSensor(coordinator, room_manager.room_id))
         # v0.3.0 debug sensors
-        entities.append(SmartRoomCurrentPrioritySensor(coordinator, room_manager.room_id))
+        entities.append(
+            SmartRoomCurrentPrioritySensor(coordinator, room_manager.room_id)
+        )
         entities.append(SmartRoomHysteresisSensor(coordinator, room_manager.room_id))
 
     async_add_entities(entities)
@@ -166,7 +167,9 @@ class SmartRoomCurrentPrioritySensor(SmartRoomEntity, SensorEntity):
             "description": self._get_priority_description(
                 climate_state.get(ATTR_CURRENT_PRIORITY, PRIORITY_NORMAL)
             ),
-            "external_control_active": climate_state.get("external_control_active", False),
+            "external_control_active": climate_state.get(
+                "external_control_active", False
+            ),
             "pause_active": room_data.get("pause_active", False),
             "schedule_active": room_data.get("schedule_active", False),
         }

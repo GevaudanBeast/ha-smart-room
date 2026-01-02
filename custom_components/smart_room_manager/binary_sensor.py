@@ -130,9 +130,11 @@ class SmartRoomExternalControlActiveSensor(SmartRoomEntity, BinarySensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional state attributes."""
         return {
-            "description": "Contrôle externe actif (Solar Optimizer, tarif dynamique, etc.)"
-            if self.is_on
-            else "Aucun contrôle externe actif"
+            "description": (
+                "Contrôle externe actif (Solar Optimizer, tarif dynamique, etc.)"
+                if self.is_on
+                else "Aucun contrôle externe actif"
+            )
         }
 
     @callback
@@ -167,9 +169,11 @@ class SmartRoomScheduleActiveSensor(SmartRoomEntity, BinarySensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return additional state attributes."""
         return {
-            "description": "Planning/calendrier contrôle le chauffage"
-            if self.is_on
-            else "Pas de calendrier configuré ou actif"
+            "description": (
+                "Planning/calendrier contrôle le chauffage"
+                if self.is_on
+                else "Pas de calendrier configuré ou actif"
+            )
         }
 
     @callback

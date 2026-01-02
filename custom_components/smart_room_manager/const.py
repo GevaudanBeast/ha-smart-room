@@ -50,12 +50,16 @@ CONF_PRESET_SCHEDULE_ON: Final = "preset_schedule_on"  # Mode when event active
 CONF_PRESET_SCHEDULE_OFF: Final = "preset_schedule_off"  # Mode when no event
 
 # Manual Pause configuration
-CONF_PAUSE_DURATION_MINUTES: Final = "pause_duration_minutes"  # 15, 30, 60, 120, 240, 480
+CONF_PAUSE_DURATION_MINUTES: Final = (
+    "pause_duration_minutes"  # 15, 30, 60, 120, 240, 480
+)
 CONF_PAUSE_INFINITE: Final = "pause_infinite"  # Boolean
 
 # Window delays (Priority 2)
 CONF_WINDOW_DELAY_OPEN: Final = "window_delay_open"  # Minutes before reacting to open
-CONF_WINDOW_DELAY_CLOSE: Final = "window_delay_close"  # Minutes before resuming after close
+CONF_WINDOW_DELAY_CLOSE: Final = (
+    "window_delay_close"  # Minutes before resuming after close
+)
 
 # Configurable presets (Priority 2)
 CONF_PRESET_COMFORT: Final = "preset_comfort"  # X4FP preset for comfort mode
@@ -166,9 +170,13 @@ SWITCH_PAUSE_FORMAT: Final = "switch.smart_room_{room_id}_pause"
 
 # Debug sensor formats
 SENSOR_PRIORITY_FORMAT: Final = "sensor.smart_room_{room_id}_current_priority"
-BINARY_SENSOR_EXTERNAL_CONTROL_FORMAT: Final = "binary_sensor.smart_room_{room_id}_external_control_active"
+BINARY_SENSOR_EXTERNAL_CONTROL_FORMAT: Final = (
+    "binary_sensor.smart_room_{room_id}_external_control_active"
+)
 SENSOR_HYSTERESIS_FORMAT: Final = "sensor.smart_room_{room_id}_hysteresis_state"
-BINARY_SENSOR_SCHEDULE_FORMAT: Final = "binary_sensor.smart_room_{room_id}_schedule_active"
+BINARY_SENSOR_SCHEDULE_FORMAT: Final = (
+    "binary_sensor.smart_room_{room_id}_schedule_active"
+)
 
 # Attributes
 ATTR_ROOM_ID: Final = "room_id"

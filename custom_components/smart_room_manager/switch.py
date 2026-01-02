@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
@@ -14,11 +14,11 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    DOMAIN,
     CONF_PAUSE_DURATION_MINUTES,
     CONF_PAUSE_INFINITE,
     DEFAULT_PAUSE_DURATION,
     DEFAULT_PAUSE_INFINITE,
+    DOMAIN,
 )
 from .coordinator import SmartRoomCoordinator
 from .entity import SmartRoomEntity

@@ -3,23 +3,25 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_PRESET_MODE,
     ATTR_TEMPERATURE,
-    DOMAIN as CLIMATE_DOMAIN,
-    HVACMode,
+)
+from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.climate import (
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_PRESET_MODE,
     SERVICE_SET_TEMPERATURE,
+    HVACMode,
 )
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 
-from .climate.x4fp_controller import X4FPController
 from .climate.thermostat_controller import ThermostatController
+from .climate.x4fp_controller import X4FPController
 from .const import (
     ALARM_STATE_ARMED_AWAY,
     CLIMATE_TYPE_THERMOSTAT,
@@ -382,7 +384,10 @@ class ClimateController:
         # Get state from active controller
         if self._climate_type == CLIMATE_TYPE_X4FP and self._x4fp_controller:
             state.update(self._x4fp_controller.get_state())
-        elif self._climate_type == CLIMATE_TYPE_THERMOSTAT and self._thermostat_controller:
+        elif (
+            self._climate_type == CLIMATE_TYPE_THERMOSTAT
+            and self._thermostat_controller
+        ):
             state.update(self._thermostat_controller.get_state())
 
         return state

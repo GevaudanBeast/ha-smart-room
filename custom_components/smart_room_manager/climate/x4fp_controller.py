@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.climate import (
-    ATTR_PRESET_MODE,
-    DOMAIN as CLIMATE_DOMAIN,
-    SERVICE_SET_PRESET_MODE,
-)
+from homeassistant.components.climate import ATTR_PRESET_MODE
+from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.climate import SERVICE_SET_PRESET_MODE
 from homeassistant.core import HomeAssistant
 
 from ..const import (
@@ -74,9 +72,7 @@ class X4FPController:
         self._hysteresis_current_temp: float | None = None
         self._hysteresis_setpoint: float | None = None
 
-    async def control(
-        self, climate_entity: str, mode: str, is_summer: bool
-    ) -> None:
+    async def control(self, climate_entity: str, mode: str, is_summer: bool) -> None:
         """Control X4FP climate entity via preset_mode."""
         # Check if hysteresis control is configured
         if self._has_hysteresis_control():
@@ -201,12 +197,8 @@ class X4FPController:
                 return
 
             # Clamp setpoint to min/max
-            min_setpoint = self.room_config.get(
-                CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT
-            )
-            max_setpoint = self.room_config.get(
-                CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT
-            )
+            min_setpoint = self.room_config.get(CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT)
+            max_setpoint = self.room_config.get(CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT)
             setpoint = max(min_setpoint, min(max_setpoint, setpoint))
 
             # Get hysteresis
@@ -268,9 +260,7 @@ class X4FPController:
     async def set_frost_protection(self, climate_entity: str) -> None:
         """Set frost protection preset."""
         # Use configurable preset for windows open
-        window_preset = self.room_config.get(
-            CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW
-        )
+        window_preset = self.room_config.get(CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW)
 
         if self._current_preset == window_preset:
             return

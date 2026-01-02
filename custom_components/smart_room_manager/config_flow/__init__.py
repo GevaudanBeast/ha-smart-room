@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 import uuid
+from typing import Any
 
+import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
@@ -17,114 +17,110 @@ from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import selector
-import homeassistant.helpers.config_validation as cv
 
-from .const import (
+from .config_flow.helpers import (
+    build_room_list_choices,
+    format_comfort_ranges,
+    parse_comfort_ranges,
+    should_save_field,
+)
+from .config_flow.schemas import (
+    build_climate_advanced_schema,
+    build_climate_config_schema,
+    build_global_settings_schema,
+    build_light_config_schema,
+    build_room_actuators_schema,
+    build_room_basic_schema,
+    build_room_control_schema,
+    build_room_sensors_schema,
+    build_schedule_schema,
+)
+from .const import (  # v0.3.0 Priority 1 additions; v0.3.0 Priority 2 additions
     CONF_ALARM_ENTITY,
+    CONF_ALLOW_EXTERNAL_IN_AWAY,
     CONF_CLIMATE_BYPASS_SWITCH,
     CONF_CLIMATE_ENTITY,
     CONF_CLIMATE_WINDOW_CHECK,
     CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
+    CONF_EXTERNAL_CONTROL_PRESET,
+    CONF_EXTERNAL_CONTROL_SWITCH,
+    CONF_EXTERNAL_CONTROL_TEMP,
     CONF_HUMIDITY_SENSOR,
-    CONF_LIGHTS,
+    CONF_HYSTERESIS,
     CONF_LIGHT_TIMEOUT,
+    CONF_LIGHTS,
+    CONF_MAX_SETPOINT,
+    CONF_MIN_SETPOINT,
     CONF_NIGHT_START,
+    CONF_PAUSE_DURATION_MINUTES,
+    CONF_PAUSE_INFINITE,
+    CONF_PRESET_AWAY,
+    CONF_PRESET_COMFORT,
+    CONF_PRESET_ECO,
+    CONF_PRESET_HEAT,
+    CONF_PRESET_IDLE,
+    CONF_PRESET_NIGHT,
+    CONF_PRESET_SCHEDULE_OFF,
+    CONF_PRESET_SCHEDULE_ON,
+    CONF_PRESET_WINDOW,
     CONF_ROOM_ICON,
     CONF_ROOM_ID,
     CONF_ROOM_NAME,
     CONF_ROOM_TYPE,
     CONF_ROOMS,
+    CONF_SCHEDULE_ENTITY,
     CONF_SEASON_CALENDAR,
-    CONF_TEMPERATURE_SENSOR,
+    CONF_SETPOINT_INPUT,
+    CONF_SUMMER_POLICY,
     CONF_TEMP_COMFORT,
     CONF_TEMP_COOL_COMFORT,
     CONF_TEMP_COOL_ECO,
     CONF_TEMP_ECO,
     CONF_TEMP_FROST_PROTECTION,
     CONF_TEMP_NIGHT,
+    CONF_TEMPERATURE_SENSOR,
+    CONF_WINDOW_DELAY_CLOSE,
+    CONF_WINDOW_DELAY_OPEN,
+    DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
+    DEFAULT_EXTERNAL_CONTROL_PRESET,
+    DEFAULT_EXTERNAL_CONTROL_TEMP,
+    DEFAULT_HYSTERESIS,
     DEFAULT_LIGHT_TIMEOUT,
     DEFAULT_LIGHT_TIMEOUT_BATHROOM,
+    DEFAULT_MAX_SETPOINT,
+    DEFAULT_MIN_SETPOINT,
     DEFAULT_NIGHT_START,
+    DEFAULT_PAUSE_DURATION,
+    DEFAULT_PAUSE_INFINITE,
+    DEFAULT_PRESET_AWAY,
+    DEFAULT_PRESET_COMFORT,
+    DEFAULT_PRESET_ECO,
+    DEFAULT_PRESET_HEAT,
+    DEFAULT_PRESET_IDLE,
+    DEFAULT_PRESET_NIGHT,
+    DEFAULT_PRESET_WINDOW,
+    DEFAULT_SUMMER_POLICY,
     DEFAULT_TEMP_COMFORT,
     DEFAULT_TEMP_COOL_COMFORT,
     DEFAULT_TEMP_COOL_ECO,
     DEFAULT_TEMP_ECO,
     DEFAULT_TEMP_FROST_PROTECTION,
     DEFAULT_TEMP_NIGHT,
+    DEFAULT_WINDOW_DELAY_CLOSE,
+    DEFAULT_WINDOW_DELAY_OPEN,
     DOMAIN,
+    MODE_COMFORT,
+    MODE_ECO,
+    MODE_FROST_PROTECTION,
+    MODE_NIGHT,
     ROOM_TYPE_BATHROOM,
     ROOM_TYPE_CORRIDOR,
     ROOM_TYPE_NORMAL,
-    # v0.3.0 Priority 1 additions
-    CONF_EXTERNAL_CONTROL_SWITCH,
-    CONF_EXTERNAL_CONTROL_PRESET,
-    CONF_EXTERNAL_CONTROL_TEMP,
-    CONF_ALLOW_EXTERNAL_IN_AWAY,
-    CONF_SETPOINT_INPUT,
-    CONF_HYSTERESIS,
-    CONF_MIN_SETPOINT,
-    CONF_MAX_SETPOINT,
-    CONF_PRESET_HEAT,
-    CONF_PRESET_IDLE,
-    CONF_SCHEDULE_ENTITY,
-    CONF_PRESET_SCHEDULE_ON,
-    CONF_PRESET_SCHEDULE_OFF,
-    CONF_PAUSE_DURATION_MINUTES,
-    CONF_PAUSE_INFINITE,
-    DEFAULT_EXTERNAL_CONTROL_PRESET,
-    DEFAULT_EXTERNAL_CONTROL_TEMP,
-    DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
-    DEFAULT_HYSTERESIS,
-    DEFAULT_MIN_SETPOINT,
-    DEFAULT_MAX_SETPOINT,
-    DEFAULT_PRESET_HEAT,
-    DEFAULT_PRESET_IDLE,
-    DEFAULT_PAUSE_DURATION,
-    DEFAULT_PAUSE_INFINITE,
-    # v0.3.0 Priority 2 additions
-    CONF_WINDOW_DELAY_OPEN,
-    CONF_WINDOW_DELAY_CLOSE,
-    CONF_PRESET_COMFORT,
-    CONF_PRESET_ECO,
-    CONF_PRESET_NIGHT,
-    CONF_PRESET_AWAY,
-    CONF_PRESET_WINDOW,
-    CONF_SUMMER_POLICY,
-    DEFAULT_WINDOW_DELAY_OPEN,
-    DEFAULT_WINDOW_DELAY_CLOSE,
-    DEFAULT_PRESET_COMFORT,
-    DEFAULT_PRESET_ECO,
-    DEFAULT_PRESET_NIGHT,
-    DEFAULT_PRESET_AWAY,
-    DEFAULT_PRESET_WINDOW,
-    DEFAULT_SUMMER_POLICY,
+    X4FP_PRESET_AWAY,
     X4FP_PRESET_COMFORT,
     X4FP_PRESET_ECO,
-    X4FP_PRESET_AWAY,
     X4FP_PRESET_OFF,
-    MODE_COMFORT,
-    MODE_ECO,
-    MODE_NIGHT,
-    MODE_FROST_PROTECTION,
-)
-
-from .config_flow.schemas import (
-    build_global_settings_schema,
-    build_room_basic_schema,
-    build_room_sensors_schema,
-    build_room_actuators_schema,
-    build_light_config_schema,
-    build_climate_config_schema,
-    build_climate_advanced_schema,
-    build_schedule_schema,
-    build_room_control_schema,
-)
-from .config_flow.helpers import (
-    parse_comfort_ranges,
-    format_comfort_ranges,
-    should_save_field,
-    build_room_list_choices,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -531,7 +527,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
             # v0.3.0 - Schedule entity (calendar) support
             if user_input.get(CONF_SCHEDULE_ENTITY):
-                self._current_room[CONF_SCHEDULE_ENTITY] = user_input.get(CONF_SCHEDULE_ENTITY)
+                self._current_room[CONF_SCHEDULE_ENTITY] = user_input.get(
+                    CONF_SCHEDULE_ENTITY
+                )
 
                 # Presets for schedule on/off
                 if user_input.get(CONF_PRESET_SCHEDULE_ON):

@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
     ATTR_TEMPERATURE,
-    DOMAIN as CLIMATE_DOMAIN,
-    HVACMode,
+)
+from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.components.climate import (
     SERVICE_SET_HVAC_MODE,
     SERVICE_SET_TEMPERATURE,
+    HVACMode,
 )
 from homeassistant.core import HomeAssistant
 
@@ -57,9 +59,7 @@ class ThermostatController:
         self._target_temperature: float | None = None
         self._current_hvac_mode: str | None = None
 
-    async def control(
-        self, climate_entity: str, mode: str, is_summer: bool
-    ) -> None:
+    async def control(self, climate_entity: str, mode: str, is_summer: bool) -> None:
         """Control thermostat climate entity via hvac_mode + temperature."""
         if is_summer:
             # Summer mode - Check if thermostat is reversible (has COOL mode)

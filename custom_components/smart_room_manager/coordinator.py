@@ -2,19 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 import logging
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import (
-    CONF_ROOMS,
-    DOMAIN,
-    UPDATE_INTERVAL,
-)
+from .const import CONF_ROOMS, DOMAIN, UPDATE_INTERVAL
 from .room_manager import RoomManager
 
 _LOGGER = logging.getLogger(__name__)
