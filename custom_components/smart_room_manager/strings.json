@@ -107,13 +107,12 @@
       },
       "room_schedule": {
         "title": "Schedule Configuration",
-        "description": "Night start + comfort ranges (time-based). Calendar: external (Google, etc.). Presets: mode when calendar ON/OFF",
+        "description": "Calendar: external (Google, etc.). Presets: mode when calendar ON/OFF",
         "data": {
-          "night_start": "Night start time",
-          "comfort_ranges": "Comfort time ranges (HH:MM-HH:MM,HH:MM-HH:MM)",
           "schedule_entity": "Schedule/Calendar entity",
           "preset_schedule_on": "Preset when calendar ON",
-          "preset_schedule_off": "Preset when calendar OFF"
+          "preset_schedule_off": "Preset when calendar OFF",
+          "ignore_in_away": "Ignore schedule when away"
         }
       },
       "room_control": {
@@ -138,6 +137,32 @@
           "alarm_entity": "Alarm entity",
           "season_calendar": "Season calendar"
         }
+      }
+    }
+  },
+  "selector": {
+    "room_type": {
+      "options": {
+        "normal": "Normal (bedrooms - no light timer)",
+        "corridor": "Corridor (5min timer)",
+        "bathroom": "Bathroom (15min timer + heater control)"
+      }
+    },
+    "summer_policy": {
+      "options": {
+        "off": "Off (turn off radiators in summer)",
+        "eco": "Eco (cool mode in summer)",
+        "comfort": "Comfort (cool mode in summer)"
+      }
+    },
+    "pause_duration": {
+      "options": {
+        "15": "15 minutes",
+        "30": "30 minutes",
+        "60": "1 hour",
+        "120": "2 hours",
+        "240": "4 hours",
+        "480": "8 hours"
       }
     }
   }

@@ -48,6 +48,7 @@ CONF_ALLOW_EXTERNAL_IN_AWAY: Final = "allow_external_in_away"  # Boolean
 CONF_SCHEDULE_ENTITY: Final = "schedule_entity"  # calendar entity
 CONF_PRESET_SCHEDULE_ON: Final = "preset_schedule_on"  # Mode when event active
 CONF_PRESET_SCHEDULE_OFF: Final = "preset_schedule_off"  # Mode when no event
+CONF_IGNORE_IN_AWAY: Final = "ignore_in_away"  # Ignore schedule when away
 
 # Manual Pause configuration
 CONF_PAUSE_DURATION_MINUTES: Final = (
