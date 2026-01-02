@@ -3,13 +3,10 @@
     "step": {
       "user": {
         "title": "Configurer Smart Room Manager",
-        "description": "Configurez les paramètres globaux de Smart Room Manager",
+        "description": "Configuration simplifiée v0.2.0 - L'alarme détermine la présence, pas de capteurs présence/luminosité",
         "data": {
-          "name": "Nom de l'intégration",
-          "guest_mode_entity": "Entité mode invité",
-          "vacation_mode_entity": "Entité mode vacances",
           "alarm_entity": "Entité alarme",
-          "season_sensor": "Capteur de saison"
+          "season_calendar": "Calendrier des saisons"
         }
       }
     }
@@ -26,76 +23,105 @@
       },
       "list_rooms": {
         "title": "Gérer les pièces",
-        "description": "Sélectionnez une pièce à modifier ou supprimer"
+        "description": "Aucune pièce configurée. Retournez au menu pour ajouter une pièce."
       },
       "add_room": {
-        "title": "Ajouter une pièce",
-        "description": "Entrez le nom de la pièce",
+        "title": "Ajouter une pièce - Informations de base",
+        "description": "Type normal : pas de timer. Couloir/Salle de bain : timer auto-off.",
         "data": {
-          "room_name": "Nom de la pièce"
+          "room_name": "Nom de la pièce",
+          "room_type": "Type de pièce",
+          "room_icon": "Icône de la pièce"
         }
       },
-      "edit_room": {
-        "title": "Modifier la pièce",
-        "description": "Modifiez le nom de la pièce",
+      "edit_room_basic": {
+        "title": "Modifier la pièce - Informations de base",
+        "description": "Modifier les informations de base de la pièce",
         "data": {
-          "room_name": "Nom de la pièce"
+          "room_name": "Nom de la pièce",
+          "room_type": "Type de pièce",
+          "room_icon": "Icône de la pièce"
         }
       },
       "room_sensors": {
         "title": "Configuration des capteurs",
-        "description": "Sélectionnez les capteurs pour {room_name}",
+        "description": "Tous optionnels. Fenêtres → hors-gel si ouvertes.",
         "data": {
-          "presence_sensors": "Capteurs de présence",
           "door_window_sensors": "Capteurs de porte/fenêtre",
-          "luminosity_sensor": "Capteur de luminosité",
           "temperature_sensor": "Capteur de température",
           "humidity_sensor": "Capteur d'humidité"
         }
       },
       "room_actuators": {
         "title": "Configuration des actionneurs",
-        "description": "Sélectionnez les lumières et le chauffage pour {room_name}",
+        "description": "Bypass : désactive tout contrôle. Contrôle externe : Solar Optimizer, etc. (priorité haute)",
         "data": {
           "lights": "Lumières",
           "climate_entity": "Entité climat",
-          "heating_switches": "Interrupteurs de chauffage",
-          "solar_optimizer_switch": "Switch Solar Optimizer (optionnel)"
+          "climate_bypass_switch": "Switch bypass",
+          "external_control_switch": "Switch contrôle externe"
         }
       },
       "room_light_config": {
         "title": "Configuration des lumières",
-        "description": "Configurez le comportement des lumières pour {room_name}",
+        "description": "Type {room_type} : auto-off après timeout",
         "data": {
-          "light_lux_threshold": "Seuil de luminosité",
-          "light_timeout": "Délai d'extinction",
-          "light_night_mode": "Mode nuit",
-          "light_night_brightness": "Luminosité de nuit",
-          "light_day_brightness": "Luminosité de jour"
+          "light_timeout": "Timeout lumière (secondes)"
         }
       },
       "room_climate_config": {
         "title": "Configuration du chauffage",
-        "description": "Configurez le comportement du chauffage pour {room_name}",
+        "description": "Températures hiver/été. Délais fenêtres : temps avant réaction aux fenêtres. Politique été : X4FP en été.",
         "data": {
-          "temp_comfort": "Température confort",
-          "temp_eco": "Température éco",
-          "temp_night": "Température nuit",
-          "temp_away": "Température absence",
+          "temp_comfort": "Température confort (hiver)",
+          "temp_eco": "Température éco (hiver)",
+          "temp_night": "Température nuit (hiver)",
           "temp_frost_protection": "Température hors-gel",
-          "climate_presence_required": "Présence requise pour chauffer",
-          "climate_window_check": "Vérifier l'ouverture des fenêtres",
-          "climate_unoccupied_delay": "Délai d'inoccupation"
+          "temp_cool_comfort": "Température confort (été)",
+          "temp_cool_eco": "Température éco (été)",
+          "climate_window_check": "Activer vérification fenêtres",
+          "window_delay_open": "Délai ouverture fenêtre (minutes)",
+          "window_delay_close": "Délai fermeture fenêtre (minutes)",
+          "summer_policy": "Politique été pour X4FP"
+        }
+      },
+      "room_climate_advanced": {
+        "title": "Configuration chauffage avancée",
+        "description": "Hystérésis : contrôle X4FP via temp (setpoint requis). Contrôle externe : config Solar Optimizer. Presets : personnaliser X4FP.",
+        "data": {
+          "setpoint_input": "Entité setpoint",
+          "hysteresis": "Hystérésis (°C)",
+          "min_setpoint": "Setpoint minimum (°C)",
+          "max_setpoint": "Setpoint maximum (°C)",
+          "preset_heat": "Preset en chauffe",
+          "preset_idle": "Preset au repos",
+          "external_control_preset": "Preset contrôle externe",
+          "external_control_temp": "Température contrôle externe (°C)",
+          "allow_external_in_away": "Autoriser contrôle externe en mode absence",
+          "preset_comfort": "Preset X4FP pour mode Confort",
+          "preset_eco": "Preset X4FP pour mode Éco",
+          "preset_night": "Preset X4FP pour mode Nuit",
+          "preset_away": "Preset X4FP pour mode Absence",
+          "preset_window": "Preset X4FP pour fenêtre ouverte"
         }
       },
       "room_schedule": {
         "title": "Configuration des horaires",
-        "description": "Configurez les périodes horaires pour {room_name}",
+        "description": "Heure de nuit + plages confort (basé sur le temps). Calendrier : externe (Google, etc.). Presets : mode si calendrier ON/OFF",
         "data": {
-          "morning_start": "Heure de début du matin",
-          "day_start": "Heure de début de journée",
-          "evening_start": "Heure de début de soirée",
-          "night_start": "Heure de début de nuit"
+          "night_start": "Heure de début de nuit",
+          "comfort_ranges": "Plages horaires confort (HH:MM-HH:MM,HH:MM-HH:MM)",
+          "schedule_entity": "Entité calendrier/horaire",
+          "preset_schedule_on": "Preset si calendrier ON",
+          "preset_schedule_off": "Preset si calendrier OFF"
+        }
+      },
+      "room_control": {
+        "title": "Options de contrôle de la pièce",
+        "description": "Pause manuelle : durée par défaut du switch pause. Infini : pause sans limite de temps.",
+        "data": {
+          "pause_duration_minutes": "Durée de la pause (minutes)",
+          "pause_infinite": "Autoriser pause infinie"
         }
       },
       "delete_room": {
@@ -107,12 +133,10 @@
       },
       "global_settings": {
         "title": "Paramètres globaux",
-        "description": "Configurez les paramètres globaux",
+        "description": "Alarme : armed_away → hors-gel. Calendrier été : mode cool, hiver : mode heat.",
         "data": {
-          "guest_mode_entity": "Entité mode invité",
-          "vacation_mode_entity": "Entité mode vacances",
           "alarm_entity": "Entité alarme",
-          "season_sensor": "Capteur de saison"
+          "season_calendar": "Calendrier des saisons"
         }
       }
     }
