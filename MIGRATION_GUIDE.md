@@ -1,372 +1,377 @@
-# 📖 Guide de migration vers Smart Room Manager
+# 📖 Migration Guide to Smart Room Manager
 
-Ce guide explique comment migrer progressivement tes automatisations YAML existantes vers l'intégration Smart Room Manager.
+This guide explains how to progressively migrate your existing YAML automations to the Smart Room Manager integration.
 
-## 🎯 Principe de migration
+## 🎯 Migration Principle
 
-**IMPORTANT** : Migration **progressive** et **testée** pièce par pièce.
+**IMPORTANT**: **Progressive** and **tested** migration, room by room.
 
-### Ordre recommandé
+### Recommended Order
 
-1. ✅ Pièces simples d'abord (couloir, WC, cave)
-2. ✅ Pièces avec chauffage simple ensuite
-3. ✅ Pièces avec Solar Optimizer (attention particulière)
-4. ⚠️ **NE PAS migrer les volets** (trop spécifiques)
+1. ✅ Simple rooms first (corridor, WC, basement)
+2. ✅ Rooms with simple heating next
+3. ✅ Rooms with Solar Optimizer (special attention required)
+4. ⚠️ **DO NOT migrate shutters** (too specific)
 
-## 📋 Inventaire de tes automatisations
+## 📋 Automation Inventory
 
-### Lumières à migrer
+### Lights to Migrate
 
-| Pièce | Automation actuelle | Timer actuel | Commentaires |
-|-------|-------------------|--------------|--------------|
-| Couloirs (x3) | `Timer - couloirs...` | 5 min | ✅ Simple |
-| Salle d'eau RDC | `Timer - couloirs...` | 15 min | ✅ Simple |
-| Salle de bain Et.1 | `Timer - couloirs...` | 15 min | ✅ Simple |
-| WC | `Timer - couloirs...` | 5 min | ✅ Simple |
-| Grenier | `Timer - couloirs...` | 15 min | ✅ Simple |
-| Cave | `Timer - couloirs...` | 15 min | ✅ Simple |
-| Abris | `Timer - couloirs...` | 15 min | ✅ Simple |
-| Entrée intérieure | `Entrée intérieure - Ouverture de la porte` | 5 min | ✅ Simple |
-| Entrée extérieure | `Lumière de l'entrée extérieure` | IPX timer | ✅ Simple |
-| Extérieurs | `Extérieurs - Gestion complète...` | N/A | ⚠️ Garder automation |
-| Terrasse | `Terrasse - Gestion intelligente...` | N/A | ⚠️ Garder automation |
+| Room | Current Automation | Current Timer | Comments |
+|------|-------------------|---------------|----------|
+| Corridors (x3) | `Timer - corridors...` | 5 min | ✅ Simple |
+| Ground Floor Bathroom | `Timer - corridors...` | 15 min | ✅ Simple |
+| First Floor Bathroom | `Timer - corridors...` | 15 min | ✅ Simple |
+| WC | `Timer - corridors...` | 5 min | ✅ Simple |
+| Attic | `Timer - corridors...` | 15 min | ✅ Simple |
+| Basement | `Timer - corridors...` | 15 min | ✅ Simple |
+| Shed | `Timer - corridors...` | 15 min | ✅ Simple |
+| Indoor Entrance | `Indoor entrance - Door open` | 5 min | ✅ Simple |
+| Outdoor Entrance | `Outdoor entrance light` | IPX timer | ✅ Simple |
+| Outdoor | `Outdoor - Complete management...` | N/A | ⚠️ Keep automation |
+| Terrace | `Terrace - Smart management...` | N/A | ⚠️ Keep automation |
 
-### Chauffages à migrer
+### Heating to Migrate
 
-| Pièce | Type | Blueprint actuel | Solar Optimizer | Priorité |
-|-------|------|------------------|-----------------|----------|
-| Salon | Poêle | `blueprint_hvac_thermostat_heat.yaml` | ❌ Non | 1 |
-| Suite parentale | X4FP FP2 | `blueprint_hvac_X4FP_room.yaml` | ✅ Oui | 3 |
-| Chambre d'amis | X4FP FP1 | `blueprint_hvac_X4FP_room.yaml` | ✅ Oui | 3 |
-| Salle d'eau RDC | X4FP FP3 | `blueprint_hvac_X4FP_bathroom.yaml` | ✅ Oui | 3 |
-| Salle de bain Et.1 | X4FP FP4 | `blueprint_hvac_X4FP_bathroom.yaml` | ✅ Oui | 3 |
-| Chambre Thomas | Clim | `blueprint_hvac_room_thermostat.yaml` | ✅ Oui | 2 |
-| Chambre Livia | Clim | `blueprint_hvac_room_thermostat.yaml` | ✅ Oui | 2 |
+| Room | Type | Current Blueprint | Solar Optimizer | Priority |
+|------|------|------------------|-----------------|----------|
+| Living Room | Stove | `blueprint_hvac_thermostat_heat.yaml` | ❌ No | 1 |
+| Master Suite | X4FP FP2 | `blueprint_hvac_X4FP_room.yaml` | ✅ Yes | 3 |
+| Guest Room | X4FP FP1 | `blueprint_hvac_X4FP_room.yaml` | ✅ Yes | 3 |
+| Ground Floor Bathroom | X4FP FP3 | `blueprint_hvac_X4FP_bathroom.yaml` | ✅ Yes | 3 |
+| First Floor Bathroom | X4FP FP4 | `blueprint_hvac_X4FP_bathroom.yaml` | ✅ Yes | 3 |
+| Thomas's Room | AC | `blueprint_hvac_room_thermostat.yaml` | ✅ Yes | 2 |
+| Livia's Room | AC | `blueprint_hvac_room_thermostat.yaml` | ✅ Yes | 2 |
 
-### Automatisations à GARDER en YAML
+### Automations to KEEP in YAML
 
-❌ **Ne PAS migrer** (logiques trop spécifiques) :
+❌ **DO NOT migrate** (too specific logic):
 
-- Tous les volets (VR) - trop complexes
-- VMC grande vitesse
-- Prises cuisine horaires
-- Cinéma + volet
-- Store anti-vent
-- Caméras Frigate
-- Alarme fumée
-- Pompe inondation
-- Sonnette avec snapshot
+- All shutters (VR) - too complex
+- Outdoor lights - specific logic (sun, motion, etc.)
+- Terrace - specific sensors and conditions
+- Security/alarm - critical system
+- Notifications - user-specific
 
-## 🚀 Migration étape par étape
+## 🔄 Migration Process
 
-### Phase 1 : Pièce simple (ex: Couloir RDC)
+### Step 1: Preparation
 
-#### Étape 1.1 : Identifier les entités
+1. **Backup** your configuration:
+```bash
+# Backup automations.yaml
+cp automations.yaml automations.yaml.backup
 
-```yaml
-# Automation actuelle (extrait)
-trigger:
-  - entity_id: light.x8r_ndeg2_relais_6  # Couloir RDC
-    from: 'off'
-    to: 'on'
-action:
-  - delay: { minutes: 5 }
-  - light.turn_off: light.x8r_ndeg2_relais_6
+# Backup scripts if used
+cp scripts.yaml scripts.yaml.backup
 ```
 
-**Entités identifiées** :
-- Lumière : `light.x8r_ndeg2_relais_6`
-- Timer : 5 minutes
-- Pas de capteur de présence (allumage manuel)
-- Pas de capteur de luminosité
+2. **Document** current behavior:
+   - Note current timer values
+   - Document special conditions
+   - List all entities used
 
-#### Étape 1.2 : Configuration dans Smart Room Manager
+3. **Test environment** (if possible):
+   - Test on development instance first
+   - Or migrate one non-critical room first
 
-1. Ouvre **Configuration** → **Intégrations** → **Smart Room Manager**
-2. Clique **Configurer** → **Ajouter une pièce**
-3. Configure :
+### Step 2: First Migration (Simple Room)
 
-**Nom** : `Couloir RDC`
+**Example: Ground Floor Corridor**
 
-**Capteurs** :
-- Capteurs de présence : (vide - pas de capteur)
-- Capteur de luminosité : (vide)
-- Autres : (vide)
+1. **Add room** in Smart Room Manager:
+   - Configuration → Integrations
+   - Smart Room Manager → Configure
+   - Options → Add a room
 
-**Actionneurs** :
-- Lumières : `light.x8r_ndeg2_relais_6`
-- Chauffage : (vide)
-
-**Configuration lumières** :
-- Seuil luminosité : 1000 lx (très élevé pour désactiver l'auto)
-- Délai extinction : 300 secondes (5 min)
-- Mode nuit : Désactivé
-- Luminosité jour : 100%
-
-**Chauffage** : (ignorer)
-
-**Horaires** : (par défaut)
-
-#### Étape 1.3 : Tester
-
-1. ✅ Allume manuellement `light.x8r_ndeg2_relais_6`
-2. ✅ Vérifie que `switch.smart_room_couloir_rdc_automation` est ON
-3. ✅ Attends 5 minutes → lumière doit s'éteindre
-4. ✅ Vérifie les logs : **Configuration** → **Logs** → Filtrer "smart_room"
-
-#### Étape 1.4 : Désactiver l'ancienne automation
-
-1. ✅ Va dans **Configuration** → **Automatisations**
-2. ✅ Trouve `Timer - couloirs...`
-3. ✅ **Désactive-la** (toggle OFF) - **NE PAS supprimer encore**
-4. ✅ Teste pendant 1 semaine
-5. ✅ Si OK : supprime l'automation
-
-#### Étape 1.5 : Valider
-
-✅ Critères de validation :
-- Lumière s'éteint après 5 min d'allumage manuel
-- Pas de conflit avec l'ancienne automation
-- Logs propres (pas d'erreurs)
-
----
-
-### Phase 2 : Pièce avec capteurs (ex: Entrée intérieure)
-
-#### Étape 2.1 : Identifier les entités
-
+2. **Configure the room**:
 ```yaml
-# Automation actuelle
-trigger:
-  - entity_id: binary_sensor.x24d_17_porte_rdc
-    to: 'on'
-action:
-  - light.turn_on: light.x8r_ndeg2_relais_5
-  - delay: { minutes: 5 }
-  - light.turn_off: light.x8r_ndeg2_relais_5
+Room Name: "Ground Floor Corridor"
+Room Type: "Corridor"
+Lights:
+  - light.corridor_light
+Light Timeout: 300s (5 minutes)
 ```
 
-**Entités** :
-- Lumière : `light.x8r_ndeg2_relais_5`
-- Capteur : `binary_sensor.x24d_17_porte_rdc` (porte)
-- Timer : 5 minutes
+3. **Test** the integration:
+   - Turn light on manually
+   - Wait for timer
+   - Verify automatic turn-off
 
-#### Étape 2.2 : Configuration Smart Room Manager
+4. **Disable** old automation:
+   - **DO NOT DELETE** yet
+   - Just disable it
+   - Keep for 1 week minimum
 
-**Nom** : `Entrée intérieure`
+5. **Monitor** for issues:
+   - Check logs
+   - Test edge cases
+   - Verify expected behavior
 
-**Capteurs** :
-- Capteurs de présence : `binary_sensor.x24d_17_porte_rdc`
-- Capteur de luminosité : (vide - allume toujours)
+### Step 3: Heating Migration (Without Solar Optimizer)
 
-**Actionneurs** :
-- Lumières : `light.x8r_ndeg2_relais_5`
+**Example: Living Room**
 
-**Configuration lumières** :
-- Seuil luminosité : 1000 lx (désactive l'auto lux)
-- Délai extinction : 300 s (5 min)
-- Mode nuit : Activé ✅
-- Luminosité nuit : 100% (pas de variation)
-- Luminosité jour : 100%
-
----
-
-### Phase 3 : Chauffage sans Solar Optimizer (ex: Salon)
-
-#### Étape 3.1 : Identifier les entités
-
+1. **Configure room** in Smart Room Manager:
 ```yaml
-# Blueprint actuel : blueprint_hvac_thermostat_heat.yaml
-input:
-  room_name: Salon
-  climate_entity: climate.salon_poele
-  window_sensors:
-    - binary_sensor.x24d_08_baie_vitree_2m_salon
-    - binary_sensor.x24d_07_baie_vitree_3m_salon
-    - binary_sensor.x24d_12_fenetre_pano_salon
-    - binary_sensor.x24d_09_baie_vitree_cuisine
-    - binary_sensor.x24d_10_fenetre_cuisine
-  alarm_entity: alarm_control_panel.maison
-  summer_entity: calendar.ete_hiver
-  comfort_temp: 19.5
-  eco_temp: 18
+Room Name: "Living Room"
+Room Type: "Normal"
+Temperature Sensor: sensor.living_room_temperature
+Climate Entity: climate.living_room_thermostat
+Door/Window Sensors:
+  - binary_sensor.living_room_window
+
+# Climate Configuration
+Comfort Temperature: 20.5°C
+Eco Temperature: 19.0°C
+Night Temperature: 18.0°C
+Frost Protection: 7.0°C
+Window Check: enabled
+
+# Schedule
+Night Start: 23:00
+Comfort Time Ranges: "07:00-09:00,18:00-23:00"
 ```
 
-**Entités** :
-- Chauffage : `climate.salon_poele`
-- Fenêtres : 5 capteurs
-- Alarme : `alarm_control_panel.maison`
-- Été : `calendar.ete_hiver`
+2. **Test phases**:
+   - ✅ Comfort mode during comfort hours
+   - ✅ Eco mode outside comfort hours
+   - ✅ Night mode after night start
+   - ✅ Frost protection when alarm armed_away
+   - ✅ Window open detection
 
-#### Étape 3.2 : Configuration Smart Room Manager
+3. **Disable** old blueprint automation
 
-**Nom** : `Salon`
+### Step 4: Solar Optimizer Integration
 
-**Capteurs** :
-- Capteurs de présence : (vide ou ajouter si tu as)
-- Capteurs porte/fenêtre :
-  - `binary_sensor.x24d_08_baie_vitree_2m_salon`
-  - `binary_sensor.x24d_07_baie_vitree_3m_salon`
-  - `binary_sensor.x24d_12_fenetre_pano_salon`
-  - `binary_sensor.x24d_09_baie_vitree_cuisine`
-  - `binary_sensor.x24d_10_fenetre_cuisine`
-- Capteur température : (le poêle a déjà son capteur interne)
+**Example: Master Bedroom with X4FP**
 
-**Actionneurs** :
-- Lumières : (à ajouter si tu veux gérer les lumières salon)
-- Entité climat : `climate.salon_poele`
+1. **Prerequisites**:
+   - Solar Optimizer already configured
+   - Switch entity exists (e.g., `switch.solar_optimizer_master`)
 
-**Configuration chauffage** :
-- Température confort : 19.5°C
-- Température éco : 18°C
-- Température nuit : 17°C
-- Température absence : 16°C
-- Température hors-gel : 7°C
-- Présence requise : ❌ Non
-- Vérifier fenêtres : ✅ Oui
-- Délai inoccupation : 1800 s (30 min)
-
-**Paramètres globaux** (dans configuration de l'intégration) :
-- Entité mode invité : (vide)
-- Entité mode vacances : (vide)
-- Entité alarme : `alarm_control_panel.maison`
-- Capteur de saison : `calendar.ete_hiver`
-
-#### Étape 3.3 : Tester
-
-1. ✅ Vérifie que le chauffage respecte confort/éco selon alarme
-2. ✅ Ouvre une fenêtre → chauffage doit se couper
-3. ✅ Arme l'alarme → température doit baisser (away)
-4. ✅ Active `calendar.ete_hiver` → chauffage doit s'éteindre
-
-#### Étape 3.4 : Désactiver le blueprint
-
-1. ✅ Désactive automation `Chauffage - Salon (poêle)`
-2. ✅ Teste pendant 1 semaine
-3. ✅ Si OK : supprime l'automation
-
----
-
-### Phase 4 : Chauffage AVEC Solar Optimizer (ATTENTION)
-
-⚠️ **CRITIQUE** : Solar Optimizer doit rester **PRIORITAIRE**.
-
-#### Contexte Solar Optimizer
-
-Tes blueprints actuels surveillent le switch Solar Optimizer :
+2. **Configure room**:
 ```yaml
-solar_switch: switch.solar_optimizer_chauffage_suite_parentale
+Room Name: "Master Bedroom"
+Room Type: "Normal"
+Temperature Sensor: sensor.master_temperature
+Climate Entity: climate.master_x4fp
+Door/Window Sensors:
+  - binary_sensor.master_window
+External Control Switch: switch.solar_optimizer_master
+
+# Climate Configuration
+Comfort Temperature: 19.0°C
+Eco Temperature: 17.0°C
+Night Temperature: 16.0°C
+Frost Protection: 7.0°C
+Summer Policy: "eco"
+
+# External Control Configuration
+External Control Preset: "comfort"
+External Control Temp: 21.0°C
+Allow External in Away: false
+
+# Priority Configuration
+Preset Comfort: "comfort"
+Preset Eco: "eco"
+Preset Window: "away"
 ```
 
-Quand ce switch est **ON**, Solar Optimizer est en train de chauffer activement.
-→ Le blueprint se met en retrait et laisse SO piloter.
+3. **Priority System**:
+```
+1. Manual Pause (highest priority)
+2. Bypass Switch
+3. Window Open → Frost Protection
+4. External Control (Solar Optimizer)
+5. Away Mode (Alarm)
+6. Schedule/Calendar
+7. Normal Mode (Comfort/Eco/Night)
+```
 
-#### Étape 4.1 : Amélioration nécessaire
+4. **Test Solar Optimizer**:
+   - ✅ When SO switch ON → radiator follows SO
+   - ✅ When SO switch OFF → Smart Room Manager resumes control
+   - ✅ Window open → interrupts SO
+   - ✅ Away mode → overrides SO (unless "Allow External in Away")
 
-L'intégration Smart Room Manager actuelle **ne gère pas encore** cette logique SO.
+### Step 5: Advanced Features
 
-**Deux options** :
+#### Hysteresis Control (X4FP Type 3b)
 
-**Option A : Garder les blueprints pour les pièces avec SO** (recommandé court terme)
-- ✅ Pas de risque
-- ✅ SO continue à fonctionner parfaitement
-- ❌ Pas de migration complète
+For temperature-based control without external thermostats:
 
-**Option B : Améliorer Smart Room Manager** (recommandé moyen terme)
-- J'ajoute la logique SO dans l'intégration
-- Même comportement que tes blueprints
-- Migration complète possible
+```yaml
+# Climate Advanced Step
+Setpoint Input: input_number.master_setpoint
+Hysteresis: 0.5°C
+Min Setpoint: 15.0°C
+Max Setpoint: 22.0°C
+Preset Heat: "comfort"
+Preset Idle: "eco"
+```
 
-#### Recommandation
+**Behavior**:
+- Temperature < (Setpoint - Hysteresis) → Heat (Comfort preset)
+- Temperature > (Setpoint + Hysteresis) → Idle (Eco preset)
 
-Pour l'instant, **garde les blueprints HVAC** pour les pièces avec Solar Optimizer :
-- Suite parentale
-- Chambre d'amis
-- Salle d'eau RDC
-- Salle de bain Et.1
-- Chambre Thomas
-- Chambre Livia
+#### Room Calendar
 
-Je vais améliorer l'intégration pour supporter SO, puis tu pourras migrer ces pièces.
+For per-room schedule overrides:
 
----
+```yaml
+# Schedule Step
+Schedule Entity: calendar.master_schedule
+Preset Schedule ON: "comfort"
+Preset Schedule OFF: "eco"
+```
 
-## 📊 Plan de migration complet
+**Use case**: Google Calendar event → force comfort mode
 
-### Sprint 1 : Lumières simples (1 semaine)
+#### Manual Pause
 
-1. ✅ Couloir RDC
-2. ✅ Couloir Et.1
-3. ✅ WC RDC
-4. ✅ Cave
-5. ✅ Grenier
-6. ✅ Abris
+```yaml
+# Control Step
+Pause Duration: 120 minutes
+Infinite Pause: true
+```
 
-**Test** : 1 semaine, validation complète
+**Usage**:
+- Switch `switch.master_pause` → pause automation temporarily
+- Infinite pause: requires manual un-pause
 
-### Sprint 2 : Lumières avec capteurs (1 semaine)
+## 🐛 Troubleshooting
 
-1. ✅ Entrée intérieure
-2. ✅ Entrée extérieure
-3. ✅ Salle d'eau RDC (lumière uniquement)
-4. ✅ Salle de bain Et.1 (lumière uniquement)
+### Issue: Lights don't turn off
 
-**Test** : 1 semaine, validation complète
+**Check**:
+1. Room type is "Corridor" or "Bathroom" (timer only for these types)
+2. Light timeout is configured
+3. Check logs for errors
 
-### Sprint 3 : Chauffage sans SO (2 semaines)
+**Solution**:
+```yaml
+# Ensure correct room type
+Room Type: "Corridor"  # or "Bathroom"
+Light Timeout: 300s
+```
 
-1. ✅ Salon (poêle)
+### Issue: Heating doesn't respond
 
-**Test** : 2 semaines, validation approfondie
+**Check**:
+1. Climate entity is responding manually
+2. Check bypass switch is OFF
+3. Check window sensors
+4. Verify alarm state
 
-### Sprint 4 : Amélioration Solar Optimizer (attendre mise à jour)
+**Debug sensors**:
+- `sensor.ROOM_climate_priority` → shows current priority
+- `sensor.ROOM_climate_state` → shows current state
+- `sensor.ROOM_target_temperature` → shows target temp
 
-1. ⏳ J'améliore l'intégration pour supporter SO
-2. ⏳ Tu testes sur une pièce pilote (ex: Chambre Thomas)
-3. ⏳ Si OK, migration des autres pièces SO
+### Issue: Solar Optimizer conflicts
 
----
+**Check**:
+1. External Control Switch is correctly configured
+2. Priority is respected (use debug sensors)
+3. "Allow External in Away" setting
 
-## 🔧 Dépannage migration
+**Solution**:
+```yaml
+# Ensure SO switch is configured
+External Control Switch: switch.solar_optimizer_room
+External Control Preset: "comfort"
+Allow External in Away: false  # SO disabled when away
+```
 
-### Problème : Lumière ne s'éteint pas
+### Issue: Configuration not saving
 
-**Cause** : Ancienne automation toujours active
+**Check**:
+1. Home Assistant logs for errors
+2. Verify entity IDs exist
+3. Check for None values
 
-**Solution** :
-1. Désactive l'ancienne automation
-2. Redémarre Home Assistant
-3. Vérifie les logs
+**Solution**:
+- Only configure fields you actually use
+- Leave optional fields empty, don't use None
 
-### Problème : Chauffage ne suit pas l'alarme
+## 📊 Migration Checklist
 
-**Cause** : Entité alarme non configurée dans paramètres globaux
+### Before Migration
+- [ ] Backup `automations.yaml`
+- [ ] Document current behavior
+- [ ] List all entities used
+- [ ] Identify Solar Optimizer rooms
 
-**Solution** :
-1. Configuration → Intégrations → Smart Room Manager
-2. Configurer → Paramètres globaux
-3. Ajoute `alarm_control_panel.maison`
+### During Migration
+- [ ] Add room to Smart Room Manager
+- [ ] Configure all necessary fields
+- [ ] Test basic functionality
+- [ ] Test edge cases (window, away, etc.)
+- [ ] Disable (don't delete) old automation
 
-### Problème : Conflit avec Solar Optimizer
+### After Migration
+- [ ] Monitor for 1 week minimum
+- [ ] Check logs for errors
+- [ ] Verify all scenarios work
+- [ ] Compare energy usage (if applicable)
+- [ ] Delete old automation after confirmation
 
-**Cause** : SO et Smart Room Manager se battent
+### Per Room Type
 
-**Solution** :
-1. **Désactive immédiatement** Smart Room Manager pour cette pièce
-2. Réactive le blueprint d'origine
-3. Attends la mise à jour de l'intégration avec support SO
+**Simple Lights**:
+- [ ] Room name and type
+- [ ] Light entities
+- [ ] Timer value (corridor/bathroom only)
+- [ ] Test on/off cycle
 
----
+**Heating Only**:
+- [ ] Temperature sensor
+- [ ] Climate entity
+- [ ] Window sensors
+- [ ] Temperature setpoints
+- [ ] Schedule/comfort ranges
+- [ ] Test all modes
 
-## 📞 Support
+**With Solar Optimizer**:
+- [ ] All heating items above
+- [ ] External control switch
+- [ ] External control preset
+- [ ] Allow external in away setting
+- [ ] Test SO priority
+- [ ] Test normal mode fallback
 
-Si tu rencontres des problèmes :
+**With Advanced Features**:
+- [ ] Hysteresis configuration (if applicable)
+- [ ] Room calendar (if applicable)
+- [ ] Manual pause settings
+- [ ] Debug sensors working
 
-1. **Logs** : Configuration → Logs → Filtrer "smart_room_manager"
-2. **État des entités** : Outils développeur → États
-3. **GitHub** : Ouvre une issue sur le repository
+## 🎯 Success Criteria
 
----
+A successful migration means:
+- ✅ All expected behaviors work
+- ✅ No errors in logs
+- ✅ Energy usage similar or better
+- ✅ Response times acceptable
+- ✅ Edge cases handled (window, away, etc.)
+- ✅ Manual controls work (pause, bypass)
 
-**Version** : 0.1.0
-**Dernière mise à jour** : 2025-01-13
+## 📚 Additional Resources
+
+- [Configuration Examples](CONFIGURATION_EXAMPLES.md) - Ready-to-use configurations
+- [Solar Optimizer Guide](SOLAR_OPTIMIZER.md) - Detailed SO integration
+- [Changelog](CHANGELOG.md) - Feature details and updates
+- [README](README.md) - Full feature list
+
+## 💡 Tips
+
+1. **Start simple**: Migrate easiest rooms first
+2. **Test thoroughly**: Don't rush, test all scenarios
+3. **Monitor logs**: Check for warnings/errors
+4. **Keep backups**: Don't delete old automations immediately
+5. **One at a time**: Don't migrate multiple rooms simultaneously
+6. **Document**: Note any special configurations
+7. **Ask for help**: Check GitHub issues if stuck
+
+Good luck with your migration! 🚀

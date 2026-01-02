@@ -209,9 +209,9 @@ def build_room_basic_schema(room_data: dict[str, Any] | None = None) -> vol.Sche
                 vol.Required(CONF_ROOM_NAME): cv.string,
                 vol.Optional(CONF_ROOM_TYPE, default=ROOM_TYPE_NORMAL): vol.In(
                     {
-                        ROOM_TYPE_NORMAL: "Normal (chambres - pas de timer lumière)",
-                        ROOM_TYPE_CORRIDOR: "Couloir (timer 5min)",
-                        ROOM_TYPE_BATHROOM: "Salle de bain (timer 15min + lumière pilote chauffage)",
+                        ROOM_TYPE_NORMAL: "Normal (bedrooms - no light timer)",
+                        ROOM_TYPE_CORRIDOR: "Corridor (5min timer)",
+                        ROOM_TYPE_BATHROOM: "Bathroom (15min timer + heater control)",
                     }
                 ),
                 vol.Optional(
@@ -231,9 +231,9 @@ def build_room_basic_schema(room_data: dict[str, Any] | None = None) -> vol.Sche
                 default=room_data.get(CONF_ROOM_TYPE, ROOM_TYPE_NORMAL),
             ): vol.In(
                 {
-                    ROOM_TYPE_NORMAL: "Normal (chambres)",
-                    ROOM_TYPE_CORRIDOR: "Couloir (timer 5min)",
-                    ROOM_TYPE_BATHROOM: "Salle de bain (timer 15min + pilote chauffage)",
+                    ROOM_TYPE_NORMAL: "Normal (bedrooms)",
+                    ROOM_TYPE_CORRIDOR: "Corridor (5min timer)",
+                    ROOM_TYPE_BATHROOM: "Bathroom (15min timer + heater)",
                 }
             ),
             vol.Optional(
@@ -495,8 +495,8 @@ def build_climate_config_schema(room_data: dict[str, Any]) -> vol.Schema:
                 default=room_data.get(CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY),
             ): vol.In(
                 {
-                    "off": "Off (éteindre radiateurs en été)",
-                    "eco": "Eco (garder radiateurs en eco en été)",
+                    "off": "Off (turn off radiators in summer)",
+                    "eco": "Eco (keep radiators in eco mode in summer)",
                 }
             ),
         }
@@ -770,10 +770,10 @@ def build_room_control_schema(room_data: dict[str, Any]) -> vol.Schema:
                 {
                     15: "15 minutes",
                     30: "30 minutes",
-                    60: "1 heure",
-                    120: "2 heures",
-                    240: "4 heures",
-                    480: "8 heures",
+                    60: "1 hour",
+                    120: "2 hours",
+                    240: "4 hours",
+                    480: "8 hours",
                 }
             ),
             vol.Optional(
@@ -835,7 +835,7 @@ class SmartRoomManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=data_schema,
             description_placeholders={
-                "description": "Configuration simplifiée v0.2.0 - Alarme détermine présence, pas de capteurs présence/luminosité"
+                "description": "Simplified v0.2.0 configuration - Alarm determines presence, no presence/luminosity sensors"
             },
         )
 
@@ -881,7 +881,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             return self.async_show_form(
                 step_id="list_rooms",
                 description_placeholders={
-                    "rooms": "Aucune pièce configurée. Retournez au menu pour ajouter une pièce."
+                    "rooms": "No rooms configured. Return to the menu to add a room."
                 },
             )
 
@@ -932,7 +932,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_room_basic_schema(None),
             errors=errors,
             description_placeholders={
-                "info": "Type normal: pas de timer. Couloir/SdB: timer auto-off."
+                "info": "Normal type: no timer. Corridor/Bathroom: auto-off timer."
             },
         )
 
@@ -985,7 +985,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_room_sensors_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Tous optionnels. Fenêtres → hors-gel si ouvertes.",
+                "info": "All optional. Windows → frost protection if open.",
             },
         )
 
@@ -1023,7 +1023,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_room_actuators_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Bypass: désactive tout contrôle. External Control: Solar Optimizer, etc. (priorité haute)",
+                "info": "Bypass: disables all control. External Control: Solar Optimizer, etc. (high priority)",
             },
         )
 
@@ -1048,7 +1048,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 data_schema=build_light_config_schema(self._current_room, room_type),
                 description_placeholders={
                     "room_name": self._current_room[CONF_ROOM_NAME],
-                    "info": f"Type {room_type}: auto-off après timeout",
+                    "info": f"Type {room_type}: auto-off after timeout",
                 },
             )
         else:
@@ -1100,7 +1100,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_climate_config_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Températures hiver/été. Window delays: temps avant réaction fenêtres. Summer policy: X4FP en été.",
+                "info": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: X4FP in summer.",
             },
         )
 
@@ -1167,7 +1167,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_climate_advanced_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Hysteresis: contrôle X4FP via temp (setpoint requis). External Control: config Solar Optimizer. Presets: personnaliser X4FP.",
+                "info": "Hysteresis: X4FP control via temp (setpoint required). External Control: Solar Optimizer config. Presets: customize X4FP.",
             },
         )
 
@@ -1209,7 +1209,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_schedule_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Night start + comfort ranges (time-based). Calendar: externe (Google, etc.). Presets: mode si calendar ON/OFF",
+                "info": "Night start + comfort ranges (time-based). Calendar: external (Google, etc.). Presets: mode when calendar ON/OFF",
             },
         )
 
@@ -1248,7 +1248,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_room_control_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Pause manuelle: durée par défaut du switch pause. Infinite: pause sans limite de temps.",
+                "info": "Manual pause: default duration of pause switch. Infinite: pause without time limit.",
             },
         )
 
@@ -1307,6 +1307,6 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             step_id="global_settings",
             data_schema=build_global_settings_schema(self.config_entry.data),
             description_placeholders={
-                "info": "Alarme: armed_away → hors-gel. Calendrier été: clim cool, hiver: heat.",
+                "info": "Alarm: armed_away → frost protection. Summer calendar: cool mode, winter: heat mode.",
             },
         )

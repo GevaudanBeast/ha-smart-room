@@ -1,316 +1,447 @@
-# ⚡ Solar Optimizer - Guide d'intégration
+# ⚡ Solar Optimizer - Integration Guide
 
-Smart Room Manager v0.1.0 supporte dès sa version initiale **Solar Optimizer** en mode **prioritaire**.
+Smart Room Manager v0.3.0+ supports **Solar Optimizer** in **priority mode** through the External Control feature.
 
-## 🎯 Principe de fonctionnement
+## 🎯 How It Works
 
-Solar Optimizer gère le chauffage pour utiliser le surplus d'énergie solaire. Quand Solar Optimizer décide de chauffer une pièce, **il doit avoir la priorité absolue** sur toute autre logique.
+Solar Optimizer manages heating to use solar energy surplus. When Solar Optimizer decides to heat a room, **it must have absolute priority** over all other logic.
 
-### Comportement de Smart Room Manager
+### Smart Room Manager Behavior
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  switch.solar_optimizer_xxx = ON                    │
 │  ↓                                                   │
-│  Solar Optimizer chauffe activement                 │
+│  Solar Optimizer is actively heating                │
 │  ↓                                                   │
-│  Smart Room Manager se met EN RETRAIT               │
+│  Smart Room Manager STEPS BACK                      │
 │  ↓                                                   │
-│  Aucune action de Smart Room Manager                │
+│  No action from Smart Room Manager                  │
 └─────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────┐
 │  switch.solar_optimizer_xxx = OFF                   │
 │  ↓                                                   │
-│  Solar Optimizer ne chauffe pas                     │
+│  Solar Optimizer not heating                        │
 │  ↓                                                   │
-│  Smart Room Manager reprend le contrôle             │
+│  Smart Room Manager RESUMES CONTROL                 │
 │  ↓                                                   │
-│  Logique normale (alarme, fenêtres, etc.)           │
+│  Normal logic (alarm, windows, schedule, etc.)      │
 └─────────────────────────────────────────────────────┘
 ```
 
+## 🏆 Priority System (v0.3.0)
+
+Smart Room Manager uses a 7-level priority system:
+
+```
+Priority 1 (HIGHEST): Manual Pause
+    ↓
+Priority 2: Bypass Switch
+    ↓
+Priority 3: Window Open
+    ↓
+Priority 4: EXTERNAL CONTROL (Solar Optimizer) ⚡
+    ↓
+Priority 5: Away Mode (Alarm armed_away)
+    ↓
+Priority 6: Schedule/Calendar
+    ↓
+Priority 7 (LOWEST): Normal Mode (Comfort/Eco/Night)
+```
+
+**Key point**: External Control (Solar Optimizer) has **Priority 4** - it overrides normal operation but respects safety features (window open, bypass).
+
 ## ⚙️ Configuration
 
-### Étape 1 : Activer Solar Optimizer
+### Step 1: Enable Solar Optimizer
 
-Assure-toi que Solar Optimizer est correctement configuré dans Home Assistant :
+Ensure Solar Optimizer is correctly configured in Home Assistant:
 
 ```yaml
-# Configuration Solar Optimizer (exemple)
+# Solar Optimizer Configuration (example)
 solar_optimizer:
   devices:
-    - name: "Chauffage Suite parentale"
+    - name: "Master Bedroom Heating"
       entity_id: climate.x4fp_fp_2
       power: 1500  # Watts
-      switch: switch.solar_optimizer_chauffage_suite_parentale
+      switch: switch.solar_optimizer_master_bedroom
 ```
 
-### Étape 2 : Configurer Smart Room Manager
+### Step 2: Configure Smart Room Manager
 
-Lors de la configuration d'une pièce avec Solar Optimizer :
+#### Basic Configuration
 
-**Configuration → Intégrations → Smart Room Manager → Configurer → Ajouter/Modifier une pièce**
-
-#### Étape "Actionneurs" :
-
-| Champ | Valeur |
-|-------|--------|
-| Entité climat | `climate.x4fp_fp_2` |
-| **Solar Optimizer switch** | `switch.solar_optimizer_chauffage_suite_parentale` |
-
-⚠️ **Important** : Le switch Solar Optimizer est le **switch d'action** (pas l'enable switch). C'est le switch qui est **ON** quand SO chauffe activement.
-
-## 📋 Exemples de configuration
-
-### Suite parentale (X4FP avec SO)
+1. **Add room** in Smart Room Manager
+2. **Configure External Control**:
 
 ```yaml
-Nom: "Suite parentale"
+Room Name: "Master Bedroom"
+Room Type: "Normal"
 
-# Capteurs
-Capteurs porte/fenêtre:
-  - binary_sensor.x24d_03_baie_vitree_sp
-  - binary_sensor.x24d_04_fenetre_sp
+# Sensors Step
+Temperature Sensor: sensor.master_temperature
+Door/Window Sensors:
+  - binary_sensor.master_window
 
-# Actionneurs
-Entité climat: climate.x4fp_fp_2
-Solar Optimizer switch: switch.solar_optimizer_chauffage_suite_parentale
-
-# Chauffage
-Température confort: 20°C
-Température éco: 18°C
-Température nuit: 17°C
-Température absence: 16°C
-Vérifier fenêtres: ✅ Oui
+# Actuators Step
+Climate Entity: climate.master_x4fp
+External Control Switch: switch.solar_optimizer_master_bedroom
 ```
 
-### Chambre d'amis (X4FP avec SO)
+#### Advanced Configuration
+
+In the **Climate Advanced** step:
 
 ```yaml
-Nom: "Chambre d'amis"
-Entité climat: climate.x4fp_fp_1
-Solar Optimizer switch: switch.solar_optimizer_chauffage_chambre_d_amis
-(reste identique à Suite parentale)
+# External Control Configuration
+External Control Preset: "comfort"
+External Control Temp: 21.0°C
+Allow External in Away: false
 ```
 
-### Salle d'eau (Sèche-serviettes avec SO)
+**Parameters explained**:
+
+| Parameter | Description | Recommended Value |
+|-----------|-------------|------------------|
+| **External Control Preset** | X4FP preset when SO is active | `"comfort"` |
+| **External Control Temp** | Target temperature for thermostats | `21.0°C` |
+| **Allow External in Away** | Allow SO when alarm is armed_away | `false` (safety) |
+
+## 🔍 Monitoring
+
+### Debug Sensors (v0.3.0)
+
+Smart Room Manager creates debug sensors for each room:
+
+| Sensor | Purpose | Example Values |
+|--------|---------|----------------|
+| `sensor.ROOM_climate_priority` | Current active priority | `external_control`, `normal`, `away` |
+| `sensor.ROOM_external_control` | External control state | `on`, `off` |
+| `sensor.ROOM_climate_state` | Current climate mode | `comfort`, `eco`, `night`, `frost_protection` |
+| `sensor.ROOM_target_temperature` | Current target temperature | `21.0`, `19.0`, `16.0`, `7.0` |
+
+### Example Monitoring Card
 
 ```yaml
-Nom: "Salle d'eau RDC"
-Entité climat: climate.x4fp_fp_3
-Solar Optimizer switch: switch.solar_optimizer_seche_serviette_salle_d_eau
+type: entities
+title: Master Bedroom - Solar Optimizer
+entities:
+  - entity: switch.solar_optimizer_master_bedroom
+    name: Solar Optimizer Switch
+  - entity: sensor.master_climate_priority
+    name: Current Priority
+  - entity: sensor.master_external_control
+    name: External Control Status
+  - entity: sensor.master_target_temperature
+    name: Target Temperature
+  - entity: climate.master_x4fp
+    name: Radiator
 ```
 
-### Salle de bain (Sèche-serviettes avec SO)
+## 📋 Detailed Scenarios
+
+### Scenario 1: Normal Solar Optimizer Operation
+
+**Conditions**:
+- Solar surplus available
+- Room temperature < target
+- No windows open
+- Alarm not armed_away
+
+**Behavior**:
+1. Solar Optimizer activates: `switch.solar_optimizer_master = ON`
+2. Smart Room Manager detects External Control active
+3. Priority 4 activated (External Control)
+4. Radiator set to External Control Preset (`comfort`)
+5. Temperature target: External Control Temp (21.0°C)
+
+**Sensors**:
+```
+sensor.master_climate_priority = "external_control"
+sensor.master_external_control = "on"
+sensor.master_target_temperature = 21.0
+climate.master_x4fp.preset_mode = "comfort"
+```
+
+### Scenario 2: Window Opens During Solar Optimization
+
+**Conditions**:
+- Solar Optimizer active
+- Window opens
+
+**Behavior**:
+1. Priority 3 (Window) overrides Priority 4 (External Control)
+2. Radiator immediately set to Frost Protection
+3. Solar Optimizer still running (but ineffective)
+
+**Sensors**:
+```
+sensor.master_climate_priority = "window"
+sensor.master_external_control = "on"  # SO still active
+sensor.master_target_temperature = 7.0
+climate.master_x4fp.preset_mode = "away"  # Frost protection
+```
+
+**When window closes**:
+- If SO still ON → resume External Control (Priority 4)
+- If SO turned OFF → resume Normal mode (Priority 7)
+
+### Scenario 3: Alarm Armed During Solar Optimization
+
+**Conditions**:
+- Solar Optimizer active
+- User arms alarm (armed_away)
+
+**Behavior depends on** `Allow External in Away` setting:
+
+**If `Allow External in Away = false`** (recommended):
+1. Priority 5 (Away) overrides Priority 4 (External Control)
+2. Radiator set to Frost Protection
+3. Solar Optimizer disabled for safety
+
+```
+sensor.master_climate_priority = "away"
+sensor.master_target_temperature = 7.0
+```
+
+**If `Allow External in Away = true`**:
+1. Priority 4 (External Control) remains active
+2. Solar Optimizer continues heating
+3. Use only if you trust Solar Optimizer safety
+
+### Scenario 4: Solar Optimizer Stops
+
+**Conditions**:
+- Solar Optimizer was active
+- Solar surplus disappears
+- Switch turns OFF
+
+**Behavior**:
+1. External Control deactivated (Priority 4 → OFF)
+2. Smart Room Manager resumes normal control
+3. Fallback to Priority 7 (Normal Mode)
+4. Mode determined by schedule/time/alarm
+
+**Example at 19:00 (comfort time)**:
+```
+sensor.master_climate_priority = "normal"
+sensor.master_external_control = "off"
+sensor.master_climate_state = "comfort"
+sensor.master_target_temperature = 19.0
+climate.master_x4fp.preset_mode = "comfort"
+```
+
+### Scenario 5: Manual Pause
+
+**Conditions**:
+- Solar Optimizer active
+- User activates manual pause
+
+**Behavior**:
+1. Priority 1 (Pause) overrides all (including SO)
+2. Automation completely paused
+3. Radiator remains in last state
+4. No automatic changes
+
+```
+sensor.master_climate_priority = "paused"
+switch.master_pause = "on"
+```
+
+## 🎛️ Configuration Tips
+
+### Recommended Settings
+
+**For most rooms**:
+```yaml
+External Control Preset: "comfort"
+External Control Temp: 21.0°C
+Allow External in Away: false
+```
+
+**For less critical rooms** (guest room, etc.):
+```yaml
+External Control Preset: "eco"
+External Control Temp: 19.0°C
+Allow External in Away: false
+```
+
+**For advanced users** (if you trust SO safety):
+```yaml
+External Control Preset: "comfort"
+External Control Temp: 21.0°C
+Allow External in Away: true  # ⚠️ Use with caution
+```
+
+### Window Detection
+
+Always configure window sensors for rooms with Solar Optimizer:
 
 ```yaml
-Nom: "Salle de bain Et.1"
-Entité climat: climate.x4fp_fp_4
-Solar Optimizer switch: switch.solar_optimizer_seche_serviette_salle_de_bain
+Door/Window Sensors:
+  - binary_sensor.master_window
 ```
 
-### Chambre Thomas (Climatisation avec SO)
+**Why?**
+- Safety: Prevents heating with window open
+- Priority: Window (Priority 3) overrides SO (Priority 4)
+- Energy: Avoids wasting solar surplus
+
+### Summer Policy
+
+Configure summer behavior for X4FP radiators:
 
 ```yaml
-Nom: "Chambre Thomas"
-Entité climat: climate.clim_thomas
-Solar Optimizer switch: switch.solar_optimizer_climatisation_thomas
+Summer Policy: "eco"  # or "off"
 ```
 
-### Chambre Livia (Climatisation avec SO)
+**Options**:
+- `"off"`: Turn off X4FP completely in summer (saves energy)
+- `"eco"`: Keep X4FP in eco mode (maintains minimal protection)
 
+## 🔧 Troubleshooting
+
+### Issue: Solar Optimizer not working
+
+**Symptoms**:
+- SO switch ON but radiator doesn't respond
+- Priority shows something other than "external_control"
+
+**Check**:
+1. External Control Switch is correctly configured
+2. Window is not open (Priority 3 > Priority 4)
+3. Alarm is not armed_away (if "Allow External in Away" = false)
+4. Bypass switch is OFF (Priority 2 > Priority 4)
+5. Manual pause is OFF (Priority 1 > Priority 4)
+
+**Debug**:
 ```yaml
-Nom: "Chambre Livia"
-Entité climat: climate.clim_livia
-Solar Optimizer switch: switch.solar_optimizer_climatisation_livia
+# Check these sensors
+sensor.master_climate_priority  # Should be "external_control"
+sensor.master_external_control  # Should be "on"
+binary_sensor.master_window     # Should be "off"
+switch.master_bypass            # Should be "off"
+switch.master_pause             # Should be "off"
 ```
 
-## 🔍 Vérification du fonctionnement
+### Issue: Solar Optimizer continues after alarm armed
 
-### 1. Vérifier les logs
+**Symptoms**:
+- Alarm armed_away but SO still heating
 
-**Configuration → Logs → Filtrer "smart_room_manager"**
-
-Quand Solar Optimizer est actif, tu dois voir :
-
-```
-[smart_room_manager.climate_control] ⚡ Solar Optimizer active (switch.solar_optimizer_chauffage_suite_parentale ON) in Suite parentale - Smart Room Manager in standby
-```
-
-### 2. Observer le comportement
-
-#### Test 1 : Solar Optimizer actif
-
-1. ✅ Vérifie que `switch.solar_optimizer_xxx` = **ON**
-2. ✅ Smart Room Manager ne doit **PAS** modifier le chauffage
-3. ✅ Les logs montrent "Solar Optimizer active... in standby"
-
-#### Test 2 : Solar Optimizer inactif
-
-1. ✅ Vérifie que `switch.solar_optimizer_xxx` = **OFF**
-2. ✅ Smart Room Manager reprend le contrôle
-3. ✅ Le chauffage suit les règles normales (alarme, fenêtres, etc.)
-
-#### Test 3 : Transition SO → Smart Room Manager
-
-1. ✅ Attends que Solar Optimizer finisse de chauffer (switch passe à OFF)
-2. ✅ Dans les 30 secondes, Smart Room Manager reprend le contrôle
-3. ✅ La température est ajustée selon le mode (confort/éco/away)
-
-## 🔄 Migration depuis les blueprints
-
-Si tu utilisais les blueprints HVAC avec Solar Optimizer, voici comment migrer :
-
-### Avant (blueprint)
-
+**Solution**:
 ```yaml
-- id: chauffage_suite_parentale
-  alias: Chauffage - Suite parentale
-  use_blueprint:
-    path: blueprint_hvac_X4FP_room.yaml
-    input:
-      room_name: Suite parentale
-      climate_entity: climate.x4fp_fp_2
-      solar_enable: switch.solar_optimizer_chauffage_suite_parentale
-      solar_behavior: force_comfort
+# Set in Climate Advanced step
+Allow External in Away: false
 ```
 
-### Après (Smart Room Manager)
+This ensures Away mode (Priority 5) overrides External Control (Priority 4).
 
-1. Configure la pièce dans Smart Room Manager avec le switch SO
-2. Désactive le blueprint
-3. Teste pendant 1 semaine
-4. Supprime le blueprint si tout fonctionne
+### Issue: Conflict between Solar Optimizer and schedule
 
-### Comparaison des comportements
+**Symptoms**:
+- Unexpected mode changes when SO stops
 
-| Condition | Blueprint | Smart Room Manager | Identique ? |
-|-----------|-----------|-------------------|-------------|
-| SO switch = ON | Blueprint en retrait | SRM en retrait | ✅ Oui |
-| SO switch = OFF | Logique blueprint | Logique SRM | ✅ Oui |
-| Fenêtre ouverte | Pause chauffage | Pause chauffage | ✅ Oui |
-| Alarme armée | Mode away | Mode away | ✅ Oui |
-| Été (calendar) | OFF | OFF | ✅ Oui |
+**Explanation**:
+- This is **normal behavior**
+- When SO stops (Priority 4 OFF), Smart Room Manager resumes normal control (Priority 7)
+- Normal mode follows schedule/time of day
 
-## ⚠️ Points d'attention
-
-### 1. Switch Solar Optimizer correct
-
-**✅ BON** : `switch.solar_optimizer_chauffage_suite_parentale`
-- C'est le switch qui est ON quand SO chauffe
-
-**❌ MAUVAIS** : `input_boolean.solar_optimizer_enable`
-- Ce n'est PAS le switch d'action
-
-### 2. Ordre de priorité
-
-Smart Room Manager respecte cet ordre :
-
-1. ⚡ **Solar Optimizer actif** (switch ON) → Priorité absolue
-2. ☀️ **Été** (calendar) → Chauffage OFF
-3. 🪟 **Fenêtre ouverte** → Pause
-4. 🔒 **Alarme armée** → Mode away
-5. 🌡️ **Logique normale** → Confort/Éco/Nuit
-
-### 3. Pas de conflit
-
-Si le switch SO n'est pas configuré, Smart Room Manager fonctionne normalement (comme avant).
-
-## 📊 Scénarios d'usage
-
-### Scénario 1 : Journée ensoleillée
-
+**Example**:
 ```
-09:00 - SO détecte surplus solaire
-      → switch.solar_optimizer_xxx = ON
-      → Smart Room Manager se met en retrait
-      → SO chauffe à fond pour stocker l'énergie
+# While SO active (14:00, comfort time)
+Priority 4: External Control → Comfort mode (21°C)
 
-14:00 - SO a fini de chauffer
-      → switch.solar_optimizer_xxx = OFF
-      → Smart Room Manager reprend le contrôle
-      → Température maintenue selon mode (confort/éco)
+# SO stops (16:00, eco time)
+Priority 7: Normal Mode → Eco mode (17°C)
 ```
 
-### Scénario 2 : Nuit + alarme armée
+This is correct - Smart Room Manager adapts to current time period.
 
-```
-22:00 - Alarme armée (away)
-      → SO ne chauffe pas (pas de soleil)
-      → Smart Room Manager applique mode away (16°C)
+### Issue: Temperature target doesn't match
 
-03:00 - Toujours nuit
-      → SO toujours inactif
-      → Smart Room Manager maintient 16°C
-```
+**Symptoms**:
+- Target temperature unexpected during SO
 
-### Scénario 3 : Fenêtre ouverte pendant SO
-
-```
-11:00 - SO chauffe (switch ON)
-      → Smart Room Manager en retrait
-
-11:30 - Tu ouvres la fenêtre
-      → Smart Room Manager détecte l'ouverture
-      → ⚠️ SO continue de chauffer (il a la priorité)
-      → Tu dois désactiver SO manuellement ou attendre qu'il finisse
-
-11:45 - SO finit de chauffer (switch OFF)
-      → Smart Room Manager reprend le contrôle
-      → Détecte fenêtre ouverte
-      → Coupe le chauffage immédiatement
+**Check**:
+```yaml
+# Climate Advanced step
+External Control Temp: 21.0°C  # Must match your expectation
 ```
 
-⚠️ **Note** : Quand SO est actif, même une fenêtre ouverte ne coupe PAS le chauffage. C'est voulu : SO doit pouvoir finir son cycle.
+**Note**: For X4FP radiators, temperature is controlled by presets:
+- `External Control Temp` only applies to thermostats
+- For X4FP, use `External Control Preset` instead
 
-## 🆘 Dépannage
+## 📊 Migration from Blueprints
 
-### Problème : SO et Smart Room Manager se battent
+If you're migrating from previous X4FP blueprints with Solar Optimizer:
 
-**Symptôme** : Le chauffage change constamment de consigne
+### Old Configuration (Blueprint)
+```yaml
+blueprint:
+  name: X4FP Room with Solar Optimizer
+  inputs:
+    solar_optimizer_switch: switch.solar_optimizer_master
+    solar_priority: true
+    # ...
+```
 
-**Cause** : Le switch SO n'est pas le bon
+### New Configuration (Smart Room Manager v0.3.0)
+```yaml
+# Actuators Step
+External Control Switch: switch.solar_optimizer_master
 
-**Solution** :
-1. Vérifie le nom exact du switch dans Solar Optimizer
-2. C'est le switch qui est ON quand SO chauffe activement
-3. Reconfigure Smart Room Manager avec le bon switch
+# Climate Advanced Step
+External Control Preset: "comfort"
+External Control Temp: 21.0°C
+Allow External in Away: false
+```
 
-### Problème : Smart Room Manager ne reprend pas le contrôle après SO
+**Benefits of new system**:
+- ✅ Clearer priority hierarchy
+- ✅ Better integration with other features
+- ✅ Debug sensors for monitoring
+- ✅ More flexible configuration
+- ✅ Supports multiple external control sources
 
-**Symptôme** : Après que SO ait fini, la température ne s'ajuste pas
+## 🎯 Best Practices
 
-**Cause** : Switch toujours détecté comme ON
+1. **Always configure window sensors** for safety
+2. **Use `Allow External in Away: false`** unless you have specific needs
+3. **Monitor debug sensors** during initial setup
+4. **Test priority scenarios** before relying on automation:
+   - Window open during SO
+   - Alarm armed during SO
+   - Manual pause during SO
+5. **Keep External Control Preset = "comfort"** for most cases
+6. **Document your configuration** for future reference
 
-**Solution** :
-1. Vérifie l'état réel du switch : Outils développeur → États
-2. Si le switch est bloqué ON, redémarre Solar Optimizer
-3. Vérifie les logs de Solar Optimizer
+## 📚 Additional Resources
 
-### Problème : SO ne chauffe plus
+- [Configuration Examples](CONFIGURATION_EXAMPLES.md) - Ready-to-use configurations
+- [Migration Guide](MIGRATION_GUIDE.md) - Migrating from YAML automations
+- [Changelog](CHANGELOG.md) - Feature details and updates
 
-**Symptôme** : SO était fonctionnel, il ne chauffe plus
+## 💡 Advanced: Multiple External Control Sources
 
-**Cause** : Smart Room Manager interfère (rare mais possible)
+Smart Room Manager v0.3.0 supports any external control source, not just Solar Optimizer:
 
-**Solution** :
-1. Désactive temporairement Smart Room Manager : `switch.smart_room_xxx_automation` → OFF
-2. Teste Solar Optimizer seul
-3. Si SO fonctionne, le switch configuré n'est pas le bon
-4. Reconfigure avec le bon switch
+**Examples**:
+- Solar Optimizer
+- Dynamic pricing automation
+- Grid load balancing
+- Manual override switches
+- External home automation systems
 
-## 📞 Support
+**Configuration is the same**:
+```yaml
+External Control Switch: switch.YOUR_EXTERNAL_SOURCE
+External Control Preset: "comfort"
+External Control Temp: 21.0°C
+```
 
-Si tu rencontres des problèmes avec Solar Optimizer :
+The switch state determines when external control is active. When ON, Priority 4 activates and your external system takes control.
 
-1. **Vérifier les switchs** : Outils développeur → États → Rechercher "solar_optimizer"
-2. **Vérifier les logs** : Configuration → Logs → Filtrer "smart_room_manager" ET "solar_optimizer"
-3. **Tester manuellement** : Désactive Smart Room Manager et teste SO seul
-4. **GitHub** : Ouvre une issue avec les logs
-
----
-
-**Version** : 0.1.0
-**Dernière mise à jour** : 2025-01-13
-**Auteur** : GevaudanBeast
+Good luck with your Solar Optimizer integration! ☀️
