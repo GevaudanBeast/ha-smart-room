@@ -3,23 +3,31 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
-from .const import (
+from .climate_control import ClimateController
+from .const import (  # v0.3.0 additions; Priority 2 additions
     ALARM_STATE_ARMED_AWAY,
     CONF_ALARM_ENTITY,
     CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
     CONF_LIGHTS,
     CONF_NIGHT_START,
+    CONF_PRESET_SCHEDULE_OFF,
+    CONF_PRESET_SCHEDULE_ON,
     CONF_ROOM_ID,
     CONF_ROOM_NAME,
     CONF_ROOM_TYPE,
+    CONF_SCHEDULE_ENTITY,
+    CONF_WINDOW_DELAY_CLOSE,
+    CONF_WINDOW_DELAY_OPEN,
     DEFAULT_NIGHT_START,
+    DEFAULT_WINDOW_DELAY_CLOSE,
+    DEFAULT_WINDOW_DELAY_OPEN,
     MODE_COMFORT,
     MODE_ECO,
     MODE_FROST_PROTECTION,
@@ -27,17 +35,7 @@ from .const import (
     ROOM_TYPE_BATHROOM,
     TIME_PERIOD_DAY,
     TIME_PERIOD_NIGHT,
-    # v0.3.0 additions
-    CONF_SCHEDULE_ENTITY,
-    CONF_PRESET_SCHEDULE_ON,
-    CONF_PRESET_SCHEDULE_OFF,
-    # Priority 2 additions
-    CONF_WINDOW_DELAY_OPEN,
-    CONF_WINDOW_DELAY_CLOSE,
-    DEFAULT_WINDOW_DELAY_OPEN,
-    DEFAULT_WINDOW_DELAY_CLOSE,
 )
-from .climate_control import ClimateController
 from .light_control import LightController
 
 if TYPE_CHECKING:

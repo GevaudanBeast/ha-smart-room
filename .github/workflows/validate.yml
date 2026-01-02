@@ -33,7 +33,7 @@ jobs:
 
       - name: Check import sorting with isort
         run: |
-          isort --check-only custom_components/smart_room_manager/
+          isort --profile black --check-only custom_components/smart_room_manager/
 
       - name: Lint with flake8
         run: |
