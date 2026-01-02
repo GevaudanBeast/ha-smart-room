@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-01-02
+
+### 🐛 Critical Bug Fix - Module Import Conflict
+
+#### Fix: config_flow module naming conflict
+- **Problem**: Integration failed to load with "Invalid handler specified" error, no logs generated
+- **Root Cause**: Both `config_flow.py` file AND `config_flow/` directory existed, creating Python import ambiguity
+- **Impact**: Home Assistant could not load the integration at all in v0.3.0 and v0.3.1
+- **Fix**: Removed `config_flow.py` file, consolidated all code into `config_flow/__init__.py` package
+- **Files Changed**:
+  - Deleted: `config_flow.py` (653 lines)
+  - Updated: `config_flow/__init__.py` (now contains full config flow implementation)
+
+**⚠️ Users affected by v0.3.0/v0.3.1**: Please upgrade to v0.3.2 immediately. The previous versions were non-functional due to this module conflict.
+
+### 📊 Verified Compatibility
+- ✅ Home Assistant 2023.1+ through 2025.12+
+- ✅ All fixes from v0.3.1 preserved (OptionsFlow and async_shutdown)
+
 ## [0.3.1] - 2025-12-31
 
 ### 🐛 Bug Fixes - Critical Compatibility Issues
