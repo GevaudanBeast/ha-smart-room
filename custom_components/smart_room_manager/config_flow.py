@@ -17,11 +17,17 @@ from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .const import (  # v0.3.0 Priority 1 additions; v0.3.0 Priority 2 additions
+from .const import (
+    CLIMATE_MODE_FIL_PILOTE,
+    CLIMATE_MODE_NONE,
+    CLIMATE_MODE_THERMOSTAT_COOL,
+    CLIMATE_MODE_THERMOSTAT_HEAT,
+    CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
     CONF_ALARM_ENTITY,
     CONF_ALLOW_EXTERNAL_IN_AWAY,
     CONF_CLIMATE_BYPASS_SWITCH,
     CONF_CLIMATE_ENTITY,
+    CONF_CLIMATE_MODE,
     CONF_CLIMATE_WINDOW_CHECK,
     CONF_DOOR_WINDOW_SENSORS,
     CONF_EXTERNAL_CONTROL_PRESET,
@@ -64,6 +70,7 @@ from .const import (  # v0.3.0 Priority 1 additions; v0.3.0 Priority 2 additions
     CONF_WINDOW_DELAY_CLOSE,
     CONF_WINDOW_DELAY_OPEN,
     DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
+    DEFAULT_CLIMATE_MODE,
     DEFAULT_EXTERNAL_CONTROL_PRESET,
     DEFAULT_EXTERNAL_CONTROL_TEMP,
     DEFAULT_HYSTERESIS,
@@ -319,7 +326,26 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
         )
     )
 
-    # Climate entity
+    # Climate mode selection (new in v0.4.0)
+    schema_dict[
+        vol.Optional(
+            CONF_CLIMATE_MODE,
+            default=room_data.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE),
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=CLIMATE_MODE_NONE, label="Aucun"),
+                selector.SelectOptionDict(value=CLIMATE_MODE_FIL_PILOTE, label="Fil Pilote (X4FP, IPX800...)"),
+                selector.SelectOptionDict(value=CLIMATE_MODE_THERMOSTAT_HEAT, label="Thermostat (chauffage)"),
+                selector.SelectOptionDict(value=CLIMATE_MODE_THERMOSTAT_COOL, label="Thermostat (climatisation)"),
+                selector.SelectOptionDict(value=CLIMATE_MODE_THERMOSTAT_HEAT_COOL, label="Thermostat (chaud/froid)"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+    # Climate entity (shown for all climate modes except "none")
     climate_entity = room_data.get(CONF_CLIMATE_ENTITY)
     if climate_entity is not None:
         schema_dict[vol.Optional(CONF_CLIMATE_ENTITY, default=climate_entity)] = (
@@ -389,138 +415,171 @@ def build_light_config_schema(room_data: dict[str, Any], room_type: str) -> vol.
     )
 
 
-def build_climate_config_schema(room_data: dict[str, Any]) -> vol.Schema:
-    """Build schema for climate configuration."""
-    return vol.Schema(
-        {
+def build_climate_config_schema(room_data: dict[str, Any], climate_mode: str) -> vol.Schema:
+    """Build schema for climate configuration based on climate mode."""
+    schema_dict = {}
+
+    # Heating temperatures (for fil_pilote, thermostat_heat, thermostat_heat_cool)
+    if climate_mode in [CLIMATE_MODE_FIL_PILOTE, CLIMATE_MODE_THERMOSTAT_HEAT, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+        schema_dict[
             vol.Optional(
                 CONF_TEMP_COMFORT,
                 default=room_data.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=15,
-                    max=25,
-                    step=0.5,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="°C",
-                )
-            ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=15,
+                max=25,
+                step=0.5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="°C",
+            )
+        )
+        schema_dict[
             vol.Optional(
                 CONF_TEMP_ECO,
                 default=room_data.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=15,
-                    max=25,
-                    step=0.5,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="°C",
-                )
-            ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=15,
+                max=25,
+                step=0.5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="°C",
+            )
+        )
+        schema_dict[
             vol.Optional(
                 CONF_TEMP_NIGHT,
                 default=room_data.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=15,
-                    max=25,
-                    step=0.5,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="°C",
-                )
-            ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=15,
+                max=25,
+                step=0.5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="°C",
+            )
+        )
+        schema_dict[
             vol.Optional(
                 CONF_TEMP_FROST_PROTECTION,
                 default=room_data.get(
                     CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
                 ),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=5,
-                    max=15,
-                    step=0.5,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="°C",
-                )
-            ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=5,
+                max=15,
+                step=0.5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="°C",
+            )
+        )
+
+    # Cooling temperatures (for thermostat_cool, thermostat_heat_cool)
+    if climate_mode in [CLIMATE_MODE_THERMOSTAT_COOL, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+        schema_dict[
             vol.Optional(
                 CONF_TEMP_COOL_COMFORT,
                 default=room_data.get(
                     CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
                 ),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=20,
-                    max=28,
-                    step=0.5,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="°C",
-                )
-            ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=20,
+                max=28,
+                step=0.5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="°C",
+            )
+        )
+        schema_dict[
             vol.Optional(
                 CONF_TEMP_COOL_ECO,
                 default=room_data.get(CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=20,
-                    max=30,
-                    step=0.5,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="°C",
-                )
-            ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=20,
+                max=30,
+                step=0.5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="°C",
+            )
+        )
+
+    # Window check (for all modes with climate)
+    if climate_mode != CLIMATE_MODE_NONE:
+        schema_dict[
             vol.Optional(
                 CONF_CLIMATE_WINDOW_CHECK,
                 default=room_data.get(CONF_CLIMATE_WINDOW_CHECK, True),
-            ): selector.BooleanSelector(),
-            # v0.3.0 Priority 2 additions
+            )
+        ] = selector.BooleanSelector()
+        schema_dict[
             vol.Optional(
                 CONF_WINDOW_DELAY_OPEN,
                 default=room_data.get(
                     CONF_WINDOW_DELAY_OPEN, DEFAULT_WINDOW_DELAY_OPEN
                 ),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    max=30,
-                    step=1,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="min",
-                )
-            ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=30,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="min",
+            )
+        )
+        schema_dict[
             vol.Optional(
                 CONF_WINDOW_DELAY_CLOSE,
                 default=room_data.get(
                     CONF_WINDOW_DELAY_CLOSE, DEFAULT_WINDOW_DELAY_CLOSE
                 ),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=0,
-                    max=30,
-                    step=1,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="min",
-                )
-            ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=0,
+                max=30,
+                step=1,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="min",
+            )
+        )
+
+    # Summer policy (only for fil_pilote)
+    if climate_mode == CLIMATE_MODE_FIL_PILOTE:
+        schema_dict[
             vol.Optional(
                 CONF_SUMMER_POLICY,
                 default=room_data.get(CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY),
-            ): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=["off", "eco", "comfort"],
-                    mode=selector.SelectSelectorMode.DROPDOWN,
-                    translation_key="summer_policy",
-                )
-            ),
-        }
-    )
+            )
+        ] = selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[
+                    selector.SelectOptionDict(value="off", label="Arrêt"),
+                    selector.SelectOptionDict(value="eco", label="Eco"),
+                    selector.SelectOptionDict(value="comfort", label="Confort"),
+                ],
+                mode=selector.SelectSelectorMode.DROPDOWN,
+            )
+        )
+
+    return vol.Schema(schema_dict)
 
 
-def build_climate_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
-    """Build schema for advanced climate configuration."""
+def build_fil_pilote_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
+    """Build schema for Fil Pilote advanced configuration (hysteresis + presets)."""
     schema_dict = {}
 
-    # Hysteresis configuration (X4FP Type 3b)
+    # Hysteresis configuration (optional - requires temperature sensor)
     setpoint_input = room_data.get(CONF_SETPOINT_INPUT)
     if setpoint_input is not None:
         schema_dict[vol.Optional(CONF_SETPOINT_INPUT, default=setpoint_input)] = (
@@ -583,11 +642,14 @@ def build_climate_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
             CONF_PRESET_HEAT,
             default=room_data.get(CONF_PRESET_HEAT, DEFAULT_PRESET_HEAT),
         )
-    ] = vol.In(
-        {
-            X4FP_PRESET_COMFORT: "Comfort",
-            X4FP_PRESET_ECO: "Eco",
-        }
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
     )
 
     schema_dict[
@@ -595,14 +657,103 @@ def build_climate_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
             CONF_PRESET_IDLE,
             default=room_data.get(CONF_PRESET_IDLE, DEFAULT_PRESET_IDLE),
         )
-    ] = vol.In(
-        {
-            X4FP_PRESET_ECO: "Eco",
-            X4FP_PRESET_OFF: "Off (none)",
-        }
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=X4FP_PRESET_OFF, label="Arrêt"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
     )
 
-    # External Control configuration
+    return vol.Schema(schema_dict)
+
+
+def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
+    """Build schema for Fil Pilote configurable presets."""
+    schema_dict = {}
+
+    # X4FP Configurable Presets - what X4FP command to send for each mode
+    schema_dict[
+        vol.Optional(
+            CONF_PRESET_COMFORT,
+            default=room_data.get(CONF_PRESET_COMFORT, DEFAULT_PRESET_COMFORT),
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+    schema_dict[
+        vol.Optional(
+            CONF_PRESET_ECO,
+            default=room_data.get(CONF_PRESET_ECO, DEFAULT_PRESET_ECO),
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+    schema_dict[
+        vol.Optional(
+            CONF_PRESET_NIGHT,
+            default=room_data.get(CONF_PRESET_NIGHT, DEFAULT_PRESET_NIGHT),
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=X4FP_PRESET_AWAY, label="Hors-gel"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+    schema_dict[
+        vol.Optional(
+            CONF_PRESET_AWAY,
+            default=room_data.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY),
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=X4FP_PRESET_AWAY, label="Hors-gel"),
+                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=X4FP_PRESET_OFF, label="Arrêt"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+    schema_dict[
+        vol.Optional(
+            CONF_PRESET_WINDOW,
+            default=room_data.get(CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW),
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=X4FP_PRESET_AWAY, label="Hors-gel"),
+                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=X4FP_PRESET_OFF, label="Arrêt"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+    # External Control configuration for Fil Pilote
     schema_dict[
         vol.Optional(
             CONF_EXTERNAL_CONTROL_PRESET,
@@ -610,13 +761,33 @@ def build_climate_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
                 CONF_EXTERNAL_CONTROL_PRESET, DEFAULT_EXTERNAL_CONTROL_PRESET
             ),
         )
-    ] = vol.In(
-        {
-            X4FP_PRESET_COMFORT: "Comfort",
-            X4FP_PRESET_ECO: "Eco",
-        }
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
     )
 
+    schema_dict[
+        vol.Optional(
+            CONF_ALLOW_EXTERNAL_IN_AWAY,
+            default=room_data.get(
+                CONF_ALLOW_EXTERNAL_IN_AWAY, DEFAULT_ALLOW_EXTERNAL_IN_AWAY
+            ),
+        )
+    ] = selector.BooleanSelector()
+
+    return vol.Schema(schema_dict)
+
+
+def build_thermostat_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
+    """Build schema for Thermostat advanced configuration (external control)."""
+    schema_dict = {}
+
+    # External Control configuration for Thermostat
     schema_dict[
         vol.Optional(
             CONF_EXTERNAL_CONTROL_TEMP,
@@ -642,70 +813,6 @@ def build_climate_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
             ),
         )
     ] = selector.BooleanSelector()
-
-    # X4FP Configurable Presets
-    schema_dict[
-        vol.Optional(
-            CONF_PRESET_COMFORT,
-            default=room_data.get(CONF_PRESET_COMFORT, DEFAULT_PRESET_COMFORT),
-        )
-    ] = vol.In(
-        {
-            X4FP_PRESET_COMFORT: "Comfort",
-            X4FP_PRESET_ECO: "Eco",
-        }
-    )
-
-    schema_dict[
-        vol.Optional(
-            CONF_PRESET_ECO,
-            default=room_data.get(CONF_PRESET_ECO, DEFAULT_PRESET_ECO),
-        )
-    ] = vol.In(
-        {
-            X4FP_PRESET_ECO: "Eco",
-            X4FP_PRESET_COMFORT: "Comfort",
-        }
-    )
-
-    schema_dict[
-        vol.Optional(
-            CONF_PRESET_NIGHT,
-            default=room_data.get(CONF_PRESET_NIGHT, DEFAULT_PRESET_NIGHT),
-        )
-    ] = vol.In(
-        {
-            X4FP_PRESET_ECO: "Eco",
-            X4FP_PRESET_COMFORT: "Comfort",
-            X4FP_PRESET_AWAY: "Away",
-        }
-    )
-
-    schema_dict[
-        vol.Optional(
-            CONF_PRESET_AWAY,
-            default=room_data.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY),
-        )
-    ] = vol.In(
-        {
-            X4FP_PRESET_AWAY: "Away (hors-gel)",
-            X4FP_PRESET_ECO: "Eco",
-            X4FP_PRESET_OFF: "Off (none)",
-        }
-    )
-
-    schema_dict[
-        vol.Optional(
-            CONF_PRESET_WINDOW,
-            default=room_data.get(CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW),
-        )
-    ] = vol.In(
-        {
-            X4FP_PRESET_AWAY: "Away (hors-gel)",
-            X4FP_PRESET_ECO: "Eco",
-            X4FP_PRESET_OFF: "Off (none)",
-        }
-    )
 
     return vol.Schema(schema_dict)
 
@@ -1006,15 +1113,17 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_room_actuators(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure room actuators (v0.3.0)."""
+        """Configure room actuators (v0.4.0 - with climate mode selection)."""
         if user_input is not None:
-            # Only save actuators that are actually configured (non-empty)
+            # Save climate mode (new in v0.4.0)
+            climate_mode = user_input.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
             update_data = {
                 CONF_LIGHTS: user_input.get(CONF_LIGHTS, []),
+                CONF_CLIMATE_MODE: climate_mode,
             }
 
-            # Add optional climate entity only if configured
-            if user_input.get(CONF_CLIMATE_ENTITY):
+            # Add optional climate entity only if configured and climate mode is not "none"
+            if climate_mode != CLIMATE_MODE_NONE and user_input.get(CONF_CLIMATE_ENTITY):
                 update_data[CONF_CLIMATE_ENTITY] = user_input.get(CONF_CLIMATE_ENTITY)
 
             # Add optional bypass switch only if configured
@@ -1037,7 +1146,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_room_actuators_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Bypass: disables all control. External Control: Solar Optimizer, etc. (high priority)",
+                "info": "Type de chauffage → détermine les options de configuration.",
             },
         )
 
@@ -1072,61 +1181,100 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_room_climate_config(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure climate behavior (v0.3.0 - 4 modes, summer/winter, window delays, summer policy)."""
+        """Configure climate behavior (v0.4.0 - contextual based on climate mode)."""
+        climate_mode = self._current_room.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
+
+        # Skip climate config if no climate configured
+        if climate_mode == CLIMATE_MODE_NONE:
+            return await self.async_step_room_schedule()
+
         if user_input is not None:
-            self._current_room.update(
-                {
-                    CONF_TEMP_COMFORT: user_input.get(
-                        CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
-                    ),
-                    CONF_TEMP_ECO: user_input.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO),
-                    CONF_TEMP_NIGHT: user_input.get(
-                        CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT
-                    ),
-                    CONF_TEMP_FROST_PROTECTION: user_input.get(
-                        CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
-                    ),
-                    CONF_TEMP_COOL_COMFORT: user_input.get(
-                        CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
-                    ),
-                    CONF_TEMP_COOL_ECO: user_input.get(
-                        CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO
-                    ),
-                    CONF_CLIMATE_WINDOW_CHECK: user_input.get(
-                        CONF_CLIMATE_WINDOW_CHECK, True
-                    ),
-                    # v0.3.0 Priority 2 additions
-                    CONF_WINDOW_DELAY_OPEN: user_input.get(
-                        CONF_WINDOW_DELAY_OPEN, DEFAULT_WINDOW_DELAY_OPEN
-                    ),
-                    CONF_WINDOW_DELAY_CLOSE: user_input.get(
-                        CONF_WINDOW_DELAY_CLOSE, DEFAULT_WINDOW_DELAY_CLOSE
-                    ),
-                    CONF_SUMMER_POLICY: user_input.get(
-                        CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
-                    ),
-                }
+            update_data = {}
+
+            # Heating temperatures (for fil_pilote, thermostat_heat, thermostat_heat_cool)
+            if climate_mode in [CLIMATE_MODE_FIL_PILOTE, CLIMATE_MODE_THERMOSTAT_HEAT, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+                update_data[CONF_TEMP_COMFORT] = user_input.get(
+                    CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
+                )
+                update_data[CONF_TEMP_ECO] = user_input.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
+                update_data[CONF_TEMP_NIGHT] = user_input.get(
+                    CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT
+                )
+                update_data[CONF_TEMP_FROST_PROTECTION] = user_input.get(
+                    CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
+                )
+
+            # Cooling temperatures (for thermostat_cool, thermostat_heat_cool)
+            if climate_mode in [CLIMATE_MODE_THERMOSTAT_COOL, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+                update_data[CONF_TEMP_COOL_COMFORT] = user_input.get(
+                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
+                )
+                update_data[CONF_TEMP_COOL_ECO] = user_input.get(
+                    CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO
+                )
+
+            # Window check (for all climate modes)
+            update_data[CONF_CLIMATE_WINDOW_CHECK] = user_input.get(
+                CONF_CLIMATE_WINDOW_CHECK, True
             )
+            update_data[CONF_WINDOW_DELAY_OPEN] = user_input.get(
+                CONF_WINDOW_DELAY_OPEN, DEFAULT_WINDOW_DELAY_OPEN
+            )
+            update_data[CONF_WINDOW_DELAY_CLOSE] = user_input.get(
+                CONF_WINDOW_DELAY_CLOSE, DEFAULT_WINDOW_DELAY_CLOSE
+            )
+
+            # Summer policy (only for fil_pilote)
+            if climate_mode == CLIMATE_MODE_FIL_PILOTE:
+                update_data[CONF_SUMMER_POLICY] = user_input.get(
+                    CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
+                )
+
+            self._current_room.update(update_data)
             return await self.async_step_room_climate_advanced()
+
+        # Build description based on climate mode
+        if climate_mode == CLIMATE_MODE_FIL_PILOTE:
+            info = "Températures de chauffage et politique été pour Fil Pilote."
+        elif climate_mode == CLIMATE_MODE_THERMOSTAT_HEAT:
+            info = "Températures de chauffage pour thermostat."
+        elif climate_mode == CLIMATE_MODE_THERMOSTAT_COOL:
+            info = "Températures de climatisation pour thermostat."
+        else:  # THERMOSTAT_HEAT_COOL
+            info = "Températures de chauffage et climatisation pour thermostat."
 
         return self.async_show_form(
             step_id="room_climate_config",
-            data_schema=build_climate_config_schema(self._current_room),
+            data_schema=build_climate_config_schema(self._current_room, climate_mode),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: X4FP in summer.",
+                "info": info,
             },
         )
 
     async def async_step_room_climate_advanced(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure advanced climate features (v0.3.0 - Hysteresis, External Control, X4FP Presets)."""
+        """Configure advanced climate features (v0.4.0 - route to appropriate step)."""
+        climate_mode = self._current_room.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
+
+        # Route to appropriate advanced config based on climate mode
+        if climate_mode == CLIMATE_MODE_FIL_PILOTE:
+            return await self.async_step_fil_pilote_hysteresis(user_input)
+        elif climate_mode in [CLIMATE_MODE_THERMOSTAT_HEAT, CLIMATE_MODE_THERMOSTAT_COOL, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+            return await self.async_step_thermostat_advanced(user_input)
+        else:
+            # No advanced config for CLIMATE_MODE_NONE
+            return await self.async_step_room_schedule()
+
+    async def async_step_fil_pilote_hysteresis(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Configure Fil Pilote hysteresis (optional - requires temperature sensor)."""
         if user_input is not None:
-            # Save optional advanced config
             update_data = {}
 
-            # Hysteresis configuration (only if both temp sensor and setpoint are configured)
+            # Hysteresis configuration (only if setpoint is configured)
             if user_input.get(CONF_SETPOINT_INPUT):
                 update_data[CONF_SETPOINT_INPUT] = user_input.get(CONF_SETPOINT_INPUT)
                 update_data[CONF_HYSTERESIS] = user_input.get(
@@ -1145,18 +1293,26 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     CONF_PRESET_IDLE, DEFAULT_PRESET_IDLE
                 )
 
-            # External Control configuration
-            update_data[CONF_EXTERNAL_CONTROL_PRESET] = user_input.get(
-                CONF_EXTERNAL_CONTROL_PRESET, DEFAULT_EXTERNAL_CONTROL_PRESET
-            )
-            update_data[CONF_EXTERNAL_CONTROL_TEMP] = user_input.get(
-                CONF_EXTERNAL_CONTROL_TEMP, DEFAULT_EXTERNAL_CONTROL_TEMP
-            )
-            update_data[CONF_ALLOW_EXTERNAL_IN_AWAY] = user_input.get(
-                CONF_ALLOW_EXTERNAL_IN_AWAY, DEFAULT_ALLOW_EXTERNAL_IN_AWAY
-            )
+            self._current_room.update(update_data)
+            return await self.async_step_fil_pilote_presets()
 
-            # X4FP Configurable Presets (Priority 2)
+        return self.async_show_form(
+            step_id="fil_pilote_hysteresis",
+            data_schema=build_fil_pilote_advanced_schema(self._current_room),
+            description_placeholders={
+                "room_name": self._current_room[CONF_ROOM_NAME],
+                "info": "Hystérésis : contrôle via température (nécessite capteur temp + consigne).",
+            },
+        )
+
+    async def async_step_fil_pilote_presets(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Configure Fil Pilote presets and external control."""
+        if user_input is not None:
+            update_data = {}
+
+            # X4FP Configurable Presets
             update_data[CONF_PRESET_COMFORT] = user_input.get(
                 CONF_PRESET_COMFORT, DEFAULT_PRESET_COMFORT
             )
@@ -1173,15 +1329,50 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW
             )
 
+            # External Control configuration for Fil Pilote
+            update_data[CONF_EXTERNAL_CONTROL_PRESET] = user_input.get(
+                CONF_EXTERNAL_CONTROL_PRESET, DEFAULT_EXTERNAL_CONTROL_PRESET
+            )
+            update_data[CONF_ALLOW_EXTERNAL_IN_AWAY] = user_input.get(
+                CONF_ALLOW_EXTERNAL_IN_AWAY, DEFAULT_ALLOW_EXTERNAL_IN_AWAY
+            )
+
             self._current_room.update(update_data)
             return await self.async_step_room_schedule()
 
         return self.async_show_form(
-            step_id="room_climate_advanced",
-            data_schema=build_climate_advanced_schema(self._current_room),
+            step_id="fil_pilote_presets",
+            data_schema=build_fil_pilote_presets_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Hysteresis: X4FP control via temp (setpoint required). External Control: Solar Optimizer config. Presets: customize X4FP.",
+                "info": "Presets Fil Pilote : commande X4FP pour chaque mode. Contrôle externe : Solar Optimizer, etc.",
+            },
+        )
+
+    async def async_step_thermostat_advanced(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Configure Thermostat external control."""
+        if user_input is not None:
+            update_data = {}
+
+            # External Control configuration for Thermostat
+            update_data[CONF_EXTERNAL_CONTROL_TEMP] = user_input.get(
+                CONF_EXTERNAL_CONTROL_TEMP, DEFAULT_EXTERNAL_CONTROL_TEMP
+            )
+            update_data[CONF_ALLOW_EXTERNAL_IN_AWAY] = user_input.get(
+                CONF_ALLOW_EXTERNAL_IN_AWAY, DEFAULT_ALLOW_EXTERNAL_IN_AWAY
+            )
+
+            self._current_room.update(update_data)
+            return await self.async_step_room_schedule()
+
+        return self.async_show_form(
+            step_id="thermostat_advanced",
+            data_schema=build_thermostat_advanced_schema(self._current_room),
+            description_placeholders={
+                "room_name": self._current_room[CONF_ROOM_NAME],
+                "info": "Contrôle externe : température cible pour Solar Optimizer, etc.",
             },
         )
 

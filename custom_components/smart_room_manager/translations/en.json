@@ -54,9 +54,10 @@
       },
       "room_actuators": {
         "title": "Configure Actuators",
-        "description": "Bypass: disables all control. External Control: Solar Optimizer, etc. (high priority)",
+        "description": "Climate type determines available configuration options.",
         "data": {
           "lights": "Lights",
+          "climate_mode": "Climate type",
           "climate_entity": "Climate entity",
           "climate_bypass_switch": "Bypass switch",
           "external_control_switch": "External control switch"
@@ -87,22 +88,40 @@
       },
       "room_climate_advanced": {
         "title": "Advanced Climate Configuration",
-        "description": "Hysteresis: X4FP control via temp (setpoint required). External Control: Solar Optimizer config. Presets: customize X4FP.",
+        "description": "Routing to appropriate configuration based on climate type.",
+        "data": {}
+      },
+      "fil_pilote_hysteresis": {
+        "title": "Wire Pilot - Hysteresis",
+        "description": "Hysteresis: control via temperature (requires temp sensor + setpoint).",
         "data": {
-          "setpoint_input": "Setpoint input entity",
+          "setpoint_input": "Setpoint entity (input_number)",
           "hysteresis": "Hysteresis (°C)",
           "min_setpoint": "Minimum setpoint (°C)",
           "max_setpoint": "Maximum setpoint (°C)",
           "preset_heat": "Preset when heating",
-          "preset_idle": "Preset when idle",
+          "preset_idle": "Preset when idle"
+        }
+      },
+      "fil_pilote_presets": {
+        "title": "Wire Pilot - Presets and External Control",
+        "description": "Wire Pilot presets: X4FP command for each mode. External control: Solar Optimizer, etc.",
+        "data": {
+          "preset_comfort": "Preset for Comfort mode",
+          "preset_eco": "Preset for Eco mode",
+          "preset_night": "Preset for Night mode",
+          "preset_away": "Preset for Away mode",
+          "preset_window": "Preset for Window open",
           "external_control_preset": "External control preset",
+          "allow_external_in_away": "Allow external control in away mode"
+        }
+      },
+      "thermostat_advanced": {
+        "title": "Thermostat - External Control",
+        "description": "External control: target temperature for Solar Optimizer, etc.",
+        "data": {
           "external_control_temp": "External control temperature (°C)",
-          "allow_external_in_away": "Allow external control in away mode",
-          "preset_comfort": "X4FP preset for Comfort mode",
-          "preset_eco": "X4FP preset for Eco mode",
-          "preset_night": "X4FP preset for Night mode",
-          "preset_away": "X4FP preset for Away mode",
-          "preset_window": "X4FP preset for Window open"
+          "allow_external_in_away": "Allow external control in away mode"
         }
       },
       "room_schedule": {

@@ -54,9 +54,10 @@
       },
       "room_actuators": {
         "title": "Configuration des actionneurs",
-        "description": "Bypass : désactive tout contrôle. Contrôle externe : Solar Optimizer, etc. (priorité haute)",
+        "description": "Type de chauffage → détermine les options de configuration.",
         "data": {
           "lights": "Lumières",
+          "climate_mode": "Type de chauffage",
           "climate_entity": "Entité climat",
           "climate_bypass_switch": "Interrupteur de contournement",
           "external_control_switch": "Interrupteur de contrôle externe"
@@ -87,22 +88,40 @@
       },
       "room_climate_advanced": {
         "title": "Configuration chauffage avancée",
-        "description": "Hystérésis : contrôle X4FP via temp (setpoint requis). Contrôle externe : config Solar Optimizer. Presets : personnaliser X4FP.",
+        "description": "Redirection vers la configuration appropriée selon le type de chauffage.",
+        "data": {}
+      },
+      "fil_pilote_hysteresis": {
+        "title": "Fil Pilote - Hystérésis",
+        "description": "Hystérésis : contrôle via température (nécessite capteur temp + consigne).",
         "data": {
-          "setpoint_input": "Entité setpoint",
+          "setpoint_input": "Entité consigne (input_number)",
           "hysteresis": "Hystérésis (°C)",
-          "min_setpoint": "Setpoint minimum (°C)",
-          "max_setpoint": "Setpoint maximum (°C)",
+          "min_setpoint": "Consigne minimum (°C)",
+          "max_setpoint": "Consigne maximum (°C)",
           "preset_heat": "Preset en chauffe",
-          "preset_idle": "Preset au repos",
+          "preset_idle": "Preset au repos"
+        }
+      },
+      "fil_pilote_presets": {
+        "title": "Fil Pilote - Presets et contrôle externe",
+        "description": "Presets Fil Pilote : commande X4FP pour chaque mode. Contrôle externe : Solar Optimizer, etc.",
+        "data": {
+          "preset_comfort": "Preset pour mode Confort",
+          "preset_eco": "Preset pour mode Éco",
+          "preset_night": "Preset pour mode Nuit",
+          "preset_away": "Preset pour mode Absence",
+          "preset_window": "Preset pour fenêtre ouverte",
           "external_control_preset": "Preset contrôle externe",
+          "allow_external_in_away": "Autoriser contrôle externe en mode absence"
+        }
+      },
+      "thermostat_advanced": {
+        "title": "Thermostat - Contrôle externe",
+        "description": "Contrôle externe : température cible pour Solar Optimizer, etc.",
+        "data": {
           "external_control_temp": "Température contrôle externe (°C)",
-          "allow_external_in_away": "Autoriser contrôle externe en mode absence",
-          "preset_comfort": "Preset X4FP pour mode Confort",
-          "preset_eco": "Preset X4FP pour mode Éco",
-          "preset_night": "Preset X4FP pour mode Nuit",
-          "preset_away": "Preset X4FP pour mode Absence",
-          "preset_window": "Preset X4FP pour fenêtre ouverte"
+          "allow_external_in_away": "Autoriser contrôle externe en mode absence"
         }
       },
       "room_schedule": {

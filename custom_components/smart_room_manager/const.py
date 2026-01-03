@@ -13,12 +13,20 @@ CONF_ROOM_ID: Final = "room_id"
 CONF_ROOM_TYPE: Final = "room_type"
 CONF_ROOM_ICON: Final = "room_icon"
 
-# Room types
+# Room types (for light behavior)
 ROOM_TYPE_NORMAL: Final = "normal"  # Chambres - pas de timer lumière
 ROOM_TYPE_CORRIDOR: Final = "corridor"  # Couloirs, WC - timer lumière
 ROOM_TYPE_BATHROOM: Final = (
     "bathroom"  # Salles de bains - timer + lumière pilote chauffage
 )
+
+# Climate/heating types
+CONF_CLIMATE_MODE: Final = "climate_mode"
+CLIMATE_MODE_NONE: Final = "none"  # Pas de chauffage (couloirs, etc.)
+CLIMATE_MODE_FIL_PILOTE: Final = "fil_pilote"  # Fil Pilote (X4FP, IPX800, etc.)
+CLIMATE_MODE_THERMOSTAT_HEAT: Final = "thermostat_heat"  # Thermostat chauffage seul
+CLIMATE_MODE_THERMOSTAT_COOL: Final = "thermostat_cool"  # Thermostat clim seule
+CLIMATE_MODE_THERMOSTAT_HEAT_COOL: Final = "thermostat_heat_cool"  # Thermostat chaud/froid
 
 # Sensor configuration
 CONF_DOOR_WINDOW_SENSORS: Final = "door_window_sensors"
@@ -144,6 +152,9 @@ DEFAULT_ALLOW_EXTERNAL_IN_AWAY: Final = False
 # Default values - Manual Pause
 DEFAULT_PAUSE_DURATION: Final = 30  # minutes
 DEFAULT_PAUSE_INFINITE: Final = False
+
+# Default values - Climate mode
+DEFAULT_CLIMATE_MODE: Final = CLIMATE_MODE_FIL_PILOTE  # Most common in France
 
 # Default values - Window delays (Priority 2)
 DEFAULT_WINDOW_DELAY_OPEN: Final = 2  # minutes
