@@ -714,17 +714,15 @@ def build_schedule_schema(room_data: dict[str, Any]) -> vol.Schema:
     """Build schema for schedule configuration."""
     schema_dict = {}
 
-    # v0.3.0 - Calendar/Schedule entity support
+    # v0.3.0 - Calendar entity support (optional)
     schedule_entity = room_data.get(CONF_SCHEDULE_ENTITY)
     if schedule_entity is not None:
         schema_dict[vol.Optional(CONF_SCHEDULE_ENTITY, default=schedule_entity)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=["calendar", "schedule"])
-            )
+            selector.EntitySelector(selector.EntitySelectorConfig(domain="calendar"))
         )
     else:
         schema_dict[vol.Optional(CONF_SCHEDULE_ENTITY)] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=["calendar", "schedule"])
+            selector.EntitySelectorConfig(domain="calendar")
         )
 
     # Presets for schedule on/off
