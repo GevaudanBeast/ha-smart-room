@@ -773,16 +773,19 @@ def build_schedule_schema(room_data: dict[str, Any]) -> vol.Schema:
 
 def build_room_control_schema(room_data: dict[str, Any]) -> vol.Schema:
     """Build schema for room control configuration."""
+    # Get current value and convert to string for SelectSelector
+    current_pause = room_data.get(CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION)
+    # Ensure default is a string (SelectSelector requires string options)
+    default_pause = str(current_pause) if current_pause is not None else str(DEFAULT_PAUSE_DURATION)
+
     return vol.Schema(
         {
             vol.Optional(
                 CONF_PAUSE_DURATION_MINUTES,
-                default=room_data.get(
-                    CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION
-                ),
+                default=default_pause,
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=[15, 30, 60, 120, 240, 480],
+                    options=["15", "30", "60", "120", "240", "480"],
                     mode=selector.SelectSelectorMode.DROPDOWN,
                     translation_key="pause_duration",
                 )
@@ -1231,9 +1234,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         """Configure room control options (v0.3.0 - Manual pause configuration)."""
         if user_input is not None:
             # Save pause configuration
-            self._current_room[CONF_PAUSE_DURATION_MINUTES] = user_input.get(
-                CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION
-            )
+            # Convert string value from SelectSelector to int
+            pause_value = user_input.get(CONF_PAUSE_DURATION_MINUTES, str(DEFAULT_PAUSE_DURATION))
+            self._current_room[CONF_PAUSE_DURATION_MINUTES] = int(pause_value)
             self._current_room[CONF_PAUSE_INFINITE] = user_input.get(
                 CONF_PAUSE_INFINITE, DEFAULT_PAUSE_INFINITE
             )
