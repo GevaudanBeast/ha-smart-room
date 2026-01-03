@@ -335,11 +335,25 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=CLIMATE_MODE_NONE, label="Aucun"),
-                selector.SelectOptionDict(value=CLIMATE_MODE_FIL_PILOTE, label="Fil Pilote (X4FP, IPX800...)"),
-                selector.SelectOptionDict(value=CLIMATE_MODE_THERMOSTAT_HEAT, label="Thermostat (chauffage)"),
-                selector.SelectOptionDict(value=CLIMATE_MODE_THERMOSTAT_COOL, label="Thermostat (climatisation)"),
-                selector.SelectOptionDict(value=CLIMATE_MODE_THERMOSTAT_HEAT_COOL, label="Thermostat (chaud/froid)"),
+                selector.SelectOptionDict(
+                    value=CLIMATE_MODE_NONE, label="Aucun"
+                ),
+                selector.SelectOptionDict(
+                    value=CLIMATE_MODE_FIL_PILOTE,
+                    label="Fil Pilote (X4FP, IPX800...)",
+                ),
+                selector.SelectOptionDict(
+                    value=CLIMATE_MODE_THERMOSTAT_HEAT,
+                    label="Thermostat (chauffage)",
+                ),
+                selector.SelectOptionDict(
+                    value=CLIMATE_MODE_THERMOSTAT_COOL,
+                    label="Thermostat (climatisation)",
+                ),
+                selector.SelectOptionDict(
+                    value=CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
+                    label="Thermostat (chaud/froid)",
+                ),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -415,12 +429,21 @@ def build_light_config_schema(room_data: dict[str, Any], room_type: str) -> vol.
     )
 
 
-def build_climate_config_schema(room_data: dict[str, Any], climate_mode: str) -> vol.Schema:
+def build_climate_config_schema(
+    room_data: dict[str, Any], climate_mode: str
+) -> vol.Schema:
     """Build schema for climate configuration based on climate mode."""
     schema_dict = {}
 
-    # Heating temperatures (for fil_pilote, thermostat_heat, thermostat_heat_cool)
-    if climate_mode in [CLIMATE_MODE_FIL_PILOTE, CLIMATE_MODE_THERMOSTAT_HEAT, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+    # Heating modes list
+    heating_modes = [
+        CLIMATE_MODE_FIL_PILOTE,
+        CLIMATE_MODE_THERMOSTAT_HEAT,
+        CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
+    ]
+
+    # Heating temperatures (fil_pilote, thermostat_heat, thermostat_heat_cool)
+    if climate_mode in heating_modes:
         schema_dict[
             vol.Optional(
                 CONF_TEMP_COMFORT,
@@ -480,8 +503,9 @@ def build_climate_config_schema(room_data: dict[str, Any], climate_mode: str) ->
             )
         )
 
-    # Cooling temperatures (for thermostat_cool, thermostat_heat_cool)
-    if climate_mode in [CLIMATE_MODE_THERMOSTAT_COOL, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+    # Cooling temperatures (thermostat_cool, thermostat_heat_cool)
+    cooling_modes = [CLIMATE_MODE_THERMOSTAT_COOL, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]
+    if climate_mode in cooling_modes:
         schema_dict[
             vol.Optional(
                 CONF_TEMP_COOL_COMFORT,
@@ -881,9 +905,14 @@ def build_schedule_schema(room_data: dict[str, Any]) -> vol.Schema:
 def build_room_control_schema(room_data: dict[str, Any]) -> vol.Schema:
     """Build schema for room control configuration."""
     # Get current value and convert to string for SelectSelector
-    current_pause = room_data.get(CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION)
+    current_pause = room_data.get(
+        CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION
+    )
     # Ensure default is a string (SelectSelector requires string options)
-    default_pause = str(current_pause) if current_pause is not None else str(DEFAULT_PAUSE_DURATION)
+    if current_pause is not None:
+        default_pause = str(current_pause)
+    else:
+        default_pause = str(DEFAULT_PAUSE_DURATION)
 
     return vol.Schema(
         {
@@ -956,7 +985,10 @@ class SmartRoomManagerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=data_schema,
             description_placeholders={
-                "description": "Simplified v0.2.0 configuration - Alarm determines presence, no presence/luminosity sensors"
+                "description": (
+                    "Simplified v0.2.0 configuration - "
+                    "Alarm determines presence, no presence/luminosity sensors"
+                )
             },
         )
 
@@ -974,7 +1006,8 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self) -> None:
         """Initialize options flow."""
-        # Note: self.config_entry is automatically provided by OptionsFlow parent class (HA 2025.12+)
+        # Note: self.config_entry is automatically provided by OptionsFlow
+        # parent class (HA 2025.12+)
         super().__init__()
         self._current_room: dict[str, Any] | None = None
         self._room_index: int | None = None
@@ -1122,9 +1155,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 CONF_CLIMATE_MODE: climate_mode,
             }
 
-            # Add optional climate entity only if configured and climate mode is not "none"
-            if climate_mode != CLIMATE_MODE_NONE and user_input.get(CONF_CLIMATE_ENTITY):
-                update_data[CONF_CLIMATE_ENTITY] = user_input.get(CONF_CLIMATE_ENTITY)
+            # Add climate entity if configured and mode is not "none"
+            has_climate = user_input.get(CONF_CLIMATE_ENTITY)
+            if climate_mode != CLIMATE_MODE_NONE and has_climate:
+                update_data[CONF_CLIMATE_ENTITY] = has_climate
 
             # Add optional bypass switch only if configured
             if user_input.get(CONF_CLIMATE_BYPASS_SWITCH):
@@ -1191,12 +1225,19 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             update_data = {}
 
-            # Heating temperatures (for fil_pilote, thermostat_heat, thermostat_heat_cool)
-            if climate_mode in [CLIMATE_MODE_FIL_PILOTE, CLIMATE_MODE_THERMOSTAT_HEAT, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+            # Heating temperatures (fil_pilote, thermostat_heat, thermostat_heat_cool)
+            heating_modes = [
+                CLIMATE_MODE_FIL_PILOTE,
+                CLIMATE_MODE_THERMOSTAT_HEAT,
+                CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
+            ]
+            if climate_mode in heating_modes:
                 update_data[CONF_TEMP_COMFORT] = user_input.get(
                     CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
                 )
-                update_data[CONF_TEMP_ECO] = user_input.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
+                update_data[CONF_TEMP_ECO] = user_input.get(
+                    CONF_TEMP_ECO, DEFAULT_TEMP_ECO
+                )
                 update_data[CONF_TEMP_NIGHT] = user_input.get(
                     CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT
                 )
@@ -1204,8 +1245,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
                 )
 
-            # Cooling temperatures (for thermostat_cool, thermostat_heat_cool)
-            if climate_mode in [CLIMATE_MODE_THERMOSTAT_COOL, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+            # Cooling temperatures (thermostat_cool, thermostat_heat_cool)
+            cooling_modes = [
+                CLIMATE_MODE_THERMOSTAT_COOL,
+                CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
+            ]
+            if climate_mode in cooling_modes:
                 update_data[CONF_TEMP_COOL_COMFORT] = user_input.get(
                     CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
                 )
@@ -1259,9 +1304,14 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         climate_mode = self._current_room.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
 
         # Route to appropriate advanced config based on climate mode
+        thermostat_modes = [
+            CLIMATE_MODE_THERMOSTAT_HEAT,
+            CLIMATE_MODE_THERMOSTAT_COOL,
+            CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
+        ]
         if climate_mode == CLIMATE_MODE_FIL_PILOTE:
             return await self.async_step_fil_pilote_hysteresis(user_input)
-        elif climate_mode in [CLIMATE_MODE_THERMOSTAT_HEAT, CLIMATE_MODE_THERMOSTAT_COOL, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]:
+        elif climate_mode in thermostat_modes:
             return await self.async_step_thermostat_advanced(user_input)
         else:
             # No advanced config for CLIMATE_MODE_NONE
@@ -1301,7 +1351,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_fil_pilote_advanced_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Hystérésis : contrôle via température (nécessite capteur temp + consigne).",
+                "info": "Hystérésis : contrôle via température.",
             },
         )
 
@@ -1345,7 +1395,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_fil_pilote_presets_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Presets Fil Pilote : commande X4FP pour chaque mode. Contrôle externe : Solar Optimizer, etc.",
+                "info": "Presets Fil Pilote et contrôle externe.",
             },
         )
 
@@ -1372,7 +1422,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_thermostat_advanced_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Contrôle externe : température cible pour Solar Optimizer, etc.",
+                "info": "Contrôle externe : température cible.",
             },
         )
 
@@ -1415,7 +1465,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_schedule_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Calendar: external (Google, etc.). Presets: mode when calendar ON/OFF",
+                "info": "Calendar: external. Presets: mode when ON/OFF",
             },
         )
 
@@ -1426,7 +1476,8 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             # Save pause configuration
             # Convert string value from SelectSelector to int
-            pause_value = user_input.get(CONF_PAUSE_DURATION_MINUTES, str(DEFAULT_PAUSE_DURATION))
+            default_pause = str(DEFAULT_PAUSE_DURATION)
+            pause_value = user_input.get(CONF_PAUSE_DURATION_MINUTES, default_pause)
             self._current_room[CONF_PAUSE_DURATION_MINUTES] = int(pause_value)
             self._current_room[CONF_PAUSE_INFINITE] = user_input.get(
                 CONF_PAUSE_INFINITE, DEFAULT_PAUSE_INFINITE
@@ -1454,7 +1505,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_room_control_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Manual pause: default duration of pause switch. Infinite: pause without time limit.",
+                "info": "Pause duration default. Infinite: no time limit.",
             },
         )
 
@@ -1513,6 +1564,6 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             step_id="global_settings",
             data_schema=build_global_settings_schema(self.config_entry.data),
             description_placeholders={
-                "info": "Alarm: armed_away → frost protection. Summer calendar: cool mode, winter: heat mode.",
+                "info": "Alarm: armed_away → frost. Calendar: season mode.",
             },
         )
