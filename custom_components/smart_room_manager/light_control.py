@@ -6,25 +6,18 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.light import ATTR_BRIGHTNESS
-from homeassistant.const import SERVICE_TURN_OFF, SERVICE_TURN_ON, STATE_ON
+from homeassistant.const import SERVICE_TURN_OFF, STATE_ON
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 from .const import (
-    CONF_LIGHT_DAY_BRIGHTNESS,
-    CONF_LIGHT_NIGHT_BRIGHTNESS,
-    CONF_LIGHT_NIGHT_MODE,
     CONF_LIGHT_TIMEOUT,
     CONF_LIGHTS,
     CONF_ROOM_TYPE,
-    DEFAULT_LIGHT_DAY_BRIGHTNESS,
-    DEFAULT_LIGHT_NIGHT_BRIGHTNESS,
     DEFAULT_LIGHT_TIMEOUT,
     DEFAULT_LIGHT_TIMEOUT_BATHROOM,
     ROOM_TYPE_BATHROOM,
     ROOM_TYPE_CORRIDOR,
-    TIME_PERIOD_NIGHT,
 )
 
 if TYPE_CHECKING:
