@@ -26,7 +26,9 @@ CLIMATE_MODE_NONE: Final = "none"  # Pas de chauffage (couloirs, etc.)
 CLIMATE_MODE_FIL_PILOTE: Final = "fil_pilote"  # Fil Pilote (X4FP, IPX800, etc.)
 CLIMATE_MODE_THERMOSTAT_HEAT: Final = "thermostat_heat"  # Thermostat chauffage seul
 CLIMATE_MODE_THERMOSTAT_COOL: Final = "thermostat_cool"  # Thermostat clim seule
-CLIMATE_MODE_THERMOSTAT_HEAT_COOL: Final = "thermostat_heat_cool"  # Thermostat chaud/froid
+CLIMATE_MODE_THERMOSTAT_HEAT_COOL: Final = (
+    "thermostat_heat_cool"  # Thermostat chaud/froid
+)
 
 # Sensor configuration
 CONF_DOOR_WINDOW_SENSORS: Final = "door_window_sensors"

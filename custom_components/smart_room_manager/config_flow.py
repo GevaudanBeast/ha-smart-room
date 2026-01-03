@@ -335,9 +335,7 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(
-                    value=CLIMATE_MODE_NONE, label="Aucun"
-                ),
+                selector.SelectOptionDict(value=CLIMATE_MODE_NONE, label="Aucun"),
                 selector.SelectOptionDict(
                     value=CLIMATE_MODE_FIL_PILOTE,
                     label="Fil Pilote (X4FP, IPX800...)",
@@ -905,9 +903,7 @@ def build_schedule_schema(room_data: dict[str, Any]) -> vol.Schema:
 def build_room_control_schema(room_data: dict[str, Any]) -> vol.Schema:
     """Build schema for room control configuration."""
     # Get current value and convert to string for SelectSelector
-    current_pause = room_data.get(
-        CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION
-    )
+    current_pause = room_data.get(CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION)
     # Ensure default is a string (SelectSelector requires string options)
     if current_pause is not None:
         default_pause = str(current_pause)
