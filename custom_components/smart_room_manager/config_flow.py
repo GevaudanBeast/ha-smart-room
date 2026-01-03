@@ -725,18 +725,22 @@ def build_schedule_schema(room_data: dict[str, Any]) -> vol.Schema:
             selector.EntitySelectorConfig(domain="calendar")
         )
 
-    # Presets for schedule on/off
+    # Presets for schedule on/off (only shown if using calendar)
     schema_dict[
         vol.Optional(
             CONF_PRESET_SCHEDULE_ON,
             default=room_data.get(CONF_PRESET_SCHEDULE_ON, MODE_COMFORT),
         )
-    ] = vol.In(
-        {
-            MODE_COMFORT: "Comfort",
-            MODE_ECO: "Eco",
-            MODE_NIGHT: "Night",
-        }
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                MODE_COMFORT,
+                MODE_ECO,
+                MODE_NIGHT,
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+            translation_key="preset_schedule_on",
+        )
     )
 
     schema_dict[
@@ -744,12 +748,16 @@ def build_schedule_schema(room_data: dict[str, Any]) -> vol.Schema:
             CONF_PRESET_SCHEDULE_OFF,
             default=room_data.get(CONF_PRESET_SCHEDULE_OFF, MODE_ECO),
         )
-    ] = vol.In(
-        {
-            MODE_ECO: "Eco",
-            MODE_NIGHT: "Night",
-            MODE_FROST_PROTECTION: "Frost Protection",
-        }
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                MODE_ECO,
+                MODE_NIGHT,
+                MODE_FROST_PROTECTION,
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+            translation_key="preset_schedule_off",
+        )
     )
 
     # Ignore schedule when away
