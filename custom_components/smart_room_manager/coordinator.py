@@ -77,9 +77,12 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
     @callback
-    def async_add_listener(self, update_callback) -> None:
-        """Listen for data updates."""
-        super().async_add_listener(update_callback)
+    def async_add_listener(self, *args, **kwargs) -> None:
+        """Listen for data updates.
+
+        Compatible with both HA 2023.x (1 arg) and HA 2025.x+ (2 args with context).
+        """
+        return super().async_add_listener(*args, **kwargs)
 
     async def async_shutdown(self) -> None:
         """Shutdown coordinator and room managers."""
