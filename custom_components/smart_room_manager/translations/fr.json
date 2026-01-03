@@ -58,8 +58,8 @@
         "data": {
           "lights": "Lumières",
           "climate_entity": "Entité climat",
-          "climate_bypass_switch": "Switch bypass",
-          "external_control_switch": "Switch contrôle externe"
+          "climate_bypass_switch": "Interrupteur de contournement",
+          "external_control_switch": "Interrupteur de contrôle externe"
         }
       },
       "room_light_config": {
@@ -107,13 +107,12 @@
       },
       "room_schedule": {
         "title": "Configuration des horaires",
-        "description": "Heure de nuit + plages confort (basé sur le temps). Calendrier : externe (Google, etc.). Presets : mode si calendrier ON/OFF",
+        "description": "Calendrier : externe (Google, etc.). Presets : mode si calendrier ON/OFF",
         "data": {
-          "night_start": "Heure de début de nuit",
-          "comfort_ranges": "Plages horaires confort (HH:MM-HH:MM,HH:MM-HH:MM)",
           "schedule_entity": "Entité calendrier/horaire",
           "preset_schedule_on": "Preset si calendrier ON",
-          "preset_schedule_off": "Preset si calendrier OFF"
+          "preset_schedule_off": "Preset si calendrier OFF",
+          "ignore_in_away": "Ne pas tenir compte si absent/away"
         }
       },
       "room_control": {
@@ -138,6 +137,32 @@
           "alarm_entity": "Entité alarme",
           "season_calendar": "Calendrier des saisons"
         }
+      }
+    }
+  },
+  "selector": {
+    "room_type": {
+      "options": {
+        "normal": "Normal (chambres - pas de timer lumière)",
+        "corridor": "Couloir (timer 5min)",
+        "bathroom": "Salle de bain (timer 15min + contrôle radiateur)"
+      }
+    },
+    "summer_policy": {
+      "options": {
+        "off": "Off (éteindre radiateurs en été)",
+        "eco": "Éco (mode rafraîchissement en été)",
+        "comfort": "Confort (mode rafraîchissement en été)"
+      }
+    },
+    "pause_duration": {
+      "options": {
+        "15": "15 minutes",
+        "30": "30 minutes",
+        "60": "1 heure",
+        "120": "2 heures",
+        "240": "4 heures",
+        "480": "8 heures"
       }
     }
   }

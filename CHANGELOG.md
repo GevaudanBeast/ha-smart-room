@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 🌍 Internationalization Improvements
+
+#### Complete translation system for English and French
+- **Added**: SelectSelector with translation_key for room types (Normal, Corridor, Bathroom)
+- **Added**: SelectSelector with translation_key for summer policy (Off, Eco, Comfort)
+- **Added**: SelectSelector with translation_key for pause duration (15min to 8h)
+- **Fixed**: French translations for bypass and external control switches
+- **Fixed**: Mixed French/English strings in room_control options
+- **Updated**: All translation files (strings.json, en.json, fr.json) with new selectors
+
+#### Simplified Schedule Configuration
+- **Removed from UI**: `night_start` and `comfort_ranges` fields from schedule configuration step
+- **Added**: `ignore_in_away` option to skip schedule when alarm is in away mode
+- **Backward Compatibility**: Existing installations with `night_start` and `comfort_ranges` configured will continue to work with these values
+- **Note**: New installations will use default values (night_start: 22:00, comfort_ranges: empty)
+
+#### Technical Changes
+- Marked `CONF_NIGHT_START` and `CONF_COMFORT_TIME_RANGES` as DEPRECATED in const.py
+- Helper functions `parse_comfort_ranges()` and `format_comfort_ranges()` kept for backward compatibility
+- Removed unused imports from config_flow.py
+
+### ✅ Backward Compatibility Guarantees
+- **Existing configurations**: All existing room configurations with `night_start` and `comfort_ranges` will continue to work
+- **Runtime behavior**: RoomManager still uses these values if present in configuration
+- **Default values**: New configurations use `DEFAULT_NIGHT_START = "22:00:00"` and empty comfort_ranges
+- **No migration needed**: Upgrade is safe and non-breaking for existing users
+
 ## [0.3.2] - 2026-01-02
 
 ### 🐛 Critical Bug Fix - Module Import Conflict

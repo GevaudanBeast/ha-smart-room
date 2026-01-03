@@ -14,7 +14,6 @@ from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
-from homeassistant.const import CONF_NAME
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
@@ -24,18 +23,17 @@ from .const import (  # v0.3.0 Priority 1 additions; v0.3.0 Priority 2 additions
     CONF_CLIMATE_BYPASS_SWITCH,
     CONF_CLIMATE_ENTITY,
     CONF_CLIMATE_WINDOW_CHECK,
-    CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
     CONF_EXTERNAL_CONTROL_PRESET,
     CONF_EXTERNAL_CONTROL_SWITCH,
     CONF_EXTERNAL_CONTROL_TEMP,
     CONF_HUMIDITY_SENSOR,
     CONF_HYSTERESIS,
+    CONF_IGNORE_IN_AWAY,
     CONF_LIGHT_TIMEOUT,
     CONF_LIGHTS,
     CONF_MAX_SETPOINT,
     CONF_MIN_SETPOINT,
-    CONF_NIGHT_START,
     CONF_PAUSE_DURATION_MINUTES,
     CONF_PAUSE_INFINITE,
     CONF_PRESET_AWAY,
@@ -73,7 +71,6 @@ from .const import (  # v0.3.0 Priority 1 additions; v0.3.0 Priority 2 additions
     DEFAULT_LIGHT_TIMEOUT_BATHROOM,
     DEFAULT_MAX_SETPOINT,
     DEFAULT_MIN_SETPOINT,
-    DEFAULT_NIGHT_START,
     DEFAULT_PAUSE_DURATION,
     DEFAULT_PAUSE_INFINITE,
     DEFAULT_PRESET_AWAY,
@@ -112,8 +109,14 @@ _LOGGER = logging.getLogger(__name__)
 # Helper functions for config flow
 
 
+# DEPRECATED (v0.3.1+): These functions are kept for backward compatibility only
+# night_start and comfort_ranges are no longer exposed in the UI
+# but existing configurations will continue to work using these values
 def parse_comfort_ranges(comfort_ranges_text: str) -> list[dict[str, str]]:
     """Parse comfort time ranges from text format.
+
+    DEPRECATED: No longer used in config flow UI (v0.3.1+)
+    Kept for backward compatibility with existing configurations.
 
     Format: "HH:MM-HH:MM,HH:MM-HH:MM"
     Example: "07:00-09:00,18:00-22:00"
@@ -140,6 +143,9 @@ def parse_comfort_ranges(comfort_ranges_text: str) -> list[dict[str, str]]:
 
 def format_comfort_ranges(comfort_ranges: list[dict[str, str]]) -> str:
     """Format comfort time ranges to text.
+
+    DEPRECATED: No longer used in config flow UI (v0.3.1+)
+    Kept for backward compatibility with existing configurations.
 
     Converts list of dicts to "HH:MM-HH:MM,HH:MM-HH:MM" format.
     """
@@ -207,12 +213,18 @@ def build_room_basic_schema(room_data: dict[str, Any] | None = None) -> vol.Sche
         return vol.Schema(
             {
                 vol.Required(CONF_ROOM_NAME): cv.string,
-                vol.Optional(CONF_ROOM_TYPE, default=ROOM_TYPE_NORMAL): vol.In(
-                    {
-                        ROOM_TYPE_NORMAL: "Normal (bedrooms - no light timer)",
-                        ROOM_TYPE_CORRIDOR: "Corridor (5min timer)",
-                        ROOM_TYPE_BATHROOM: "Bathroom (15min timer + heater control)",
-                    }
+                vol.Optional(
+                    CONF_ROOM_TYPE, default=ROOM_TYPE_NORMAL
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            ROOM_TYPE_NORMAL,
+                            ROOM_TYPE_CORRIDOR,
+                            ROOM_TYPE_BATHROOM,
+                        ],
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                        translation_key="room_type",
+                    )
                 ),
                 vol.Optional(
                     CONF_ROOM_ICON, default="mdi:home"
@@ -229,12 +241,12 @@ def build_room_basic_schema(room_data: dict[str, Any] | None = None) -> vol.Sche
             vol.Optional(
                 CONF_ROOM_TYPE,
                 default=room_data.get(CONF_ROOM_TYPE, ROOM_TYPE_NORMAL),
-            ): vol.In(
-                {
-                    ROOM_TYPE_NORMAL: "Normal (bedrooms)",
-                    ROOM_TYPE_CORRIDOR: "Corridor (5min timer)",
-                    ROOM_TYPE_BATHROOM: "Bathroom (15min timer + heater)",
-                }
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[ROOM_TYPE_NORMAL, ROOM_TYPE_CORRIDOR, ROOM_TYPE_BATHROOM],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                    translation_key="room_type",
+                )
             ),
             vol.Optional(
                 CONF_ROOM_ICON,
@@ -493,11 +505,12 @@ def build_climate_config_schema(room_data: dict[str, Any]) -> vol.Schema:
             vol.Optional(
                 CONF_SUMMER_POLICY,
                 default=room_data.get(CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY),
-            ): vol.In(
-                {
-                    "off": "Off (turn off radiators in summer)",
-                    "eco": "Eco (keep radiators in eco mode in summer)",
-                }
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=["off", "eco", "comfort"],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                    translation_key="summer_policy",
+                )
             ),
         }
     )
@@ -699,20 +712,7 @@ def build_climate_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
 
 def build_schedule_schema(room_data: dict[str, Any]) -> vol.Schema:
     """Build schema for schedule configuration."""
-    # Format existing comfort ranges for display
-    comfort_ranges = room_data.get(CONF_COMFORT_TIME_RANGES, [])
-    comfort_ranges_text = format_comfort_ranges(comfort_ranges)
-
-    schema_dict = {
-        vol.Optional(
-            CONF_NIGHT_START,
-            default=room_data.get(CONF_NIGHT_START, DEFAULT_NIGHT_START),
-        ): selector.TimeSelector(),
-        vol.Optional(
-            "comfort_ranges",
-            default=comfort_ranges_text,
-        ): cv.string,
-    }
+    schema_dict = {}
 
     # v0.3.0 - Calendar/Schedule entity support
     schedule_entity = room_data.get(CONF_SCHEDULE_ENTITY)
@@ -754,6 +754,14 @@ def build_schedule_schema(room_data: dict[str, Any]) -> vol.Schema:
         }
     )
 
+    # Ignore schedule when away
+    schema_dict[
+        vol.Optional(
+            CONF_IGNORE_IN_AWAY,
+            default=room_data.get(CONF_IGNORE_IN_AWAY, False),
+        )
+    ] = selector.BooleanSelector()
+
     return vol.Schema(schema_dict)
 
 
@@ -766,15 +774,12 @@ def build_room_control_schema(room_data: dict[str, Any]) -> vol.Schema:
                 default=room_data.get(
                     CONF_PAUSE_DURATION_MINUTES, DEFAULT_PAUSE_DURATION
                 ),
-            ): vol.In(
-                {
-                    15: "15 minutes",
-                    30: "30 minutes",
-                    60: "1 hour",
-                    120: "2 hours",
-                    240: "4 hours",
-                    480: "8 hours",
-                }
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=[15, 30, 60, 120, 240, 480],
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                    translation_key="pause_duration",
+                )
             ),
             vol.Optional(
                 CONF_PAUSE_INFINITE,
@@ -1174,18 +1179,8 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_room_schedule(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure room schedule (v0.3.0 - night_start, comfort_time_ranges, calendar, presets)."""
+        """Configure room schedule (v0.3.0 - calendar, presets)."""
         if user_input is not None:
-            # Save night start
-            self._current_room[CONF_NIGHT_START] = user_input.get(
-                CONF_NIGHT_START, DEFAULT_NIGHT_START
-            )
-
-            # Parse comfort time ranges using helper
-            comfort_ranges_text = user_input.get("comfort_ranges", "")
-            comfort_ranges = parse_comfort_ranges(comfort_ranges_text)
-            self._current_room[CONF_COMFORT_TIME_RANGES] = comfort_ranges
-
             # v0.3.0 - Schedule entity (calendar) support
             if user_input.get(CONF_SCHEDULE_ENTITY):
                 self._current_room[CONF_SCHEDULE_ENTITY] = user_input.get(
@@ -1202,6 +1197,11 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                         CONF_PRESET_SCHEDULE_OFF
                     )
 
+                # Ignore schedule when away
+                self._current_room[CONF_IGNORE_IN_AWAY] = user_input.get(
+                    CONF_IGNORE_IN_AWAY, False
+                )
+
             return await self.async_step_room_control()
 
         return self.async_show_form(
@@ -1209,7 +1209,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_schedule_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Night start + comfort ranges (time-based). Calendar: external (Google, etc.). Presets: mode when calendar ON/OFF",
+                "info": "Calendar: external (Google, etc.). Presets: mode when calendar ON/OFF",
             },
         )
 
