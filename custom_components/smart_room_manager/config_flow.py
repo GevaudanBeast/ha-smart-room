@@ -1187,26 +1187,24 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Configure room schedule (v0.3.0 - calendar, presets)."""
         if user_input is not None:
-            # v0.3.0 - Schedule entity (calendar) support
+            # v0.3.0 - Schedule entity (calendar) support (optional)
             if user_input.get(CONF_SCHEDULE_ENTITY):
                 self._current_room[CONF_SCHEDULE_ENTITY] = user_input.get(
                     CONF_SCHEDULE_ENTITY
                 )
 
-                # Presets for schedule on/off
-                if user_input.get(CONF_PRESET_SCHEDULE_ON):
-                    self._current_room[CONF_PRESET_SCHEDULE_ON] = user_input.get(
-                        CONF_PRESET_SCHEDULE_ON
-                    )
-                if user_input.get(CONF_PRESET_SCHEDULE_OFF):
-                    self._current_room[CONF_PRESET_SCHEDULE_OFF] = user_input.get(
-                        CONF_PRESET_SCHEDULE_OFF
-                    )
+            # Save presets (always save even if no calendar, for future use)
+            self._current_room[CONF_PRESET_SCHEDULE_ON] = user_input.get(
+                CONF_PRESET_SCHEDULE_ON, MODE_COMFORT
+            )
+            self._current_room[CONF_PRESET_SCHEDULE_OFF] = user_input.get(
+                CONF_PRESET_SCHEDULE_OFF, MODE_ECO
+            )
 
-                # Ignore schedule when away
-                self._current_room[CONF_IGNORE_IN_AWAY] = user_input.get(
-                    CONF_IGNORE_IN_AWAY, False
-                )
+            # Ignore schedule when away
+            self._current_room[CONF_IGNORE_IN_AWAY] = user_input.get(
+                CONF_IGNORE_IN_AWAY, False
+            )
 
             return await self.async_step_room_control()
 
