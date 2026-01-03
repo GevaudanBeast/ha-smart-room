@@ -164,6 +164,20 @@
         "240": "4 hours",
         "480": "8 hours"
       }
+    },
+    "preset_schedule_on": {
+      "options": {
+        "comfort": "Comfort",
+        "eco": "Eco",
+        "night": "Night"
+      }
+    },
+    "preset_schedule_off": {
+      "options": {
+        "eco": "Eco",
+        "night": "Night",
+        "frost_protection": "Frost Protection"
+      }
     }
   }
 }
