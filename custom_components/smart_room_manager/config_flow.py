@@ -1188,18 +1188,26 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         """Configure room schedule (v0.3.0 - calendar, presets)."""
         if user_input is not None:
             # v0.3.0 - Schedule entity (calendar) support (optional)
-            if user_input.get(CONF_SCHEDULE_ENTITY):
-                self._current_room[CONF_SCHEDULE_ENTITY] = user_input.get(
-                    CONF_SCHEDULE_ENTITY
-                )
+            # Only save if not empty string
+            schedule_entity = user_input.get(CONF_SCHEDULE_ENTITY)
+            if schedule_entity:
+                self._current_room[CONF_SCHEDULE_ENTITY] = schedule_entity
+            elif CONF_SCHEDULE_ENTITY in self._current_room:
+                # Remove if was previously set but now empty
+                self._current_room.pop(CONF_SCHEDULE_ENTITY, None)
 
-            # Save presets (always save even if no calendar, for future use)
-            self._current_room[CONF_PRESET_SCHEDULE_ON] = user_input.get(
-                CONF_PRESET_SCHEDULE_ON, MODE_COMFORT
-            )
-            self._current_room[CONF_PRESET_SCHEDULE_OFF] = user_input.get(
-                CONF_PRESET_SCHEDULE_OFF, MODE_ECO
-            )
+            # Save presets - ensure valid values from the allowed list
+            preset_on = user_input.get(CONF_PRESET_SCHEDULE_ON, MODE_COMFORT)
+            if preset_on in [MODE_COMFORT, MODE_ECO, MODE_NIGHT]:
+                self._current_room[CONF_PRESET_SCHEDULE_ON] = preset_on
+            else:
+                self._current_room[CONF_PRESET_SCHEDULE_ON] = MODE_COMFORT
+
+            preset_off = user_input.get(CONF_PRESET_SCHEDULE_OFF, MODE_ECO)
+            if preset_off in [MODE_ECO, MODE_NIGHT, MODE_FROST_PROTECTION]:
+                self._current_room[CONF_PRESET_SCHEDULE_OFF] = preset_off
+            else:
+                self._current_room[CONF_PRESET_SCHEDULE_OFF] = MODE_ECO
 
             # Ignore schedule when away
             self._current_room[CONF_IGNORE_IN_AWAY] = user_input.get(
