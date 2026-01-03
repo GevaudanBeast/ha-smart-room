@@ -109,7 +109,7 @@
         "title": "Configuration des horaires",
         "description": "Calendrier : externe (Google, etc.). Presets : mode si calendrier ON/OFF",
         "data": {
-          "schedule_entity": "Entité calendrier/horaire",
+          "schedule_entity": "Entité calendrier (optionnel)",
           "preset_schedule_on": "Preset si calendrier ON",
           "preset_schedule_off": "Preset si calendrier OFF",
           "ignore_in_away": "Ne pas tenir compte si absent/away"

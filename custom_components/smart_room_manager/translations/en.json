@@ -109,7 +109,7 @@
         "title": "Schedule Configuration",
         "description": "Calendar: external (Google, etc.). Presets: mode when calendar ON/OFF",
         "data": {
-          "schedule_entity": "Schedule/Calendar entity",
+          "schedule_entity": "Calendar entity (optional)",
           "preset_schedule_on": "Preset when calendar ON",
           "preset_schedule_off": "Preset when calendar OFF",
           "ignore_in_away": "Ignore schedule when away"
