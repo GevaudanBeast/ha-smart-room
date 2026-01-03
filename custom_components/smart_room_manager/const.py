@@ -93,6 +93,7 @@ CONF_TEMP_COOL_COMFORT: Final = "temp_cool_comfort"
 CONF_TEMP_COOL_ECO: Final = "temp_cool_eco"
 
 # Schedule configuration
+# DEPRECATED (v0.3.1+): kept for backward compatibility with existing installations
 CONF_NIGHT_START: Final = "night_start"
 CONF_COMFORT_TIME_RANGES: Final = (
     "comfort_time_ranges"  # List of {"start": "HH:MM", "end": "HH:MM"}

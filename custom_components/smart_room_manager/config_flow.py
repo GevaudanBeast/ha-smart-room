@@ -109,8 +109,14 @@ _LOGGER = logging.getLogger(__name__)
 # Helper functions for config flow
 
 
+# DEPRECATED (v0.3.1+): These functions are kept for backward compatibility only
+# night_start and comfort_ranges are no longer exposed in the UI
+# but existing configurations will continue to work using these values
 def parse_comfort_ranges(comfort_ranges_text: str) -> list[dict[str, str]]:
     """Parse comfort time ranges from text format.
+
+    DEPRECATED: No longer used in config flow UI (v0.3.1+)
+    Kept for backward compatibility with existing configurations.
 
     Format: "HH:MM-HH:MM,HH:MM-HH:MM"
     Example: "07:00-09:00,18:00-22:00"
@@ -137,6 +143,9 @@ def parse_comfort_ranges(comfort_ranges_text: str) -> list[dict[str, str]]:
 
 def format_comfort_ranges(comfort_ranges: list[dict[str, str]]) -> str:
     """Format comfort time ranges to text.
+
+    DEPRECATED: No longer used in config flow UI (v0.3.1+)
+    Kept for backward compatibility with existing configurations.
 
     Converts list of dicts to "HH:MM-HH:MM,HH:MM-HH:MM" format.
     """
