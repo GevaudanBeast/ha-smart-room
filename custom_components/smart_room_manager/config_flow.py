@@ -1187,26 +1187,32 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Configure room schedule (v0.3.0 - calendar, presets)."""
         if user_input is not None:
-            # v0.3.0 - Schedule entity (calendar) support
-            if user_input.get(CONF_SCHEDULE_ENTITY):
-                self._current_room[CONF_SCHEDULE_ENTITY] = user_input.get(
-                    CONF_SCHEDULE_ENTITY
-                )
+            # v0.3.0 - Schedule entity (calendar) support (optional)
+            # Only save if not empty string
+            schedule_entity = user_input.get(CONF_SCHEDULE_ENTITY)
+            if schedule_entity:
+                self._current_room[CONF_SCHEDULE_ENTITY] = schedule_entity
+            elif CONF_SCHEDULE_ENTITY in self._current_room:
+                # Remove if was previously set but now empty
+                self._current_room.pop(CONF_SCHEDULE_ENTITY, None)
 
-                # Presets for schedule on/off
-                if user_input.get(CONF_PRESET_SCHEDULE_ON):
-                    self._current_room[CONF_PRESET_SCHEDULE_ON] = user_input.get(
-                        CONF_PRESET_SCHEDULE_ON
-                    )
-                if user_input.get(CONF_PRESET_SCHEDULE_OFF):
-                    self._current_room[CONF_PRESET_SCHEDULE_OFF] = user_input.get(
-                        CONF_PRESET_SCHEDULE_OFF
-                    )
+            # Save presets - ensure valid values from the allowed list
+            preset_on = user_input.get(CONF_PRESET_SCHEDULE_ON, MODE_COMFORT)
+            if preset_on in [MODE_COMFORT, MODE_ECO, MODE_NIGHT]:
+                self._current_room[CONF_PRESET_SCHEDULE_ON] = preset_on
+            else:
+                self._current_room[CONF_PRESET_SCHEDULE_ON] = MODE_COMFORT
 
-                # Ignore schedule when away
-                self._current_room[CONF_IGNORE_IN_AWAY] = user_input.get(
-                    CONF_IGNORE_IN_AWAY, False
-                )
+            preset_off = user_input.get(CONF_PRESET_SCHEDULE_OFF, MODE_ECO)
+            if preset_off in [MODE_ECO, MODE_NIGHT, MODE_FROST_PROTECTION]:
+                self._current_room[CONF_PRESET_SCHEDULE_OFF] = preset_off
+            else:
+                self._current_room[CONF_PRESET_SCHEDULE_OFF] = MODE_ECO
+
+            # Ignore schedule when away
+            self._current_room[CONF_IGNORE_IN_AWAY] = user_input.get(
+                CONF_IGNORE_IN_AWAY, False
+            )
 
             return await self.async_step_room_control()
 
