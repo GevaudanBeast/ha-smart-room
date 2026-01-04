@@ -142,11 +142,25 @@ class LightController:
         else:
             timeout = self.room_config.get(CONF_LIGHT_TIMEOUT, DEFAULT_LIGHT_TIMEOUT)
 
+        # Calculate remaining time for each tracked light
+        timer_active = False
+        time_remaining = 0
+        if self._light_on_times and room_type in [ROOM_TYPE_CORRIDOR, ROOM_TYPE_BATHROOM]:
+            now = dt_util.utcnow()
+            for entity_id, on_time in self._light_on_times.items():
+                elapsed = (now - on_time).total_seconds()
+                remaining = max(0, timeout - elapsed)
+                if remaining > 0:
+                    timer_active = True
+                    time_remaining = max(time_remaining, remaining)
+
         return {
             "room_type": room_type,
             "timeout_seconds": timeout,
             "lights_tracked": len(self._light_on_times),
             "lights_on": list(self._light_on_times.keys()),
+            "timer_active": timer_active,
+            "time_remaining": int(time_remaining),
         }
 
     async def async_shutdown(self) -> None:

@@ -50,6 +50,8 @@ async def async_setup_entry(
             SmartRoomCurrentPrioritySensor(coordinator, room_manager.room_id)
         )
         entities.append(SmartRoomHysteresisSensor(coordinator, room_manager.room_id))
+        # v0.3.3 activity log sensor
+        entities.append(SmartRoomActivitySensor(coordinator, room_manager.room_id))
 
     async_add_entities(entities)
 
@@ -249,6 +251,142 @@ class SmartRoomHysteresisSensor(SmartRoomEntity, SensorEntity):
             "deadband": "Zone morte (maintien preset actuel)",
         }
         return descriptions.get(state, state)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+
+class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
+    """Sensor showing human-readable activity log (v0.3.3)."""
+
+    def __init__(self, coordinator: SmartRoomCoordinator, room_id: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, room_id)
+
+        room_manager = coordinator.get_room_manager(room_id)
+        if room_manager:
+            room_name = room_manager.room_name
+            self._attr_name = f"{room_name} Activité"
+            self._attr_unique_id = f"smart_room_{room_id}_activity"
+            self._attr_icon = "mdi:clipboard-text"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return a short summary of current activity."""
+        if not self.coordinator.data or self._room_id not in self.coordinator.data:
+            return "Inactif"
+
+        room_data = self.coordinator.data[self._room_id]
+
+        if not room_data.get("automation_enabled"):
+            return "Automation désactivée"
+
+        if room_data.get("pause_active"):
+            return "En pause"
+
+        climate_state = room_data.get("climate_state", {})
+        priority = climate_state.get(ATTR_CURRENT_PRIORITY, PRIORITY_NORMAL)
+
+        priority_labels = {
+            "paused": "En pause",
+            "bypass": "Mode manuel",
+            "windows_open": "Fenêtres ouvertes",
+            "external_control": "Contrôle externe",
+            "away": "Absent",
+            "schedule": "Selon planning",
+            "normal": room_data.get("current_mode", "Normal"),
+        }
+        return priority_labels.get(priority, priority)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return detailed activity log."""
+        if not self.coordinator.data or self._room_id not in self.coordinator.data:
+            return {"log": "Pas de données"}
+
+        room_data = self.coordinator.data[self._room_id]
+        climate_state = room_data.get("climate_state", {})
+
+        # Build human-readable log
+        log_lines = []
+
+        # Room info
+        room_name = room_data.get("room_name", "?")
+        room_type = room_data.get("room_type", "normal")
+        log_lines.append(f"Pièce: {room_name} ({room_type})")
+
+        # Automation status
+        if not room_data.get("automation_enabled"):
+            log_lines.append("⛔ Automation désactivée")
+            return {"log": "\n".join(log_lines)}
+
+        if room_data.get("pause_active"):
+            log_lines.append("⏸️ Pause manuelle active")
+            return {"log": "\n".join(log_lines)}
+
+        # Current mode and why
+        mode = room_data.get("current_mode", "?")
+        priority = climate_state.get(ATTR_CURRENT_PRIORITY, PRIORITY_NORMAL)
+
+        mode_labels = {
+            "comfort": "Confort",
+            "eco": "Éco",
+            "night": "Nuit",
+            "frost_protection": "Hors-gel",
+        }
+        mode_label = mode_labels.get(mode, mode)
+
+        # Explain why this mode
+        if priority == "away":
+            log_lines.append(f"🏠 Mode: {mode_label} (alarme armée)")
+        elif priority == "windows_open":
+            log_lines.append("🪟 Mode: Hors-gel (fenêtres ouvertes)")
+        elif priority == "external_control":
+            log_lines.append("🌞 Mode: Contrôle externe actif")
+        elif priority == "bypass":
+            log_lines.append("🔌 Mode: Manuel (bypass ON)")
+        elif priority == "schedule":
+            log_lines.append(f"📅 Mode: {mode_label} (selon planning)")
+        else:
+            log_lines.append(f"🏠 Mode: {mode_label}")
+
+        # Climate details
+        climate_type = climate_state.get("climate_type")
+        if climate_type:
+            if climate_type == "x4fp":
+                preset = climate_state.get("current_preset", "?")
+                log_lines.append(f"🔥 Fil Pilote: preset {preset}")
+            else:
+                temp = climate_state.get("target_temperature")
+                if temp:
+                    log_lines.append(f"🌡️ Thermostat: consigne {temp}°C")
+
+        # Hysteresis info if applicable
+        hyst_state = climate_state.get(ATTR_HYSTERESIS_STATE)
+        if hyst_state and hyst_state != HYSTERESIS_DEADBAND:
+            if hyst_state == "heating":
+                log_lines.append("📈 Hystérésis: chauffe")
+            elif hyst_state == "idle":
+                log_lines.append("📉 Hystérésis: repos")
+
+        # Windows state
+        if room_data.get("windows_open"):
+            log_lines.append("🪟 Fenêtres: ouvertes")
+
+        # Light state for bathroom
+        if room_type == "bathroom" and room_data.get("light_on"):
+            log_lines.append("💡 Lumière: allumée")
+
+        return {
+            "log": "\n".join(log_lines),
+            "mode": mode,
+            "priority": priority,
+            "climate_type": climate_type,
+            "windows_open": room_data.get("windows_open", False),
+            "occupied": room_data.get("occupied", True),
+        }
 
     @callback
     def _handle_coordinator_update(self) -> None:

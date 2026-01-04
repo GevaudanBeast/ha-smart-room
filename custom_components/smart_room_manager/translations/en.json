@@ -58,9 +58,16 @@
         "data": {
           "lights": "Lights",
           "climate_mode": "Climate type",
-          "climate_entity": "Climate entity",
-          "climate_bypass_switch": "Bypass switch",
-          "external_control_switch": "External control switch"
+          "climate_entity": "Climate entity (thermostat or X4FP)",
+          "climate_bypass_switch": "Manual mode (disables SRM)",
+          "external_control_switch": "External control (Solar Optimizer...)"
+        },
+        "data_description": {
+          "lights": "Lights to control (auto timer for bathroom/corridor)",
+          "climate_mode": "Wire Pilot for X4FP/IPX800, Thermostat for others",
+          "climate_entity": "climate.xxx entity to control",
+          "climate_bypass_switch": "When ON, SRM stops controlling this room's climate",
+          "external_control_switch": "When ON, SRM uses the external control preset/temperature"
         }
       },
       "room_light_config": {
@@ -153,9 +160,16 @@
         "title": "Global Settings",
         "description": "Alarm: armed_away → frost. VMC: duration after bathroom/WC light off.",
         "data": {
-          "alarm_entity": "Alarm entity",
-          "season_calendar": "Season calendar",
-          "vmc_timer": "VMC timer (seconds)"
+          "alarm_entity": "Alarm entity (presence)",
+          "season_calendar": "Season calendar (summer/winter)",
+          "vmc_entity": "VMC high speed entity (switch or fan)",
+          "vmc_timer": "VMC high speed duration (seconds)"
+        },
+        "data_description": {
+          "alarm_entity": "When armed_away, all rooms switch to frost protection",
+          "season_calendar": "ON = summer (cooling), OFF = winter (heating)",
+          "vmc_entity": "Switch or fan that activates VMC high speed",
+          "vmc_timer": "Duration VMC stays on high speed after bathroom/WC light off"
         }
       }
     }

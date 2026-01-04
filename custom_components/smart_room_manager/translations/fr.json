@@ -58,9 +58,16 @@
         "data": {
           "lights": "Lumières",
           "climate_mode": "Type de chauffage",
-          "climate_entity": "Entité climat",
-          "climate_bypass_switch": "Interrupteur de contournement",
-          "external_control_switch": "Interrupteur de contrôle externe"
+          "climate_entity": "Entité climat (thermostat ou X4FP)",
+          "climate_bypass_switch": "Mode manuel (désactive SRM)",
+          "external_control_switch": "Contrôle externe (Solar Optimizer...)"
+        },
+        "data_description": {
+          "lights": "Lumières à contrôler (timer auto pour SDB/couloir)",
+          "climate_mode": "Fil Pilote pour X4FP/IPX800, Thermostat pour les autres",
+          "climate_entity": "Entité climate.xxx à piloter",
+          "climate_bypass_switch": "Quand ON, SRM ne touche plus au chauffage de cette pièce",
+          "external_control_switch": "Quand ON, SRM utilise le preset/température de contrôle externe"
         }
       },
       "room_light_config": {
@@ -153,9 +160,16 @@
         "title": "Paramètres globaux",
         "description": "Alarme : armed_away → hors-gel. VMC : durée après extinction lumière SDB/WC.",
         "data": {
-          "alarm_entity": "Entité alarme",
-          "season_calendar": "Calendrier des saisons",
-          "vmc_timer": "Timer VMC (secondes)"
+          "alarm_entity": "Entité alarme (présence)",
+          "season_calendar": "Calendrier des saisons (été/hiver)",
+          "vmc_entity": "Entité VMC grande vitesse (switch ou fan)",
+          "vmc_timer": "Durée VMC grande vitesse (secondes)"
+        },
+        "data_description": {
+          "alarm_entity": "Quand armed_away, toutes les pièces passent en hors-gel",
+          "season_calendar": "ON = été (climatisation), OFF = hiver (chauffage)",
+          "vmc_entity": "Switch ou fan qui active la VMC en grande vitesse",
+          "vmc_timer": "Durée pendant laquelle la VMC reste en GV après extinction lumière SDB/WC"
         }
       }
     }

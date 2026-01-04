@@ -1464,6 +1464,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
         """Configure Thermostat external control."""
+        # Skip if no external control switch configured
+        if not self._current_room.get(CONF_EXTERNAL_CONTROL_SWITCH):
+            return await self.async_step_room_schedule()
+
         if user_input is not None:
             update_data = {}
 
