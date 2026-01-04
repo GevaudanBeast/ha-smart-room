@@ -21,9 +21,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Improved**: Contextual configuration based on selected mode
 
 #### New: VMC (Ventilation) Support
-- **Added**: VMC entity per room (switch or fan)
-- **Added**: Global VMC timer in general settings
-- **Behavior**: VMC activates with light, timer starts when light turns off
+- **Added**: Global VMC entity in general settings (switch or fan)
+- **Added**: Configurable VMC timer (duration after light turns off)
+- **Behavior**: VMC high speed activates when light turns on, timer starts when light turns off
+- **Added**: VMC High Speed binary_sensor (shows countdown)
+
+#### New: Debug and Tracing Sensors
+- **Added**: Activity sensor for each room (human-readable log with emojis)
+- **Added**: Light Timer binary_sensor (countdown before auto-off)
+- **Added**: Clear descriptions for bypass vs external control
+
+#### New: Cleanup Service
+- **Added**: `smart_room_manager.cleanup_entities` service to remove orphaned entities
+- **Behavior**: Automatically removes entities from rooms that no longer exist
 
 #### Room Type Improvements
 - **Renamed**: "Normal" → "Living space" (bedroom, living room, kitchen, office...)
