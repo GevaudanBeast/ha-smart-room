@@ -243,15 +243,16 @@ class RoomManager:
                     self._current_mode = MODE_ECO
                     return
 
-        # PRIORITY 3: Night period
-        if self._is_night:
-            self._current_mode = MODE_NIGHT
-            return
-
-        # PRIORITY 4: Check schedule/calendar (v0.3.0+)
+        # PRIORITY 3: Check schedule/calendar (v0.3.0+)
+        # Schedule has priority over night period (explicit user config)
         schedule_mode = self.get_schedule_mode()
         if schedule_mode:
             self._current_mode = schedule_mode
+            return
+
+        # PRIORITY 4: Night period
+        if self._is_night:
+            self._current_mode = MODE_NIGHT
             return
 
         # PRIORITY 5: Check legacy comfort time ranges (backward compatibility)
