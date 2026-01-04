@@ -13,6 +13,7 @@ from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAI
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
+from homeassistant.helpers import entity_registry as er
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.core import callback
 from homeassistant.helpers import selector
@@ -195,38 +196,64 @@ def build_room_list_choices(rooms: list[dict[str, Any]]) -> dict[str, str]:
 
 def build_global_settings_schema(current_data: dict[str, Any]) -> vol.Schema:
     """Build schema for global settings."""
-    return vol.Schema(
-        {
-            vol.Optional(
-                CONF_ALARM_ENTITY,
-                default=current_data.get(CONF_ALARM_ENTITY),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(
-                    domain=["alarm_control_panel"],
-                )
-            ),
-            vol.Optional(
-                CONF_SEASON_CALENDAR,
-                default=current_data.get(CONF_SEASON_CALENDAR),
-            ): selector.EntitySelector(
-                selector.EntitySelectorConfig(
-                    domain=["calendar", "binary_sensor"],
-                )
-            ),
-            vol.Optional(
-                CONF_VMC_TIMER,
-                default=current_data.get(CONF_VMC_TIMER, DEFAULT_VMC_TIMER),
-            ): selector.NumberSelector(
-                selector.NumberSelectorConfig(
-                    min=60,
-                    max=1800,
-                    step=60,
-                    mode=selector.NumberSelectorMode.SLIDER,
-                    unit_of_measurement="s",
-                )
-            ),
-        }
+    schema_dict = {}
+
+    # Alarm entity
+    alarm = current_data.get(CONF_ALARM_ENTITY)
+    if alarm is not None:
+        schema_dict[vol.Optional(CONF_ALARM_ENTITY, default=alarm)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=["alarm_control_panel"])
+            )
+        )
+    else:
+        schema_dict[vol.Optional(CONF_ALARM_ENTITY)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["alarm_control_panel"])
+        )
+
+    # Season calendar
+    calendar = current_data.get(CONF_SEASON_CALENDAR)
+    if calendar is not None:
+        schema_dict[vol.Optional(CONF_SEASON_CALENDAR, default=calendar)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=["calendar", "binary_sensor"])
+            )
+        )
+    else:
+        schema_dict[vol.Optional(CONF_SEASON_CALENDAR)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=["calendar", "binary_sensor"])
+        )
+
+    # VMC entity (high speed switch)
+    vmc = current_data.get(CONF_VMC_ENTITY)
+    if vmc is not None:
+        schema_dict[vol.Optional(CONF_VMC_ENTITY, default=vmc)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "fan"])
+            )
+        )
+    else:
+        schema_dict[vol.Optional(CONF_VMC_ENTITY)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "fan"])
+        )
+
+    # VMC timer
+    schema_dict[
+        vol.Optional(
+            CONF_VMC_TIMER,
+            default=current_data.get(CONF_VMC_TIMER, DEFAULT_VMC_TIMER),
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=60,
+            max=1800,
+            step=60,
+            mode=selector.NumberSelectorMode.SLIDER,
+            unit_of_measurement="s",
+        )
     )
+
+    return vol.Schema(schema_dict)
 
 
 def build_room_basic_schema(room_data: dict[str, Any] | None = None) -> vol.Schema:
@@ -413,18 +440,7 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
             )
         )
 
-    # VMC entity (for bathroom and corridor with WC)
-    vmc_entity = room_data.get(CONF_VMC_ENTITY)
-    if vmc_entity is not None:
-        schema_dict[vol.Optional(CONF_VMC_ENTITY, default=vmc_entity)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "fan"])
-            )
-        )
-    else:
-        schema_dict[vol.Optional(CONF_VMC_ENTITY)] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "fan"])
-        )
+    # Note: VMC entity is now in global settings, not per-room
 
     return vol.Schema(schema_dict)
 
@@ -1208,9 +1224,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                         CONF_EXTERNAL_CONTROL_SWITCH
                     )
 
-            # Add VMC entity if configured
-            if user_input.get(CONF_VMC_ENTITY):
-                update_data[CONF_VMC_ENTITY] = user_input.get(CONF_VMC_ENTITY)
+            # Note: VMC entity is now in global settings, not per-room
 
             self._current_room.update(update_data)
             return await self.async_step_room_light_config()
@@ -1258,9 +1272,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         """Configure climate behavior (v0.4.0 - contextual based on climate mode)."""
         climate_mode = self._current_room.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
 
-        # Skip climate config if no climate configured
+        # Skip climate config, schedule, and control if no climate configured
         if climate_mode == CLIMATE_MODE_NONE:
-            return await self.async_step_room_schedule()
+            return await self._save_room()
 
         if user_input is not None:
             update_data = {}
@@ -1530,22 +1544,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 CONF_PAUSE_INFINITE, DEFAULT_PAUSE_INFINITE
             )
 
-            # Save the room
-            rooms = list(self.config_entry.options.get(CONF_ROOMS, []))
-            if self._room_index is not None:
-                # Edit existing room
-                rooms[self._room_index] = self._current_room
-            else:
-                # Add new room
-                rooms.append(self._current_room)
-
-            return self.async_create_entry(
-                title="",
-                data={
-                    **self.config_entry.options,
-                    CONF_ROOMS: rooms,
-                },
-            )
+            return await self._save_room()
 
         return self.async_show_form(
             step_id="room_control",
@@ -1561,10 +1560,16 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Confirm room deletion."""
         rooms = list(self.config_entry.options.get(CONF_ROOMS, []))
-        room_name = rooms[self._room_index].get(CONF_ROOM_NAME, "Unknown")
+        room_data = rooms[self._room_index]
+        room_name = room_data.get(CONF_ROOM_NAME, "Unknown")
+        room_id = room_data.get(CONF_ROOM_ID)
 
         if user_input is not None:
             if user_input.get("confirm"):
+                # Remove entities from registry before deleting room
+                if room_id:
+                    await self._remove_room_entities(room_id)
+
                 rooms.pop(self._room_index)
                 return self.async_create_entry(
                     title="",
@@ -1585,6 +1590,59 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             description_placeholders={"room_name": room_name},
         )
 
+    async def _save_room(self) -> config_entries.FlowResult:
+        """Save the current room configuration."""
+        rooms = list(self.config_entry.options.get(CONF_ROOMS, []))
+        if self._room_index is not None:
+            # Edit existing room
+            rooms[self._room_index] = self._current_room
+        else:
+            # Add new room
+            rooms.append(self._current_room)
+
+        return self.async_create_entry(
+            title="",
+            data={
+                **self.config_entry.options,
+                CONF_ROOMS: rooms,
+            },
+        )
+
+    async def _remove_room_entities(self, room_id: str) -> None:
+        """Remove all entities associated with a room from the entity registry."""
+        entity_registry = er.async_get(self.hass)
+
+        # List of entity suffixes for each room
+        entity_suffixes = [
+            "automation",
+            "pause",
+            "state",
+            "current_priority",
+            "hysteresis_state",
+            "occupied",
+            "light_needed",
+            "external_control_active",
+            "schedule_active",
+        ]
+
+        for suffix in entity_suffixes:
+            unique_id = f"smart_room_{room_id}_{suffix}"
+            entity_id = entity_registry.async_get_entity_id(
+                # Try all possible domains
+                "sensor", DOMAIN, unique_id
+            )
+            if not entity_id:
+                entity_id = entity_registry.async_get_entity_id(
+                    "binary_sensor", DOMAIN, unique_id
+                )
+            if not entity_id:
+                entity_id = entity_registry.async_get_entity_id(
+                    "switch", DOMAIN, unique_id
+                )
+
+            if entity_id:
+                entity_registry.async_remove(entity_id)
+
     async def async_step_global_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
@@ -1597,6 +1655,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 **self.config_entry.data,
                 CONF_ALARM_ENTITY: user_input.get(CONF_ALARM_ENTITY),
                 CONF_SEASON_CALENDAR: user_input.get(CONF_SEASON_CALENDAR),
+                CONF_VMC_ENTITY: user_input.get(CONF_VMC_ENTITY),
                 CONF_VMC_TIMER: user_input.get(CONF_VMC_TIMER, DEFAULT_VMC_TIMER),
             }
 

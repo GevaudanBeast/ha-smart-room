@@ -40,9 +40,9 @@ CONF_LIGHTS: Final = "lights"
 CONF_CLIMATE_ENTITY: Final = "climate_entity"
 CONF_CLIMATE_BYPASS_SWITCH: Final = "climate_bypass_switch"
 
-# VMC (Ventilation) configuration
-CONF_VMC_ENTITY: Final = "vmc_entity"  # switch or fan entity for VMC
-CONF_VMC_TIMER: Final = "vmc_timer"  # Timer duration in seconds
+# VMC (Ventilation) configuration - Global settings
+CONF_VMC_ENTITY: Final = "vmc_entity"  # switch or fan for VMC high speed (global)
+CONF_VMC_TIMER: Final = "vmc_timer"  # Timer duration in seconds after light off
 
 # X4FP Hysteresis configuration (Type 3b)
 CONF_SETPOINT_INPUT: Final = "setpoint_input"  # input_number entity for setpoint
