@@ -45,6 +45,7 @@ from .const import (
     PRIORITY_PAUSED,
     PRIORITY_SCHEDULE,
     PRIORITY_WINDOWS_OPEN,
+    ROOM_TYPE_BATHROOM,
 )
 
 if TYPE_CHECKING:
@@ -154,6 +155,20 @@ class ClimateController:
             )
             self._current_priority = PRIORITY_AWAY
             await self._set_frost_protection(climate_entity)
+            return
+
+        # PRIORITY 4.5: Bathroom special logic (light controls heating)
+        # For bathrooms, light state takes priority over schedule
+        if self.room_manager.room_type == ROOM_TYPE_BATHROOM:
+            mode = self.room_manager.get_current_mode()
+            _LOGGER.debug(
+                "🛁 Bathroom %s - light-based mode: %s",
+                self.room_manager.room_name,
+                mode,
+            )
+            self._current_priority = PRIORITY_NORMAL
+            is_summer = self._is_summer_mode()
+            await self._apply_mode(climate_entity, mode, is_summer)
             return
 
         # PRIORITY 5: Check schedule (calendar)
