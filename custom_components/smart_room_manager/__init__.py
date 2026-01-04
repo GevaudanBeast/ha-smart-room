@@ -144,7 +144,9 @@ async def async_cleanup_orphaned_entities(
 
     # Get all configured room IDs
     rooms = entry.options.get(CONF_ROOMS, [])
-    configured_room_ids = {room.get(CONF_ROOM_ID) for room in rooms if room.get(CONF_ROOM_ID)}
+    configured_room_ids = {
+        room.get(CONF_ROOM_ID) for room in rooms if room.get(CONF_ROOM_ID)
+    }
 
     # Find all entities belonging to this integration
     entities_to_remove = []
@@ -213,4 +215,6 @@ def register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
     # Register the service if not already registered
     if not hass.services.has_service(DOMAIN, "cleanup_entities"):
-        hass.services.async_register(DOMAIN, "cleanup_entities", handle_cleanup_entities)
+        hass.services.async_register(
+            DOMAIN, "cleanup_entities", handle_cleanup_entities
+        )
