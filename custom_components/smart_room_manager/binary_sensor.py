@@ -278,7 +278,10 @@ class SmartRoomVMCSensor(SmartRoomEntity, BinarySensorEntity):
 
         vmc_time_remaining = light_state.get("vmc_time_remaining", 0)
 
-        if vmc_time_remaining > 0:
+        if vmc_time_remaining == -1:
+            # VMC active, light still on, no countdown yet
+            description = "💨 VMC GV active (lumière allumée)"
+        elif vmc_time_remaining > 0:
             mins = vmc_time_remaining // 60
             secs = vmc_time_remaining % 60
             description = f"💨 VMC GV active - arrêt dans {mins}m {secs}s"
@@ -286,7 +289,7 @@ class SmartRoomVMCSensor(SmartRoomEntity, BinarySensorEntity):
             description = "VMC en vitesse normale"
 
         return {
-            "time_remaining": vmc_time_remaining,
+            "time_remaining": vmc_time_remaining if vmc_time_remaining >= 0 else None,
             "description": description,
         }
 

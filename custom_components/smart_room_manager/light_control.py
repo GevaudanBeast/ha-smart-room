@@ -138,7 +138,13 @@ class LightController:
         self._any_light_was_on = any_light_on
 
     async def _update_vmc_control(self, any_light_on: bool) -> None:
-        """Update VMC control for bathroom rooms."""
+        """Update VMC control for bathroom rooms.
+
+        Logic:
+        - Light turns ON → VMC high speed ON immediately
+        - Light turns OFF → Start timer
+        - Timer expires → VMC high speed OFF
+        """
         # Get VMC config from global settings
         vmc_entity = self.room_manager.coordinator.entry.data.get(CONF_VMC_ENTITY)
         vmc_timer = self.room_manager.coordinator.entry.data.get(
@@ -150,19 +156,27 @@ class LightController:
 
         now = dt_util.utcnow()
 
-        # Light just turned off (was on, now off) -> start VMC
-        if self._any_light_was_on and not any_light_on:
+        # Light just turned ON (was off, now on) -> start VMC high speed
+        if not self._any_light_was_on and any_light_on:
             _LOGGER.info(
-                "💨 Bathroom light off in %s - starting VMC high speed for %ds",
+                "💨 Bathroom light ON in %s - starting VMC high speed",
                 self.room_manager.room_name,
-                vmc_timer,
             )
             await self._turn_on_vmc(vmc_entity)
             self._vmc_active = True
-            self._vmc_started_at = now
+            self._vmc_started_at = None  # No timer yet, light is still on
 
-        # Check if VMC timer expired
-        if self._vmc_active and self._vmc_started_at:
+        # Light just turned OFF (was on, now off) -> start the countdown timer
+        if self._any_light_was_on and not any_light_on:
+            _LOGGER.info(
+                "💨 Bathroom light OFF in %s - VMC will stop in %ds",
+                self.room_manager.room_name,
+                vmc_timer,
+            )
+            self._vmc_started_at = now  # Start countdown
+
+        # Check if VMC timer expired (light is off and timer running)
+        if self._vmc_active and self._vmc_started_at and not any_light_on:
             elapsed = (now - self._vmc_started_at).total_seconds()
             if elapsed >= vmc_timer:
                 _LOGGER.info(
@@ -173,15 +187,13 @@ class LightController:
                 self._vmc_active = False
                 self._vmc_started_at = None
 
-        # If light turns on while VMC is active, cancel VMC timer
-        if any_light_on and self._vmc_active:
+        # If light turns back on while timer is running, cancel the timer
+        if any_light_on and self._vmc_started_at:
             _LOGGER.debug(
-                "Light on in %s while VMC active - canceling VMC timer",
+                "Light back ON in %s - canceling VMC shutdown timer",
                 self.room_manager.room_name,
             )
-            await self._turn_off_vmc(vmc_entity)
-            self._vmc_active = False
-            self._vmc_started_at = None
+            self._vmc_started_at = None  # Cancel timer, VMC stays on
 
     async def _turn_on_vmc(self, vmc_entity: str) -> None:
         """Turn on VMC high speed."""
@@ -250,7 +262,7 @@ class LightController:
                     timer_active = True
                     time_remaining = max(time_remaining, remaining)
 
-        # Calculate VMC timer remaining
+        # Calculate VMC timer remaining (only when light is off and timer running)
         vmc_time_remaining = 0
         if self._vmc_active and self._vmc_started_at:
             vmc_timer = self.room_manager.coordinator.entry.data.get(
@@ -258,6 +270,9 @@ class LightController:
             )
             elapsed = (dt_util.utcnow() - self._vmc_started_at).total_seconds()
             vmc_time_remaining = max(0, vmc_timer - elapsed)
+        elif self._vmc_active and not self._vmc_started_at:
+            # VMC active but no timer = light still on, show -1 to indicate "waiting"
+            vmc_time_remaining = -1
 
         return {
             "room_type": room_type,
