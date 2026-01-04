@@ -6,10 +6,11 @@ import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, VERSION
+from .const import CONF_ROOM_ID, CONF_ROOMS, DOMAIN, VERSION
 from .coordinator import SmartRoomCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -92,6 +93,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register update listener for options flow
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
+    # Register services
+    register_services(hass, entry)
+
     _LOGGER.info("Smart Room Manager integration setup completed")
     return True
 
@@ -127,3 +131,86 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         return True
 
     return False
+
+
+async def async_cleanup_orphaned_entities(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> dict[str, int]:
+    """Clean up orphaned entities that no longer belong to any configured room.
+
+    Returns a dict with counts of entities found and removed.
+    """
+    entity_registry = er.async_get(hass)
+
+    # Get all configured room IDs
+    rooms = entry.options.get(CONF_ROOMS, [])
+    configured_room_ids = {room.get(CONF_ROOM_ID) for room in rooms if room.get(CONF_ROOM_ID)}
+
+    # Find all entities belonging to this integration
+    entities_to_remove = []
+    for entity_entry in list(entity_registry.entities.values()):
+        if entity_entry.platform != DOMAIN:
+            continue
+
+        # Extract room_id from unique_id (format: smart_room_{room_id}_{suffix})
+        unique_id = entity_entry.unique_id
+        if unique_id and unique_id.startswith("smart_room_"):
+            parts = unique_id.split("_")
+            if len(parts) >= 3:
+                # room_id is the 3rd part (index 2)
+                room_id = parts[2]
+                if room_id not in configured_room_ids:
+                    entities_to_remove.append(entity_entry)
+                    _LOGGER.debug(
+                        "Found orphaned entity: %s (room_id: %s)",
+                        entity_entry.entity_id,
+                        room_id,
+                    )
+
+    # Remove orphaned entities
+    removed_count = 0
+    for entity_entry in entities_to_remove:
+        try:
+            entity_registry.async_remove(entity_entry.entity_id)
+            removed_count += 1
+            _LOGGER.info("Removed orphaned entity: %s", entity_entry.entity_id)
+        except Exception as err:
+            _LOGGER.warning(
+                "Failed to remove entity %s: %s", entity_entry.entity_id, err
+            )
+
+    return {
+        "found": len(entities_to_remove),
+        "removed": removed_count,
+    }
+
+
+def register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Register integration services."""
+
+    async def handle_cleanup_entities(call: ServiceCall) -> None:
+        """Handle the cleanup_entities service call."""
+        result = await async_cleanup_orphaned_entities(hass, entry)
+        _LOGGER.info(
+            "Cleanup completed: found %d orphaned entities, removed %d",
+            result["found"],
+            result["removed"],
+        )
+        # Create a persistent notification with the result
+        await hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "title": "Smart Room Manager - Nettoyage",
+                "message": (
+                    f"Nettoyage terminé :\n"
+                    f"- Entités orphelines trouvées : {result['found']}\n"
+                    f"- Entités supprimées : {result['removed']}"
+                ),
+                "notification_id": "smart_room_cleanup",
+            },
+        )
+
+    # Register the service if not already registered
+    if not hass.services.has_service(DOMAIN, "cleanup_entities"):
+        hass.services.async_register(DOMAIN, "cleanup_entities", handle_cleanup_entities)

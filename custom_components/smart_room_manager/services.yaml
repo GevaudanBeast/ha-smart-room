@@ -1,0 +1,6 @@
+cleanup_entities:
+  name: Nettoyer les entités orphelines
+  description: >-
+    Supprime toutes les entités qui appartiennent à des pièces qui n'existent plus
+    dans la configuration. Utile après avoir supprimé des pièces avec une ancienne
+    version de l'intégration.
