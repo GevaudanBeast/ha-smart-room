@@ -67,6 +67,8 @@ from .const import (
     CONF_TEMP_FROST_PROTECTION,
     CONF_TEMP_NIGHT,
     CONF_TEMPERATURE_SENSOR,
+    CONF_VMC_ENTITY,
+    CONF_VMC_TIMER,
     CONF_WINDOW_DELAY_CLOSE,
     CONF_WINDOW_DELAY_OPEN,
     DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
@@ -94,6 +96,7 @@ from .const import (
     DEFAULT_TEMP_ECO,
     DEFAULT_TEMP_FROST_PROTECTION,
     DEFAULT_TEMP_NIGHT,
+    DEFAULT_VMC_TIMER,
     DEFAULT_WINDOW_DELAY_CLOSE,
     DEFAULT_WINDOW_DELAY_OPEN,
     DOMAIN,
@@ -208,6 +211,18 @@ def build_global_settings_schema(current_data: dict[str, Any]) -> vol.Schema:
             ): selector.EntitySelector(
                 selector.EntitySelectorConfig(
                     domain=["calendar", "binary_sensor"],
+                )
+            ),
+            vol.Optional(
+                CONF_VMC_TIMER,
+                default=current_data.get(CONF_VMC_TIMER, DEFAULT_VMC_TIMER),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=60,
+                    max=1800,
+                    step=60,
+                    mode=selector.NumberSelectorMode.SLIDER,
+                    unit_of_measurement="s",
                 )
             ),
         }
@@ -398,6 +413,19 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
             )
         )
 
+    # VMC entity (for bathroom and corridor with WC)
+    vmc_entity = room_data.get(CONF_VMC_ENTITY)
+    if vmc_entity is not None:
+        schema_dict[vol.Optional(CONF_VMC_ENTITY, default=vmc_entity)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "fan"])
+            )
+        )
+    else:
+        schema_dict[vol.Optional(CONF_VMC_ENTITY)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "fan"])
+        )
+
     return vol.Schema(schema_dict)
 
 
@@ -433,15 +461,22 @@ def build_climate_config_schema(
     """Build schema for climate configuration based on climate mode."""
     schema_dict = {}
 
-    # Heating modes list
-    heating_modes = [
-        CLIMATE_MODE_FIL_PILOTE,
+    # Check if temperature sensor is configured
+    has_temp_sensor = room_data.get(CONF_TEMPERATURE_SENSOR) is not None
+
+    # Thermostat modes always need temperature setpoints
+    # Fil Pilote needs them only if a temperature sensor is available
+    thermostat_heating_modes = [
         CLIMATE_MODE_THERMOSTAT_HEAT,
         CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
     ]
+    fil_pilote_with_sensor = climate_mode == CLIMATE_MODE_FIL_PILOTE and has_temp_sensor
+    show_heating_temps = (
+        climate_mode in thermostat_heating_modes or fil_pilote_with_sensor
+    )
 
-    # Heating temperatures (fil_pilote, thermostat_heat, thermostat_heat_cool)
-    if climate_mode in heating_modes:
+    # Heating temperatures
+    if show_heating_temps:
         schema_dict[
             vol.Optional(
                 CONF_TEMP_COMFORT,
@@ -1144,29 +1179,38 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Configure room actuators (v0.4.0 - with climate mode selection)."""
         if user_input is not None:
-            # Save climate mode (new in v0.4.0)
+            # Get climate entity and mode
+            has_climate = user_input.get(CONF_CLIMATE_ENTITY)
             climate_mode = user_input.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
+
+            # If no climate entity, force mode to "none"
+            if not has_climate:
+                climate_mode = CLIMATE_MODE_NONE
+
             update_data = {
                 CONF_LIGHTS: user_input.get(CONF_LIGHTS, []),
                 CONF_CLIMATE_MODE: climate_mode,
             }
 
-            # Add climate entity if configured and mode is not "none"
-            has_climate = user_input.get(CONF_CLIMATE_ENTITY)
+            # Add climate-related options only if climate is configured
             if climate_mode != CLIMATE_MODE_NONE and has_climate:
                 update_data[CONF_CLIMATE_ENTITY] = has_climate
 
-            # Add optional bypass switch only if configured
-            if user_input.get(CONF_CLIMATE_BYPASS_SWITCH):
-                update_data[CONF_CLIMATE_BYPASS_SWITCH] = user_input.get(
-                    CONF_CLIMATE_BYPASS_SWITCH
-                )
+                # Bypass switch (only relevant with climate)
+                if user_input.get(CONF_CLIMATE_BYPASS_SWITCH):
+                    update_data[CONF_CLIMATE_BYPASS_SWITCH] = user_input.get(
+                        CONF_CLIMATE_BYPASS_SWITCH
+                    )
 
-            # Add optional external control switch only if configured (v0.3.0)
-            if user_input.get(CONF_EXTERNAL_CONTROL_SWITCH):
-                update_data[CONF_EXTERNAL_CONTROL_SWITCH] = user_input.get(
-                    CONF_EXTERNAL_CONTROL_SWITCH
-                )
+                # External control switch (only relevant with climate)
+                if user_input.get(CONF_EXTERNAL_CONTROL_SWITCH):
+                    update_data[CONF_EXTERNAL_CONTROL_SWITCH] = user_input.get(
+                        CONF_EXTERNAL_CONTROL_SWITCH
+                    )
+
+            # Add VMC entity if configured
+            if user_input.get(CONF_VMC_ENTITY):
+                update_data[CONF_VMC_ENTITY] = user_input.get(CONF_VMC_ENTITY)
 
             self._current_room.update(update_data)
             return await self.async_step_room_light_config()
@@ -1221,13 +1265,20 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             update_data = {}
 
-            # Heating temperatures (fil_pilote, thermostat_heat, thermostat_heat_cool)
-            heating_modes = [
-                CLIMATE_MODE_FIL_PILOTE,
+            # Check if temperature sensor is configured
+            has_temp_sensor = (
+                self._current_room.get(CONF_TEMPERATURE_SENSOR) is not None
+            )
+
+            # Heating temperatures: thermostat modes OR Fil Pilote with temp sensor
+            thermostat_heating_modes = [
                 CLIMATE_MODE_THERMOSTAT_HEAT,
                 CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
             ]
-            if climate_mode in heating_modes:
+            fil_pilote_with_sensor = (
+                climate_mode == CLIMATE_MODE_FIL_PILOTE and has_temp_sensor
+            )
+            if climate_mode in thermostat_heating_modes or fil_pilote_with_sensor:
                 update_data[CONF_TEMP_COMFORT] = user_input.get(
                     CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
                 )
@@ -1537,7 +1588,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_global_settings(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure global settings (v0.2.0 - alarm + season calendar)."""
+        """Configure global settings (v0.2.0 - alarm + season calendar + VMC)."""
         if user_input is not None:
             # Update entry data (not options) for global settings
             # Note: This requires updating entry.data which is normally immutable
@@ -1546,6 +1597,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 **self.config_entry.data,
                 CONF_ALARM_ENTITY: user_input.get(CONF_ALARM_ENTITY),
                 CONF_SEASON_CALENDAR: user_input.get(CONF_SEASON_CALENDAR),
+                CONF_VMC_TIMER: user_input.get(CONF_VMC_TIMER, DEFAULT_VMC_TIMER),
             }
 
             # Update the config entry
@@ -1560,6 +1612,6 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             step_id="global_settings",
             data_schema=build_global_settings_schema(self.config_entry.data),
             description_placeholders={
-                "info": "Alarm: armed_away → frost. Calendar: season mode.",
+                "info": "VMC: durée après extinction lumière SDB/WC.",
             },
         )

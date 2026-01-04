@@ -60,7 +60,8 @@
           "climate_mode": "Type de chauffage",
           "climate_entity": "Entité climat",
           "climate_bypass_switch": "Interrupteur de contournement",
-          "external_control_switch": "Interrupteur de contrôle externe"
+          "external_control_switch": "Interrupteur de contrôle externe",
+          "vmc_entity": "Entité VMC (ventilation)"
         }
       },
       "room_light_config": {
@@ -151,10 +152,11 @@
       },
       "global_settings": {
         "title": "Paramètres globaux",
-        "description": "Alarme : armed_away → hors-gel. Calendrier été : mode cool, hiver : mode heat.",
+        "description": "Alarme : armed_away → hors-gel. VMC : durée après extinction lumière SDB/WC.",
         "data": {
           "alarm_entity": "Entité alarme",
-          "season_calendar": "Calendrier des saisons"
+          "season_calendar": "Calendrier des saisons",
+          "vmc_timer": "Timer VMC (secondes)"
         }
       }
     }
@@ -162,9 +164,9 @@
   "selector": {
     "room_type": {
       "options": {
-        "normal": "Normal (chambres - pas de timer lumière)",
-        "corridor": "Couloir (timer 5min)",
-        "bathroom": "Salle de bain (timer 15min + contrôle radiateur)"
+        "normal": "Pièce de vie (chambre, salon, cuisine, bureau...)",
+        "corridor": "Pièce de passage (couloir, grenier, cave, buanderie...)",
+        "bathroom": "Salle de bain / WC (timer lumière + VMC)"
       }
     },
     "summer_policy": {

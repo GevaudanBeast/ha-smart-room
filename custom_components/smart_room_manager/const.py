@@ -14,8 +14,8 @@ CONF_ROOM_TYPE: Final = "room_type"
 CONF_ROOM_ICON: Final = "room_icon"
 
 # Room types (for light behavior)
-ROOM_TYPE_NORMAL: Final = "normal"  # Chambres - pas de timer lumière
-ROOM_TYPE_CORRIDOR: Final = "corridor"  # Couloirs, WC - timer lumière
+ROOM_TYPE_NORMAL: Final = "normal"  # Pièces de vie - pas de timer lumière
+ROOM_TYPE_CORRIDOR: Final = "corridor"  # Pièces de passage/techniques - timer lumière
 ROOM_TYPE_BATHROOM: Final = (
     "bathroom"  # Salles de bains - timer + lumière pilote chauffage
 )
@@ -39,6 +39,10 @@ CONF_HUMIDITY_SENSOR: Final = "humidity_sensor"
 CONF_LIGHTS: Final = "lights"
 CONF_CLIMATE_ENTITY: Final = "climate_entity"
 CONF_CLIMATE_BYPASS_SWITCH: Final = "climate_bypass_switch"
+
+# VMC (Ventilation) configuration
+CONF_VMC_ENTITY: Final = "vmc_entity"  # switch or fan entity for VMC
+CONF_VMC_TIMER: Final = "vmc_timer"  # Timer duration in seconds
 
 # X4FP Hysteresis configuration (Type 3b)
 CONF_SETPOINT_INPUT: Final = "setpoint_input"  # input_number entity for setpoint
@@ -135,6 +139,10 @@ DEFAULT_LIGHT_TIMEOUT: Final = 300  # 5 minutes
 DEFAULT_LIGHT_TIMEOUT_BATHROOM: Final = 900  # 15 minutes
 DEFAULT_LIGHT_NIGHT_BRIGHTNESS: Final = 50
 DEFAULT_LIGHT_DAY_BRIGHTNESS: Final = 100
+
+# Default values - VMC
+DEFAULT_VMC_TIMER: Final = 600  # 10 minutes
+DEFAULT_VMC_TIMER_BATHROOM: Final = 900  # 15 minutes
 
 # Default values - Schedule
 DEFAULT_NIGHT_START: Final = "22:00:00"
