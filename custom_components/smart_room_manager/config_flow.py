@@ -13,9 +13,9 @@ from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAI
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.helpers import entity_registry as er
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.core import callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 
 from .const import (
@@ -1464,6 +1464,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
         """Configure Thermostat external control."""
+        # Skip if no external control switch configured
+        if not self._current_room.get(CONF_EXTERNAL_CONTROL_SWITCH):
+            return await self.async_step_room_schedule()
+
         if user_input is not None:
             update_data = {}
 
@@ -1629,7 +1633,9 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             unique_id = f"smart_room_{room_id}_{suffix}"
             entity_id = entity_registry.async_get_entity_id(
                 # Try all possible domains
-                "sensor", DOMAIN, unique_id
+                "sensor",
+                DOMAIN,
+                unique_id,
             )
             if not entity_id:
                 entity_id = entity_registry.async_get_entity_id(

@@ -21,9 +21,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Amélioré** : Configuration contextuelle basée sur le mode sélectionné
 
 #### Nouveau : Support VMC (Ventilation)
-- **Ajouté** : Entité VMC par pièce (switch ou fan)
-- **Ajouté** : Timer VMC global dans les paramètres généraux
-- **Comportement** : VMC s'active avec la lumière, timer démarre à l'extinction
+- **Ajouté** : Entité VMC globale dans paramètres généraux (switch ou fan)
+- **Ajouté** : Timer VMC configurable (durée après extinction lumière)
+- **Comportement** : VMC grande vitesse s'active à l'allumage, timer démarre à l'extinction
+- **Ajouté** : binary_sensor VMC Grande Vitesse (affiche countdown)
+
+#### Nouveau : Capteurs de debug et traçage
+- **Ajouté** : sensor Activité pour chaque pièce (log lisible avec emojis)
+- **Ajouté** : binary_sensor Timer Lumière (countdown avant extinction auto)
+- **Ajouté** : Descriptions claires pour bypass vs contrôle externe
+
+#### Nouveau : Service de nettoyage
+- **Ajouté** : Service `smart_room_manager.cleanup_entities` pour supprimer les entités orphelines
+- **Comportement** : Supprime automatiquement les entités des pièces qui n'existent plus
 
 #### Améliorations des types de pièces
 - **Renommé** : "Normal" → "Pièce de vie" (chambre, salon, cuisine, bureau...)
