@@ -60,8 +60,7 @@
           "climate_mode": "Type de chauffage",
           "climate_entity": "Entité climat",
           "climate_bypass_switch": "Interrupteur de contournement",
-          "external_control_switch": "Interrupteur de contrôle externe",
-          "vmc_entity": "Entité VMC (ventilation)"
+          "external_control_switch": "Interrupteur de contrôle externe"
         }
       },
       "room_light_config": {

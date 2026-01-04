@@ -60,8 +60,7 @@
           "climate_mode": "Climate type",
           "climate_entity": "Climate entity",
           "climate_bypass_switch": "Bypass switch",
-          "external_control_switch": "External control switch",
-          "vmc_entity": "VMC entity (ventilation)"
+          "external_control_switch": "External control switch"
         }
       },
       "room_light_config": {
