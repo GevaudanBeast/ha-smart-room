@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-01-04
+
+### ✨ Améliorations UX - Configuration contextuelle
+
+#### Nouveau : Sélection du mode climat
+- **Ajouté** : Sélecteur de type de chauffage dans les actionneurs :
+  - Aucun (couloirs, etc.)
+  - Fil Pilote (X4FP, IPX800...)
+  - Thermostat (chauffage seul)
+  - Thermostat (climatisation seule)
+  - Thermostat (chaud/froid)
+- **Amélioré** : Configuration contextuelle basée sur le mode sélectionné
+
+#### Nouveau : Support VMC (Ventilation)
+- **Ajouté** : Entité VMC par pièce (switch ou fan)
+- **Ajouté** : Timer VMC global dans les paramètres généraux
+- **Comportement** : VMC s'active avec la lumière, timer démarre à l'extinction
+
+#### Améliorations des types de pièces
+- **Renommé** : "Normal" → "Pièce de vie" (chambre, salon, cuisine, bureau...)
+- **Renommé** : "Couloir" → "Pièce de passage" (couloir, grenier, cave, buanderie...)
+- **Renommé** : "Salle de bain" → "Salle de bain / WC" (timer lumière + VMC)
+
+#### Logique de configuration intelligente
+- **Amélioré** : Pas d'entité climat → mode forcé à "Aucun", config climat sautée
+- **Amélioré** : Fil Pilote + capteur temp → températures de consigne affichées
+- **Amélioré** : Fil Pilote sans capteur temp → températures masquées
+- **Amélioré** : Bypass et contrôle externe ignorés si pas de climat configuré
+
+### 🐛 Corrections
+
+#### Fix : Erreur de validation SelectSelector
+- **Problème** : "unknown error" lors de la création/édition de pièces
+- **Cause** : SelectSelector pour pause_duration utilisait des entiers au lieu de chaînes
+- **Fix** : Conversion en options string ["15", "30", "60", "120", "240", "480"]
+
+#### Fix : Erreurs de longueur de ligne (E501)
+- **Fix** : Toutes les lignes respectent la limite de 88 caractères pour ruff/HACS
+
+#### Fix : Imports non utilisés
+- **Fix** : Suppression des imports F401 dans plusieurs fichiers
+
+### ✅ Compatibilité ascendante
+- Les configurations existantes restent fonctionnelles
+- Les nouveaux champs (VMC, climate_mode) sont optionnels avec valeurs par défaut
+- Pas de migration nécessaire
+
 ### 🌍 Internationalization Improvements
 
 #### Complete translation system for English and French

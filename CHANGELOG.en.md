@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-01-04
+
+### ✨ UX Improvements - Contextual Configuration
+
+#### New: Climate Mode Selection
+- **Added**: Climate type selector in actuators:
+  - None (corridors, etc.)
+  - Wire Pilot / Fil Pilote (X4FP, IPX800...)
+  - Thermostat (heat only)
+  - Thermostat (cool only)
+  - Thermostat (heat/cool)
+- **Improved**: Contextual configuration based on selected mode
+
+#### New: VMC (Ventilation) Support
+- **Added**: VMC entity per room (switch or fan)
+- **Added**: Global VMC timer in general settings
+- **Behavior**: VMC activates with light, timer starts when light turns off
+
+#### Room Type Improvements
+- **Renamed**: "Normal" → "Living space" (bedroom, living room, kitchen, office...)
+- **Renamed**: "Corridor" → "Passage/utility" (corridor, attic, cellar, laundry...)
+- **Renamed**: "Bathroom" → "Bathroom / WC" (light timer + VMC)
+
+#### Smart Configuration Logic
+- **Improved**: No climate entity → mode forced to "None", climate config skipped
+- **Improved**: Fil Pilote + temp sensor → temperature setpoints shown
+- **Improved**: Fil Pilote without temp sensor → temperatures hidden
+- **Improved**: Bypass and external control ignored if no climate configured
+
+### 🐛 Bug Fixes
+
+#### Fix: SelectSelector Validation Error
+- **Problem**: "unknown error" when creating/editing rooms
+- **Cause**: SelectSelector for pause_duration used integers instead of strings
+- **Fix**: Converted to string options ["15", "30", "60", "120", "240", "480"]
+
+#### Fix: Line Length Errors (E501)
+- **Fix**: All lines comply with 88 character limit for ruff/HACS
+
+#### Fix: Unused Imports
+- **Fix**: Removed F401 unused imports in multiple files
+
+### ✅ Backward Compatibility
+- Existing configurations remain functional
+- New fields (VMC, climate_mode) are optional with default values
+- No migration required
+
 ## [0.2.3] - 2025-01-14
 
 ### Fixed
