@@ -60,7 +60,8 @@
           "climate_mode": "Climate type",
           "climate_entity": "Climate entity",
           "climate_bypass_switch": "Bypass switch",
-          "external_control_switch": "External control switch"
+          "external_control_switch": "External control switch",
+          "vmc_entity": "VMC entity (ventilation)"
         }
       },
       "room_light_config": {
@@ -151,10 +152,11 @@
       },
       "global_settings": {
         "title": "Global Settings",
-        "description": "Alarm: armed_away → frost protection. Summer calendar: cool mode, winter: heat mode.",
+        "description": "Alarm: armed_away → frost. VMC: duration after bathroom/WC light off.",
         "data": {
           "alarm_entity": "Alarm entity",
-          "season_calendar": "Season calendar"
+          "season_calendar": "Season calendar",
+          "vmc_timer": "VMC timer (seconds)"
         }
       }
     }
@@ -162,9 +164,9 @@
   "selector": {
     "room_type": {
       "options": {
-        "normal": "Normal (bedrooms - no light timer)",
-        "corridor": "Corridor (5min timer)",
-        "bathroom": "Bathroom (15min timer + heater control)"
+        "normal": "Living space (bedroom, living room, kitchen, office...)",
+        "corridor": "Passage/utility (corridor, attic, cellar, laundry...)",
+        "bathroom": "Bathroom / WC (light timer + VMC)"
       }
     },
     "summer_policy": {
