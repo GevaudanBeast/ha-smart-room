@@ -248,7 +248,13 @@ class RoomManager:
             self._current_mode = MODE_NIGHT
             return
 
-        # PRIORITY 4: Check if in comfort time range
+        # PRIORITY 4: Check schedule/calendar (v0.3.0+)
+        schedule_mode = self.get_schedule_mode()
+        if schedule_mode:
+            self._current_mode = schedule_mode
+            return
+
+        # PRIORITY 5: Check legacy comfort time ranges (backward compatibility)
         if self._is_in_comfort_time_range():
             self._current_mode = MODE_COMFORT
             return
