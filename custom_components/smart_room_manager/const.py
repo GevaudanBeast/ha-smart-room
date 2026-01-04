@@ -146,6 +146,7 @@ DEFAULT_VMC_TIMER_BATHROOM: Final = 900  # 15 minutes
 
 # Default values - Schedule
 DEFAULT_NIGHT_START: Final = "22:00:00"
+DEFAULT_DAY_START: Final = "06:00:00"  # End of night period
 
 # Default values - Hysteresis
 DEFAULT_HYSTERESIS: Final = 0.5  # °C

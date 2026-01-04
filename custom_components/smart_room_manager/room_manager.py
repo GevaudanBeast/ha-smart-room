@@ -25,6 +25,7 @@ from .const import (  # v0.3.0 additions; Priority 2 additions
     CONF_SCHEDULE_ENTITY,
     CONF_WINDOW_DELAY_CLOSE,
     CONF_WINDOW_DELAY_OPEN,
+    DEFAULT_DAY_START,
     DEFAULT_NIGHT_START,
     DEFAULT_WINDOW_DELAY_CLOSE,
     DEFAULT_WINDOW_DELAY_OPEN,
@@ -165,13 +166,20 @@ class RoomManager:
             self._windows_opened_at = None
 
     def _update_night_period(self) -> None:
-        """Update night period status."""
+        """Update night period status.
+
+        Handles midnight crossing: night_start=22:00, day_start=06:00
+        means night is 22:00-23:59 AND 00:00-05:59.
+        """
         now = dt_util.now().time()
         night_start = dt_util.parse_time(
             self.room_config.get(CONF_NIGHT_START, DEFAULT_NIGHT_START)
         )
+        day_start = dt_util.parse_time(DEFAULT_DAY_START)
 
-        self._is_night = now >= night_start
+        # Night period crosses midnight (e.g., 22:00 to 06:00)
+        # is_night = True if now >= 22:00 OR now < 06:00
+        self._is_night = now >= night_start or now < day_start
 
     def _is_in_comfort_time_range(self) -> bool:
         """Check if current time is within any configured comfort time range."""

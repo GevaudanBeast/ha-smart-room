@@ -106,7 +106,10 @@ class LightController:
             # If light just turned on, record time
             if state.state == STATE_ON:
                 if entity_id not in self._light_on_times:
-                    self._light_on_times[entity_id] = state.last_changed
+                    # Use last_changed or current time as fallback
+                    self._light_on_times[entity_id] = (
+                        state.last_changed or dt_util.utcnow()
+                    )
                     _LOGGER.debug(
                         "Light %s turned on in %s at %s",
                         entity_id,
@@ -195,49 +198,38 @@ class LightController:
             )
             self._vmc_started_at = None  # Cancel timer, VMC stays on
 
-    async def _turn_on_vmc(self, vmc_entity: str) -> None:
-        """Turn on VMC high speed."""
-        try:
-            domain = vmc_entity.split(".")[0] if "." in vmc_entity else "switch"
-            await self.hass.services.async_call(
-                domain,
-                SERVICE_TURN_ON,
-                {"entity_id": vmc_entity},
-                blocking=True,
-            )
-        except Exception as err:
-            _LOGGER.error("Error turning on VMC %s: %s", vmc_entity, err)
+    def _get_entity_domain(self, entity_id: str, default: str = "light") -> str:
+        """Extract domain from entity_id (e.g., 'light.kitchen' -> 'light')."""
+        return entity_id.split(".")[0] if "." in entity_id else default
 
-    async def _turn_off_vmc(self, vmc_entity: str) -> None:
-        """Turn off VMC high speed."""
+    async def _control_entity(
+        self, entity_id: str, turn_on: bool, default_domain: str = "light"
+    ) -> None:
+        """Turn an entity on or off."""
         try:
-            domain = vmc_entity.split(".")[0] if "." in vmc_entity else "switch"
+            domain = self._get_entity_domain(entity_id, default_domain)
+            service = SERVICE_TURN_ON if turn_on else SERVICE_TURN_OFF
             await self.hass.services.async_call(
                 domain,
-                SERVICE_TURN_OFF,
-                {"entity_id": vmc_entity},
-                blocking=True,
-            )
-        except Exception as err:
-            _LOGGER.error("Error turning off VMC %s: %s", vmc_entity, err)
-
-    async def _turn_off_light(self, entity_id: str) -> None:
-        """Turn off a single light."""
-        try:
-            # Extract domain from entity_id (e.g., "light.kitchen" -> "light")
-            domain = entity_id.split(".")[0] if "." in entity_id else "light"
-            await self.hass.services.async_call(
-                domain,
-                SERVICE_TURN_OFF,
+                service,
                 {"entity_id": entity_id},
                 blocking=True,
             )
         except Exception as err:
-            _LOGGER.error(
-                "Error turning off light %s: %s",
-                entity_id,
-                err,
-            )
+            action = "on" if turn_on else "off"
+            _LOGGER.error("Error turning %s %s: %s", action, entity_id, err)
+
+    async def _turn_on_vmc(self, vmc_entity: str) -> None:
+        """Turn on VMC high speed."""
+        await self._control_entity(vmc_entity, turn_on=True, default_domain="switch")
+
+    async def _turn_off_vmc(self, vmc_entity: str) -> None:
+        """Turn off VMC high speed."""
+        await self._control_entity(vmc_entity, turn_on=False, default_domain="switch")
+
+    async def _turn_off_light(self, entity_id: str) -> None:
+        """Turn off a single light."""
+        await self._control_entity(entity_id, turn_on=False, default_domain="light")
 
     def get_state(self) -> dict[str, Any]:
         """Get current light controller state."""
