@@ -1,4 +1,4 @@
-"""X4FP climate controller (Fil Pilote)."""
+"""Fil Pilote climate controller."""
 
 from __future__ import annotations
 
@@ -35,15 +35,15 @@ from ..const import (
     DEFAULT_PRESET_NIGHT,
     DEFAULT_PRESET_WINDOW,
     DEFAULT_SUMMER_POLICY,
+    FP_PRESET_AWAY,
+    FP_PRESET_ECO,
+    FP_PRESET_OFF,
     HYSTERESIS_DEADBAND,
     HYSTERESIS_HEATING,
     HYSTERESIS_IDLE,
     MODE_COMFORT,
     MODE_FROST_PROTECTION,
     MODE_NIGHT,
-    X4FP_PRESET_AWAY,
-    X4FP_PRESET_ECO,
-    X4FP_PRESET_OFF,
 )
 
 if TYPE_CHECKING:
@@ -52,8 +52,8 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 
-class X4FPController:
-    """Controller for X4FP (Fil Pilote) climate entities."""
+class FilPiloteController:
+    """Controller for Fil Pilote climate entities."""
 
     def __init__(
         self,
@@ -61,7 +61,7 @@ class X4FPController:
         room_config: dict[str, Any],
         room_manager: RoomManager,
     ) -> None:
-        """Initialize X4FP controller."""
+        """Initialize Fil Pilote controller."""
         self.hass = hass
         self.room_config = room_config
         self.room_manager = room_manager
@@ -72,7 +72,7 @@ class X4FPController:
         self._hysteresis_setpoint: float | None = None
 
     async def control(self, climate_entity: str, mode: str, is_summer: bool) -> None:
-        """Control X4FP climate entity via preset_mode."""
+        """Control Fil Pilote climate entity via preset_mode."""
         # Check if hysteresis control is configured
         if self._has_hysteresis_control():
             await self._control_with_hysteresis(climate_entity, mode, is_summer)
@@ -82,7 +82,7 @@ class X4FPController:
     async def _control_normal(
         self, climate_entity: str, mode: str, is_summer: bool
     ) -> None:
-        """Control X4FP without hysteresis (preset-based)."""
+        """Control Fil Pilote without hysteresis (preset-based)."""
         # Summer: apply summer policy (off or eco)
         if is_summer:
             if mode != MODE_FROST_PROTECTION:
@@ -91,12 +91,12 @@ class X4FPController:
                     CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
                 )
                 if summer_policy == "eco":
-                    target_preset = X4FP_PRESET_ECO
+                    target_preset = FP_PRESET_ECO
                 else:  # "off"
-                    target_preset = X4FP_PRESET_OFF
+                    target_preset = FP_PRESET_OFF
             else:
                 # Frost protection always uses away
-                target_preset = X4FP_PRESET_AWAY
+                target_preset = FP_PRESET_AWAY
         else:
             # Winter: map mode to preset
             target_preset = self._get_preset_for_mode(mode)
@@ -110,7 +110,7 @@ class X4FPController:
             # Sync internal state with actual state
             if actual_preset and self._current_preset != actual_preset:
                 _LOGGER.debug(
-                    "X4FP preset sync: internal=%s, actual=%s for %s",
+                    "Fil Pilote preset sync: internal=%s, actual=%s for %s",
                     self._current_preset,
                     actual_preset,
                     self.room_manager.room_name,
@@ -122,7 +122,7 @@ class X4FPController:
             return
 
         _LOGGER.debug(
-            "Setting X4FP preset for %s in %s to %s (mode: %s, summer: %s)",
+            "Setting Fil Pilote preset for %s in %s to %s (mode: %s, summer: %s)",
             climate_entity,
             self.room_manager.room_name,
             target_preset,
@@ -151,16 +151,16 @@ class X4FPController:
     async def _control_with_hysteresis(
         self, climate_entity: str, mode: str, is_summer: bool
     ) -> None:
-        """Control X4FP with temperature hysteresis (Type 3b)."""
+        """Control Fil Pilote with temperature hysteresis (Type 3b)."""
         if is_summer:
             # Summer: apply summer policy (off or eco)
             summer_policy = self.room_config.get(
                 CONF_SUMMER_POLICY, DEFAULT_SUMMER_POLICY
             )
             if summer_policy == "eco":
-                target_preset = X4FP_PRESET_ECO
+                target_preset = FP_PRESET_ECO
             else:  # "off"
-                target_preset = X4FP_PRESET_OFF
+                target_preset = FP_PRESET_OFF
             self._hysteresis_state = HYSTERESIS_DEADBAND
         else:
             # Winter: use hysteresis control
@@ -254,7 +254,7 @@ class X4FPController:
             return
 
         _LOGGER.debug(
-            "Setting X4FP hysteresis preset for %s to %s (temp: %.1f°C, setpoint: %.1f°C, state: %s)",
+            "Setting Fil Pilote hysteresis preset for %s to %s (temp: %.1f°C, setpoint: %.1f°C, state: %s)",
             self.room_manager.room_name,
             target_preset,
             self._hysteresis_current_temp or 0,
@@ -315,7 +315,7 @@ class X4FPController:
             )
 
     def _get_preset_for_mode(self, mode: str) -> str:
-        """Map mode to X4FP preset (configurable per room)."""
+        """Map mode to Fil Pilote preset (configurable per room)."""
         if mode == MODE_FROST_PROTECTION:
             return self.room_config.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY)
         elif mode == MODE_COMFORT:

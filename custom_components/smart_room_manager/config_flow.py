@@ -108,10 +108,10 @@ from .const import (
     ROOM_TYPE_BATHROOM,
     ROOM_TYPE_CORRIDOR,
     ROOM_TYPE_NORMAL,
-    X4FP_PRESET_AWAY,
-    X4FP_PRESET_COMFORT,
-    X4FP_PRESET_ECO,
-    X4FP_PRESET_OFF,
+    FP_PRESET_AWAY,
+    FP_PRESET_COMFORT,
+    FP_PRESET_ECO,
+    FP_PRESET_OFF,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -380,7 +380,7 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
                 selector.SelectOptionDict(value=CLIMATE_MODE_NONE, label="Aucun"),
                 selector.SelectOptionDict(
                     value=CLIMATE_MODE_FIL_PILOTE,
-                    label="Fil Pilote (X4FP, IPX800...)",
+                    label="Fil Pilote (IPX800, Qubino...)",
                 ),
                 selector.SelectOptionDict(
                     value=CLIMATE_MODE_THERMOSTAT_HEAT,
@@ -718,8 +718,8 @@ def build_fil_pilote_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
-                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=FP_PRESET_ECO, label="Eco"),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -733,8 +733,8 @@ def build_fil_pilote_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
-                selector.SelectOptionDict(value=X4FP_PRESET_OFF, label="Arrêt"),
+                selector.SelectOptionDict(value=FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=FP_PRESET_OFF, label="Arrêt"),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -747,7 +747,7 @@ def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
     """Build schema for Fil Pilote configurable presets."""
     schema_dict = {}
 
-    # X4FP Configurable Presets - what X4FP command to send for each mode
+    # Fil Pilote Configurable Presets - what preset to send for each mode
     schema_dict[
         vol.Optional(
             CONF_PRESET_COMFORT,
@@ -756,8 +756,8 @@ def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
-                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=FP_PRESET_ECO, label="Eco"),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -771,8 +771,8 @@ def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
-                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=FP_PRESET_COMFORT, label="Confort"),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -786,9 +786,9 @@ def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
-                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
-                selector.SelectOptionDict(value=X4FP_PRESET_AWAY, label="Hors-gel"),
+                selector.SelectOptionDict(value=FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=FP_PRESET_AWAY, label="Hors-gel"),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -802,9 +802,9 @@ def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=X4FP_PRESET_AWAY, label="Hors-gel"),
-                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
-                selector.SelectOptionDict(value=X4FP_PRESET_OFF, label="Arrêt"),
+                selector.SelectOptionDict(value=FP_PRESET_AWAY, label="Hors-gel"),
+                selector.SelectOptionDict(value=FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=FP_PRESET_OFF, label="Arrêt"),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -818,9 +818,9 @@ def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=X4FP_PRESET_AWAY, label="Hors-gel"),
-                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
-                selector.SelectOptionDict(value=X4FP_PRESET_OFF, label="Arrêt"),
+                selector.SelectOptionDict(value=FP_PRESET_AWAY, label="Hors-gel"),
+                selector.SelectOptionDict(value=FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=FP_PRESET_OFF, label="Arrêt"),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -837,8 +837,8 @@ def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
     ] = selector.SelectSelector(
         selector.SelectSelectorConfig(
             options=[
-                selector.SelectOptionDict(value=X4FP_PRESET_COMFORT, label="Confort"),
-                selector.SelectOptionDict(value=X4FP_PRESET_ECO, label="Eco"),
+                selector.SelectOptionDict(value=FP_PRESET_COMFORT, label="Confort"),
+                selector.SelectOptionDict(value=FP_PRESET_ECO, label="Eco"),
             ],
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
@@ -1423,7 +1423,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             update_data = {}
 
-            # X4FP Configurable Presets
+            # Fil Pilote Configurable Presets
             update_data[CONF_PRESET_COMFORT] = user_input.get(
                 CONF_PRESET_COMFORT, DEFAULT_PRESET_COMFORT
             )

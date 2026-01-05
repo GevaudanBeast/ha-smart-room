@@ -20,12 +20,12 @@ from homeassistant.components.climate import (
 from homeassistant.const import STATE_ON
 from homeassistant.core import HomeAssistant
 
+from .climate.fil_pilote_controller import FilPiloteController
 from .climate.thermostat_controller import ThermostatController
-from .climate.x4fp_controller import X4FPController
 from .const import (
     ALARM_STATE_ARMED_AWAY,
+    CLIMATE_TYPE_FIL_PILOTE,
     CLIMATE_TYPE_THERMOSTAT,
-    CLIMATE_TYPE_X4FP,
     CONF_ALARM_ENTITY,
     CONF_ALLOW_EXTERNAL_IN_AWAY,
     CONF_CLIMATE_BYPASS_SWITCH,
@@ -76,7 +76,7 @@ class ClimateController:
         self._external_control_active: bool = False
 
         # Specialized controllers (lazy loaded)
-        self._x4fp_controller: X4FPController | None = None
+        self._fil_pilote_controller: FilPiloteController | None = None
         self._thermostat_controller: ThermostatController | None = None
 
     def update_config(self, room_config: dict[str, Any]) -> None:
@@ -84,7 +84,7 @@ class ClimateController:
         self.room_config = room_config
         # Reset climate type detection on config change
         self._climate_type = None
-        self._x4fp_controller = None
+        self._fil_pilote_controller = None
         self._thermostat_controller = None
 
     async def async_update(self) -> None:
@@ -209,18 +209,18 @@ class ClimateController:
         await self._apply_mode(climate_entity, mode, is_summer)
 
     def _detect_climate_type(self, climate_entity: str) -> str:
-        """Detect if climate entity is X4FP (preset_mode) or thermostat (hvac_mode)."""
+        """Detect if climate entity is Fil Pilote (preset_mode) or thermostat (hvac_mode)."""
         state = self.hass.states.get(climate_entity)
         if not state:
             _LOGGER.warning("Climate entity %s not found", climate_entity)
             return CLIMATE_TYPE_THERMOSTAT
 
-        # Check if entity has X4FP-style preset modes
+        # Check if entity has Fil Pilote-style preset modes
         preset_modes = state.attributes.get("preset_modes", [])
 
-        # X4FP has "comfort" and/or "eco" preset modes
+        # Fil Pilote has "comfort" and/or "eco" preset modes
         if "comfort" in preset_modes or "eco" in preset_modes:
-            return CLIMATE_TYPE_X4FP
+            return CLIMATE_TYPE_FIL_PILOTE
 
         return CLIMATE_TYPE_THERMOSTAT
 
@@ -241,8 +241,8 @@ class ClimateController:
         self, climate_entity: str, mode: str, is_summer: bool
     ) -> None:
         """Unified method to apply a mode (normal or schedule)."""
-        if self._climate_type == CLIMATE_TYPE_X4FP:
-            controller = self._get_x4fp_controller()
+        if self._climate_type == CLIMATE_TYPE_FIL_PILOTE:
+            controller = self._get_fil_pilote_controller()
             await controller.control(climate_entity, mode, is_summer)
         else:
             controller = self._get_thermostat_controller()
@@ -250,8 +250,8 @@ class ClimateController:
 
     async def _set_frost_protection(self, climate_entity: str) -> None:
         """Set frost protection when windows open or away."""
-        if self._climate_type == CLIMATE_TYPE_X4FP:
-            controller = self._get_x4fp_controller()
+        if self._climate_type == CLIMATE_TYPE_FIL_PILOTE:
+            controller = self._get_fil_pilote_controller()
             await controller.set_frost_protection(climate_entity)
         else:
             controller = self._get_thermostat_controller()
@@ -290,13 +290,13 @@ class ClimateController:
 
     async def _apply_external_control(self, climate_entity: str) -> None:
         """Apply external control preset/temperature."""
-        if self._climate_type == CLIMATE_TYPE_X4FP:
-            # X4FP: use preset
+        if self._climate_type == CLIMATE_TYPE_FIL_PILOTE:
+            # Fil Pilote: use preset
             preset = self.room_config.get(
                 CONF_EXTERNAL_CONTROL_PRESET, DEFAULT_EXTERNAL_CONTROL_PRESET
             )
 
-            controller = self._get_x4fp_controller()
+            controller = self._get_fil_pilote_controller()
             if controller._current_preset == preset:
                 return
 
@@ -387,13 +387,13 @@ class ClimateController:
         alarm_state = self.hass.states.get(alarm_entity)
         return alarm_state and alarm_state.state == ALARM_STATE_ARMED_AWAY
 
-    def _get_x4fp_controller(self) -> X4FPController:
-        """Get or create X4FP controller (lazy load)."""
-        if self._x4fp_controller is None:
-            self._x4fp_controller = X4FPController(
+    def _get_fil_pilote_controller(self) -> FilPiloteController:
+        """Get or create Fil Pilote controller (lazy load)."""
+        if self._fil_pilote_controller is None:
+            self._fil_pilote_controller = FilPiloteController(
                 self.hass, self.room_config, self.room_manager
             )
-        return self._x4fp_controller
+        return self._fil_pilote_controller
 
     def _get_thermostat_controller(self) -> ThermostatController:
         """Get or create thermostat controller (lazy load)."""
@@ -412,8 +412,8 @@ class ClimateController:
         }
 
         # Get state from active controller
-        if self._climate_type == CLIMATE_TYPE_X4FP and self._x4fp_controller:
-            state.update(self._x4fp_controller.get_state())
+        if self._climate_type == CLIMATE_TYPE_FIL_PILOTE and self._fil_pilote_controller:
+            state.update(self._fil_pilote_controller.get_state())
         elif (
             self._climate_type == CLIMATE_TYPE_THERMOSTAT
             and self._thermostat_controller

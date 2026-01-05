@@ -44,7 +44,7 @@ CONF_CLIMATE_BYPASS_SWITCH: Final = "climate_bypass_switch"
 CONF_VMC_ENTITY: Final = "vmc_entity"  # switch or fan for VMC high speed (global)
 CONF_VMC_TIMER: Final = "vmc_timer"  # Timer duration in seconds after light off
 
-# X4FP Hysteresis configuration (Type 3b)
+# Fil Pilote Hysteresis configuration (Type 3b)
 CONF_SETPOINT_INPUT: Final = "setpoint_input"  # input_number entity for setpoint
 CONF_HYSTERESIS: Final = "hysteresis"  # Hysteresis value in °C
 CONF_MIN_SETPOINT: Final = "min_setpoint"  # Minimum temperature setpoint
@@ -54,7 +54,7 @@ CONF_PRESET_IDLE: Final = "preset_idle"  # Preset when temperature OK
 
 # External Control configuration (Solar Optimizer, etc.)
 CONF_EXTERNAL_CONTROL_SWITCH: Final = "external_control_switch"  # Switch/binary_sensor
-CONF_EXTERNAL_CONTROL_PRESET: Final = "external_control_preset"  # X4FP preset
+CONF_EXTERNAL_CONTROL_PRESET: Final = "external_control_preset"  # Fil Pilote preset
 CONF_EXTERNAL_CONTROL_TEMP: Final = "external_control_temp"  # Thermostat temperature
 CONF_ALLOW_EXTERNAL_IN_AWAY: Final = "allow_external_in_away"  # Boolean
 
@@ -77,14 +77,14 @@ CONF_WINDOW_DELAY_CLOSE: Final = (
 )
 
 # Configurable presets (Priority 2)
-CONF_PRESET_COMFORT: Final = "preset_comfort"  # X4FP preset for comfort mode
-CONF_PRESET_ECO: Final = "preset_eco"  # X4FP preset for eco mode
-CONF_PRESET_NIGHT: Final = "preset_night"  # X4FP preset for night mode
-CONF_PRESET_AWAY: Final = "preset_away"  # X4FP preset for away/frost protection
-CONF_PRESET_WINDOW: Final = "preset_window"  # X4FP preset for windows open
+CONF_PRESET_COMFORT: Final = "preset_comfort"  # Fil Pilote preset for comfort mode
+CONF_PRESET_ECO: Final = "preset_eco"  # Fil Pilote preset for eco mode
+CONF_PRESET_NIGHT: Final = "preset_night"  # Fil Pilote preset for night mode
+CONF_PRESET_AWAY: Final = "preset_away"  # Fil Pilote preset for away/frost protection
+CONF_PRESET_WINDOW: Final = "preset_window"  # Fil Pilote preset for windows open
 
 # Summer policy (Priority 2)
-CONF_SUMMER_POLICY: Final = "summer_policy"  # "off" or "eco" for X4FP in summer
+CONF_SUMMER_POLICY: Final = "summer_policy"  # "off" or "eco" for Fil Pilote in summer
 
 # Tick configuration (Priority 2)
 CONF_TICK_MINUTES: Final = "tick_minutes"  # 0, 5, 10, 15 (0 = disabled)
@@ -117,12 +117,18 @@ CONF_COMFORT_TIME_RANGES: Final = (
 CONF_ALARM_ENTITY: Final = "alarm_entity"
 CONF_SEASON_CALENDAR: Final = "season_calendar"
 
-# X4FP preset modes (IPX800 fil pilote)
-# Real preset names from IPX800: comfort, eco, away, none
-X4FP_PRESET_COMFORT: Final = "comfort"
-X4FP_PRESET_ECO: Final = "eco"
-X4FP_PRESET_AWAY: Final = "away"  # Hors-gel/frost protection mode
-X4FP_PRESET_OFF: Final = "none"
+# Fil Pilote preset modes (IPX800, etc.)
+# Real preset names: comfort, eco, away (hors-gel), none (off)
+FP_PRESET_COMFORT: Final = "comfort"
+FP_PRESET_ECO: Final = "eco"
+FP_PRESET_AWAY: Final = "away"  # Hors-gel/frost protection mode
+FP_PRESET_OFF: Final = "none"
+
+# Backward compatibility aliases (X4FP was the old name)
+X4FP_PRESET_COMFORT = FP_PRESET_COMFORT
+X4FP_PRESET_ECO = FP_PRESET_ECO
+X4FP_PRESET_AWAY = FP_PRESET_AWAY
+X4FP_PRESET_OFF = FP_PRESET_OFF
 
 # Default values - Heating
 DEFAULT_TEMP_COMFORT: Final = 20.0
@@ -152,11 +158,11 @@ DEFAULT_DAY_START: Final = "06:00:00"  # End of night period
 DEFAULT_HYSTERESIS: Final = 0.5  # °C
 DEFAULT_MIN_SETPOINT: Final = 17.0  # °C
 DEFAULT_MAX_SETPOINT: Final = 23.0  # °C
-DEFAULT_PRESET_HEAT: Final = X4FP_PRESET_COMFORT
-DEFAULT_PRESET_IDLE: Final = X4FP_PRESET_ECO
+DEFAULT_PRESET_HEAT: Final = FP_PRESET_COMFORT
+DEFAULT_PRESET_IDLE: Final = FP_PRESET_ECO
 
 # Default values - External Control
-DEFAULT_EXTERNAL_CONTROL_PRESET: Final = X4FP_PRESET_COMFORT
+DEFAULT_EXTERNAL_CONTROL_PRESET: Final = FP_PRESET_COMFORT
 DEFAULT_EXTERNAL_CONTROL_TEMP: Final = 20.0  # °C
 DEFAULT_ALLOW_EXTERNAL_IN_AWAY: Final = False
 
@@ -172,12 +178,12 @@ DEFAULT_WINDOW_DELAY_OPEN: Final = 2  # minutes
 DEFAULT_WINDOW_DELAY_CLOSE: Final = 2  # minutes
 
 # Default values - Configurable presets (Priority 2)
-# These default to standard X4FP presets, but can be overridden per room
-DEFAULT_PRESET_COMFORT: Final = X4FP_PRESET_COMFORT
-DEFAULT_PRESET_ECO: Final = X4FP_PRESET_ECO
-DEFAULT_PRESET_NIGHT: Final = X4FP_PRESET_ECO  # Often same as eco
-DEFAULT_PRESET_AWAY: Final = X4FP_PRESET_AWAY
-DEFAULT_PRESET_WINDOW: Final = X4FP_PRESET_AWAY  # Frost protection when windows open
+# These default to standard Fil Pilote presets, but can be overridden per room
+DEFAULT_PRESET_COMFORT: Final = FP_PRESET_COMFORT
+DEFAULT_PRESET_ECO: Final = FP_PRESET_ECO
+DEFAULT_PRESET_NIGHT: Final = FP_PRESET_ECO  # Often same as eco
+DEFAULT_PRESET_AWAY: Final = FP_PRESET_AWAY
+DEFAULT_PRESET_WINDOW: Final = FP_PRESET_AWAY  # Frost protection when windows open
 
 # Default values - Summer policy (Priority 2)
 DEFAULT_SUMMER_POLICY: Final = "off"  # "off" or "eco"
@@ -262,8 +268,11 @@ HYSTERESIS_IDLE: Final = "idle"
 HYSTERESIS_DEADBAND: Final = "deadband"
 
 # Climate types
-CLIMATE_TYPE_X4FP: Final = "x4fp"
+CLIMATE_TYPE_FIL_PILOTE: Final = "fil_pilote"
 CLIMATE_TYPE_THERMOSTAT: Final = "thermostat"
+
+# Backward compatibility alias
+CLIMATE_TYPE_X4FP = CLIMATE_TYPE_FIL_PILOTE
 
 # Alarm states
 ALARM_STATE_DISARMED: Final = "disarmed"

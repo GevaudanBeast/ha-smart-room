@@ -196,7 +196,7 @@ class SmartRoomCurrentPrioritySensor(SmartRoomEntity, SensorEntity):
 
 
 class SmartRoomHysteresisSensor(SmartRoomEntity, SensorEntity):
-    """Sensor showing hysteresis state for X4FP Type 3b (v0.3.0 debug)."""
+    """Sensor showing hysteresis state for Fil Pilote Type 3b (v0.3.0 debug)."""
 
     def __init__(self, coordinator: SmartRoomCoordinator, room_id: str) -> None:
         """Initialize the sensor."""
@@ -355,7 +355,8 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
         # Climate details
         climate_type = climate_state.get("climate_type")
         if climate_type:
-            if climate_type == "x4fp":
+            # Handle both old "x4fp" and new "fil_pilote" values
+            if climate_type in ("x4fp", "fil_pilote"):
                 preset = climate_state.get("current_preset", "?")
                 log_lines.append(f"🔥 Fil Pilote: preset {preset}")
             else:
