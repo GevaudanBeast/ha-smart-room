@@ -34,6 +34,7 @@ from .const import (
     CONF_EXTERNAL_CONTROL_PRESET,
     CONF_EXTERNAL_CONTROL_SWITCH,
     CONF_EXTERNAL_CONTROL_TEMP,
+    CONF_IGNORE_IN_AWAY,
     CONF_SEASON_CALENDAR,
     DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
     DEFAULT_EXTERNAL_CONTROL_PRESET,
@@ -149,6 +150,22 @@ class ClimateController:
 
         # PRIORITY 4: Check away mode (alarm armed_away)
         if self._is_away_mode():
+            # Check if schedule should be used even in away mode
+            ignore_in_away = self.room_config.get(CONF_IGNORE_IN_AWAY, False)
+            schedule_mode = self.room_manager.get_schedule_mode()
+
+            if ignore_in_away and schedule_mode is not None:
+                # User wants schedule to work even when away
+                _LOGGER.debug(
+                    "🏠 Away mode in %s but ignore_in_away=True, using schedule: %s",
+                    self.room_manager.room_name,
+                    schedule_mode,
+                )
+                self._current_priority = PRIORITY_SCHEDULE
+                is_summer = self._is_summer_mode()
+                await self._apply_mode(climate_entity, schedule_mode, is_summer)
+                return
+
             _LOGGER.debug(
                 "🏠 Away mode active in %s - setting frost protection",
                 self.room_manager.room_name,
