@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fix** : Le calendrier a maintenant priorité sur la période nuit (config explicite)
 - **Fix** : Les salles de bain utilisent la logique lumière avant le calendrier
 
+#### Fix : Option ignore_in_away respectée
+- **Problème** : Le schedule était ignoré même avec l'option "ignore_in_away" cochée
+- **Fix** : Vérification de `ignore_in_away` dans la priorité away mode
+
+#### Fix : Transition away → disarmed (X4FP et Thermostats)
+- **Problème** : Passage de armed_away à disarmed ne changeait pas les presets
+- **Fix X4FP** : Synchronisation avec l'état réel du preset avant comparaison
+- **Fix Thermostat** : Support des presets "away" et "home" si le thermostat les supporte
+- **Comportement** : X4FP away→eco/comfort, Thermostat away→home + heat/cool
+
 ### 🔧 Refactoring
 
 - **Consolidé** : Méthodes VMC on/off en `_control_entity()` générique

@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fix**: Schedule now has priority over night period (explicit user config)
 - **Fix**: Bathrooms use light-based logic before schedule
 
+#### Fix: Respect ignore_in_away option for schedule
+- **Problem**: Schedule was ignored even with "ignore_in_away" option checked
+- **Fix**: Check `ignore_in_away` in away mode priority
+
+#### Fix: Away → disarmed transition (X4FP and Thermostats)
+- **Problem**: Transitioning from armed_away to disarmed didn't change presets
+- **X4FP Fix**: Sync with actual preset state before comparison
+- **Thermostat Fix**: Support "away" and "home" presets if thermostat supports them
+- **Behavior**: X4FP away→eco/comfort, Thermostat away→home + heat/cool
+
 ### 🔧 Refactoring
 
 - **Consolidated**: VMC on/off methods into generic `_control_entity()`

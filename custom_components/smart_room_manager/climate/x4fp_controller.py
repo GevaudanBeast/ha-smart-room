@@ -101,8 +101,24 @@ class X4FPController:
             # Winter: map mode to preset
             target_preset = self._get_preset_for_mode(mode)
 
-        # Only change if different
-        if self._current_preset == target_preset:
+        # Get actual preset from entity state (not just internal tracking)
+        # This handles cases where preset was changed externally or after HA restart
+        state = self.hass.states.get(climate_entity)
+        actual_preset = None
+        if state:
+            actual_preset = state.attributes.get(ATTR_PRESET_MODE)
+            # Sync internal state with actual state
+            if actual_preset and self._current_preset != actual_preset:
+                _LOGGER.debug(
+                    "X4FP preset sync: internal=%s, actual=%s for %s",
+                    self._current_preset,
+                    actual_preset,
+                    self.room_manager.room_name,
+                )
+                self._current_preset = actual_preset
+
+        # Only change if different from actual state
+        if actual_preset == target_preset:
             return
 
         _LOGGER.debug(
@@ -225,8 +241,16 @@ class X4FPController:
                 self._hysteresis_state = HYSTERESIS_DEADBAND
                 return
 
-        # Apply preset
-        if self._current_preset == target_preset:
+        # Get actual preset from entity state (sync with reality)
+        state = self.hass.states.get(climate_entity)
+        actual_preset = None
+        if state:
+            actual_preset = state.attributes.get(ATTR_PRESET_MODE)
+            if actual_preset and self._current_preset != actual_preset:
+                self._current_preset = actual_preset
+
+        # Apply preset only if different from actual
+        if actual_preset == target_preset:
             return
 
         _LOGGER.debug(
@@ -261,7 +285,15 @@ class X4FPController:
         # Use configurable preset for windows open
         window_preset = self.room_config.get(CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW)
 
-        if self._current_preset == window_preset:
+        # Get actual preset from entity state (sync with reality)
+        state = self.hass.states.get(climate_entity)
+        actual_preset = None
+        if state:
+            actual_preset = state.attributes.get(ATTR_PRESET_MODE)
+            if actual_preset and self._current_preset != actual_preset:
+                self._current_preset = actual_preset
+
+        if actual_preset == window_preset:
             return
 
         try:

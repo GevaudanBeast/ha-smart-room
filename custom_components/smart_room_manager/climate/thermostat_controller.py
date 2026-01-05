@@ -7,11 +7,13 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.climate import (
     ATTR_HVAC_MODE,
+    ATTR_PRESET_MODE,
     ATTR_TEMPERATURE,
 )
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.components.climate import (
     SERVICE_SET_HVAC_MODE,
+    SERVICE_SET_PRESET_MODE,
     SERVICE_SET_TEMPERATURE,
     HVACMode,
 )
@@ -35,6 +37,10 @@ from ..const import (
     MODE_NIGHT,
 )
 
+# Standard thermostat presets
+PRESET_AWAY = "away"
+PRESET_HOME = "home"
+
 if TYPE_CHECKING:
     from ..room_manager import RoomManager
 
@@ -57,9 +63,79 @@ class ThermostatController:
 
         self._target_temperature: float | None = None
         self._current_hvac_mode: str | None = None
+        self._current_preset: str | None = None
+        self._supports_away_preset: bool | None = None
+        self._supports_home_preset: bool | None = None
+
+    def _detect_preset_support(self, climate_entity: str) -> None:
+        """Detect if thermostat supports away/home presets."""
+        if self._supports_away_preset is not None:
+            return  # Already detected
+
+        state = self.hass.states.get(climate_entity)
+        if not state:
+            self._supports_away_preset = False
+            self._supports_home_preset = False
+            return
+
+        preset_modes = state.attributes.get("preset_modes", [])
+        self._supports_away_preset = PRESET_AWAY in preset_modes
+        self._supports_home_preset = PRESET_HOME in preset_modes
+
+        if self._supports_away_preset or self._supports_home_preset:
+            _LOGGER.info(
+                "Thermostat %s preset support: away=%s, home=%s",
+                climate_entity,
+                self._supports_away_preset,
+                self._supports_home_preset,
+            )
+
+    async def _set_preset(self, climate_entity: str, preset: str) -> bool:
+        """Set thermostat preset if supported. Returns True if preset was set."""
+        # Get actual preset from entity state
+        state = self.hass.states.get(climate_entity)
+        if not state:
+            return False
+
+        actual_preset = state.attributes.get(ATTR_PRESET_MODE)
+        if actual_preset == preset:
+            return True  # Already at target preset
+
+        _LOGGER.debug(
+            "Setting thermostat preset for %s in %s to %s",
+            climate_entity,
+            self.room_manager.room_name,
+            preset,
+        )
+        try:
+            await self.hass.services.async_call(
+                CLIMATE_DOMAIN,
+                SERVICE_SET_PRESET_MODE,
+                {
+                    "entity_id": climate_entity,
+                    ATTR_PRESET_MODE: preset,
+                },
+                blocking=True,
+            )
+            self._current_preset = preset
+            return True
+        except Exception as err:
+            _LOGGER.error(
+                "Error setting preset for %s: %s",
+                climate_entity,
+                err,
+            )
+            return False
 
     async def control(self, climate_entity: str, mode: str, is_summer: bool) -> None:
         """Control thermostat climate entity via hvac_mode + temperature."""
+        # Detect preset support on first call
+        self._detect_preset_support(climate_entity)
+
+        # If thermostat supports "home" preset, ensure it's set when not in frost mode
+        if self._supports_home_preset and mode != MODE_FROST_PROTECTION:
+            await self._set_preset(climate_entity, PRESET_HOME)
+
         if is_summer:
             # Summer mode - Check if thermostat is reversible (has COOL mode)
             state = self.hass.states.get(climate_entity)
@@ -160,7 +236,15 @@ class ThermostatController:
                     )
 
     async def set_frost_protection(self, climate_entity: str) -> None:
-        """Set frost protection temperature."""
+        """Set frost protection temperature and preset if supported."""
+        # Detect preset support on first call
+        self._detect_preset_support(climate_entity)
+
+        # If thermostat supports "away" preset, set it
+        if self._supports_away_preset:
+            await self._set_preset(climate_entity, PRESET_AWAY)
+
+        # Set frost protection temperature
         try:
             await self.hass.services.async_call(
                 CLIMATE_DOMAIN,
@@ -197,4 +281,7 @@ class ThermostatController:
         return {
             "target_temperature": self._target_temperature,
             "current_hvac_mode": self._current_hvac_mode,
+            "current_preset": self._current_preset,
+            "supports_away_preset": self._supports_away_preset,
+            "supports_home_preset": self._supports_home_preset,
         }
