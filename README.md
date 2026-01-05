@@ -1,11 +1,11 @@
 # Smart Room Manager - Home Assistant Integration
 
-[![Version](https://img.shields.io/badge/version-0.3.2-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
+[![Version](https://img.shields.io/badge/version-0.3.4-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-**Version 0.3.2** - 🔥 Critical Bug Fix!
+**Version 0.3.4** - Bug fixes & VMC support!
 
 [English](#english) | [Français](#français)
 
@@ -17,11 +17,16 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 ### 🆕 What's New
 
-**v0.3.2** (Latest) - Critical Bug Fix:
-- 🔥 **CRITICAL FIX**: Resolved Python module conflict preventing integration from loading (v0.3.0/v0.3.1 were broken)
-- ⚠️ **If you installed v0.3.0 or v0.3.1**: Please upgrade to v0.3.2 immediately
-- ✅ **All fixes from v0.3.1 preserved**: OptionsFlow and async_shutdown compatibility maintained
-- ✅ **Tested**: HA 2023.1+ through 2025.12
+**v0.3.4** (Latest) - Bug Fixes:
+- 🌙 **Night period fix**: Now works correctly after midnight (22:00-06:00)
+- 💨 **VMC multi-bathroom**: Fixed conflict when multiple bathrooms share one VMC
+- 📊 **Priority alignment**: Display mode now matches actual heating action
+
+**v0.3.3** - VMC & Debug Sensors:
+- 💨 **VMC Support**: Global VMC entity with configurable timer
+- 🔍 **Activity Sensor**: Human-readable room status with emojis
+- ⏱️ **Light Timer**: Countdown before auto-off
+- 🧹 **Cleanup Service**: Remove orphaned entities
 
 **v0.3.0** - Advanced Climate Control:
 - 🌞 **External Control** : Solar Optimizer and other external control systems support
@@ -261,17 +266,22 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 
 ### 🆕 Nouveautés
 
-**v0.2.3** (Dernière) - Correctif Critique :
-- 🔧 **Migration automatique** : Corrige automatiquement les valeurs None des configs v0.2.1/v0.2.2
-- ✅ **Aucune action requise** : Migration transparente au redémarrage
-- 🐛 **Corrige** : Erreur "Entity None is neither a valid entity ID nor a valid UUID"
+**v0.3.4** (Dernière) - Corrections :
+- 🌙 **Période nuit** : Fonctionne maintenant après minuit (22:00-06:00)
+- 💨 **VMC multi-SDB** : Corrige conflit quand plusieurs SDB partagent une VMC
+- 📊 **Priorités alignées** : Le mode affiché correspond à l'action réelle
 
-**v0.2.2** :
-- ✅ **Champs optionnels** : Capteurs température/humidité non sauvegardés en None
-- 📝 **Config propre** : Seuls les champs configurés sont stockés
+**v0.3.3** - VMC & Capteurs Debug :
+- 💨 **Support VMC** : Entité VMC globale avec timer configurable
+- 🔍 **Capteur Activité** : État pièce lisible avec emojis
+- ⏱️ **Timer Lumière** : Countdown avant extinction auto
+- 🧹 **Service Nettoyage** : Supprime entités orphelines
 
-**v0.2.1** :
-- 🐛 **Corrigé** : Erreur critique d'import ALARM_STATE_ARMED_AWAY
+**v0.3.0** - Contrôle Climat Avancé :
+- 🌞 **Contrôle externe** : Support Solar Optimizer
+- 📅 **Calendriers** : Planning par pièce
+- ⏸️ **Pause manuelle** : Pause temporaire par pièce
+- 🔍 **Capteurs debug** : Priorité, hystérésis, etc.
 
 **v0.2.0** - Architecture Simplifiée :
 - 🔄 **Plus de capteurs de présence** : L'alarme détermine la présence (armed_away = absent)
