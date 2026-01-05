@@ -106,7 +106,10 @@ class LightController:
             # If light just turned on, record time
             if state.state == STATE_ON:
                 if entity_id not in self._light_on_times:
-                    self._light_on_times[entity_id] = state.last_changed
+                    # Use last_changed or current time as fallback
+                    self._light_on_times[entity_id] = (
+                        state.last_changed or dt_util.utcnow()
+                    )
                     _LOGGER.debug(
                         "Light %s turned on in %s at %s",
                         entity_id,
@@ -179,13 +182,23 @@ class LightController:
         if self._vmc_active and self._vmc_started_at and not any_light_on:
             elapsed = (now - self._vmc_started_at).total_seconds()
             if elapsed >= vmc_timer:
-                _LOGGER.info(
-                    "💨 VMC timer expired in %s - stopping high speed",
-                    self.room_manager.room_name,
-                )
-                await self._turn_off_vmc(vmc_entity)
-                self._vmc_active = False
-                self._vmc_started_at = None
+                # Before turning off VMC, check if any OTHER bathroom has lights on
+                # VMC is global, so we must not turn it off if another bathroom needs it
+                if self._any_other_bathroom_active():
+                    _LOGGER.debug(
+                        "💨 VMC timer expired in %s but another bathroom is active",
+                        self.room_manager.room_name,
+                    )
+                    self._vmc_active = False
+                    self._vmc_started_at = None
+                else:
+                    _LOGGER.info(
+                        "💨 VMC timer expired in %s - stopping high speed",
+                        self.room_manager.room_name,
+                    )
+                    await self._turn_off_vmc(vmc_entity)
+                    self._vmc_active = False
+                    self._vmc_started_at = None
 
         # If light turns back on while timer is running, cancel the timer
         if any_light_on and self._vmc_started_at:
@@ -195,49 +208,66 @@ class LightController:
             )
             self._vmc_started_at = None  # Cancel timer, VMC stays on
 
-    async def _turn_on_vmc(self, vmc_entity: str) -> None:
-        """Turn on VMC high speed."""
-        try:
-            domain = vmc_entity.split(".")[0] if "." in vmc_entity else "switch"
-            await self.hass.services.async_call(
-                domain,
-                SERVICE_TURN_ON,
-                {"entity_id": vmc_entity},
-                blocking=True,
-            )
-        except Exception as err:
-            _LOGGER.error("Error turning on VMC %s: %s", vmc_entity, err)
+    def _any_other_bathroom_active(self) -> bool:
+        """Check if any other bathroom has lights on or VMC timer running.
 
-    async def _turn_off_vmc(self, vmc_entity: str) -> None:
-        """Turn off VMC high speed."""
-        try:
-            domain = vmc_entity.split(".")[0] if "." in vmc_entity else "switch"
-            await self.hass.services.async_call(
-                domain,
-                SERVICE_TURN_OFF,
-                {"entity_id": vmc_entity},
-                blocking=True,
-            )
-        except Exception as err:
-            _LOGGER.error("Error turning off VMC %s: %s", vmc_entity, err)
+        This prevents turning off the global VMC when another bathroom needs it.
+        """
+        coordinator = self.room_manager.coordinator
+        current_room_id = self.room_manager.room_id
 
-    async def _turn_off_light(self, entity_id: str) -> None:
-        """Turn off a single light."""
+        for room_manager in coordinator.get_all_room_managers():
+            # Skip current room
+            if room_manager.room_id == current_room_id:
+                continue
+
+            # Only check other bathrooms
+            if room_manager.room_type != ROOM_TYPE_BATHROOM:
+                continue
+
+            # Check if lights are on in this bathroom
+            light_controller = room_manager.light_controller
+            if light_controller._any_light_was_on:
+                return True
+
+            # Check if VMC timer is still running in this bathroom
+            if light_controller._vmc_active and light_controller._vmc_started_at:
+                return True
+
+        return False
+
+    def _get_entity_domain(self, entity_id: str, default: str = "light") -> str:
+        """Extract domain from entity_id (e.g., 'light.kitchen' -> 'light')."""
+        return entity_id.split(".")[0] if "." in entity_id else default
+
+    async def _control_entity(
+        self, entity_id: str, turn_on: bool, default_domain: str = "light"
+    ) -> None:
+        """Turn an entity on or off."""
         try:
-            # Extract domain from entity_id (e.g., "light.kitchen" -> "light")
-            domain = entity_id.split(".")[0] if "." in entity_id else "light"
+            domain = self._get_entity_domain(entity_id, default_domain)
+            service = SERVICE_TURN_ON if turn_on else SERVICE_TURN_OFF
             await self.hass.services.async_call(
                 domain,
-                SERVICE_TURN_OFF,
+                service,
                 {"entity_id": entity_id},
                 blocking=True,
             )
         except Exception as err:
-            _LOGGER.error(
-                "Error turning off light %s: %s",
-                entity_id,
-                err,
-            )
+            action = "on" if turn_on else "off"
+            _LOGGER.error("Error turning %s %s: %s", action, entity_id, err)
+
+    async def _turn_on_vmc(self, vmc_entity: str) -> None:
+        """Turn on VMC high speed."""
+        await self._control_entity(vmc_entity, turn_on=True, default_domain="switch")
+
+    async def _turn_off_vmc(self, vmc_entity: str) -> None:
+        """Turn off VMC high speed."""
+        await self._control_entity(vmc_entity, turn_on=False, default_domain="switch")
+
+    async def _turn_off_light(self, entity_id: str) -> None:
+        """Turn off a single light."""
+        await self._control_entity(entity_id, turn_on=False, default_domain="light")
 
     def get_state(self) -> dict[str, Any]:
         """Get current light controller state."""

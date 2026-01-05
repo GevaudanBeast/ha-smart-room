@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-01-04
+
+### 🐛 Critical Bug Fixes
+
+#### Fix: Night period after midnight
+- **Problem**: Night period only worked between 22:00 and 23:59
+- **Fix**: Added `DEFAULT_DAY_START` (06:00), night is now 22:00-06:00
+- **Logic**: `is_night = now >= 22:00 OR now < 06:00`
+
+#### Fix: VMC with multiple bathrooms
+- **Problem**: One bathroom's VMC timer could turn off the global VMC while another bathroom was still active
+- **Fix**: Added `_any_other_bathroom_active()` that checks if other bathrooms need the VMC before turning it off
+
+#### Fix: Heating mode priorities
+- **Fix**: Aligned priorities between `room_manager` and `climate_control`
+- **Fix**: Schedule now has priority over night period (explicit user config)
+- **Fix**: Bathrooms use light-based logic before schedule
+
+### 🔧 Refactoring
+
+- **Consolidated**: VMC on/off methods into generic `_control_entity()`
+- **Added**: `_get_entity_domain()` helper for domain extraction
+- **Fixed**: Null check on `state.last_changed`
+- **Unified**: All binary_sensors return `None` when no data available
+
 ## [0.3.3] - 2026-01-04
 
 ### ✨ UX Improvements - Contextual Configuration

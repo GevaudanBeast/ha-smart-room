@@ -127,7 +127,7 @@ class SmartRoomExternalControlActiveSensor(SmartRoomEntity, BinarySensorEntity):
             room_data = self.coordinator.data[self._room_id]
             climate_state = room_data.get("climate_state", {})
             return climate_state.get("external_control_active", False)
-        return False
+        return None  # Unknown state when no data
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -166,7 +166,7 @@ class SmartRoomScheduleActiveSensor(SmartRoomEntity, BinarySensorEntity):
         if self.coordinator.data and self._room_id in self.coordinator.data:
             room_data = self.coordinator.data[self._room_id]
             return room_data.get("schedule_active", False)
-        return False
+        return None  # Unknown state when no data
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -208,7 +208,7 @@ class SmartRoomLightTimerSensor(SmartRoomEntity, BinarySensorEntity):
             room_data = self.coordinator.data[self._room_id]
             light_state = room_data.get("light_state", {})
             return light_state.get("timer_active", False)
-        return False
+        return None  # Unknown state when no data
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -265,7 +265,7 @@ class SmartRoomVMCSensor(SmartRoomEntity, BinarySensorEntity):
             room_data = self.coordinator.data[self._room_id]
             light_state = room_data.get("light_state", {})
             return light_state.get("vmc_active", False)
-        return False
+        return None  # Unknown state when no data
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
