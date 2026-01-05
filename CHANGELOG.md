@@ -39,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Problème** : Le switch pause n'arrêtait que le chauffage, pas le contrôle des lumières
 - **Fix** : Ajout de la vérification `is_paused()` dans `light_control.py`
 
+#### Fix : Sensor état incohérent avec priorités
+- **Problème** : Le sensor d'état ignorait fenêtres ouvertes et ignore_in_away
+- **Fix** : Alignement des priorités dans `room_manager._update_current_mode()`
+- **Comportement** : Le sensor affiche maintenant le vrai mode appliqué
+
 ### 🔧 Refactoring
 
 - **Consolidé** : Méthodes VMC on/off en `_control_entity()` générique

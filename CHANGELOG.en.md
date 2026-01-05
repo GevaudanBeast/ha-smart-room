@@ -39,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Problem**: Pause switch only stopped climate control, not light automation
 - **Fix**: Added `is_paused()` check in `light_control.py`
 
+#### Fix: State sensor inconsistent with priorities
+- **Problem**: State sensor ignored windows open and ignore_in_away option
+- **Fix**: Aligned priorities in `room_manager._update_current_mode()`
+- **Behavior**: Sensor now shows the actual applied mode
+
 ### 🔧 Refactoring
 
 - **Consolidated**: VMC on/off methods into generic `_control_entity()`

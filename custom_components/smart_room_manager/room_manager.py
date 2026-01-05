@@ -13,8 +13,10 @@ from .climate_control import ClimateController
 from .const import (  # v0.3.0 additions; Priority 2 additions
     ALARM_STATE_ARMED_AWAY,
     CONF_ALARM_ENTITY,
+    CONF_CLIMATE_WINDOW_CHECK,
     CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
+    CONF_IGNORE_IN_AWAY,
     CONF_LIGHTS,
     CONF_NIGHT_START,
     CONF_PRESET_SCHEDULE_OFF,
@@ -222,16 +224,40 @@ class RoomManager:
         return False
 
     def _update_current_mode(self) -> None:
-        """Determine current operating mode."""
-        # PRIORITY 1: Check alarm armed_away
+        """Determine current operating mode.
+
+        Priority order (aligned with climate_control.async_update):
+        1. Windows open (with delay) → frost_protection
+        2. Away mode (alarm armed_away) → frost_protection OR schedule if ignore_in_away
+        3. Bathroom special logic
+        4. Schedule
+        5. Night period
+        6. Comfort time ranges
+        7. Default: Eco
+        """
+        # PRIORITY 1: Check windows open (aligned with climate_control PRIORITY 2)
+        if self.room_config.get(CONF_CLIMATE_WINDOW_CHECK, True):
+            if self.is_windows_open_delayed():
+                self._current_mode = MODE_FROST_PROTECTION
+                return
+
+        # PRIORITY 2: Check alarm armed_away
         alarm_entity = self.coordinator.entry.data.get(CONF_ALARM_ENTITY)
         if alarm_entity:
             alarm_state = self.hass.states.get(alarm_entity)
             if alarm_state and alarm_state.state == ALARM_STATE_ARMED_AWAY:
+                # Check if schedule should be used even when away
+                ignore_in_away = self.room_config.get(CONF_IGNORE_IN_AWAY, False)
+                if ignore_in_away:
+                    schedule_mode = self.get_schedule_mode()
+                    if schedule_mode:
+                        self._current_mode = schedule_mode
+                        return
+                # Default away behavior: frost protection
                 self._current_mode = MODE_FROST_PROTECTION
                 return
 
-        # PRIORITY 2: Bathroom special logic (light state determines mode)
+        # PRIORITY 3: Bathroom special logic (light state determines mode)
         if self.room_type == ROOM_TYPE_BATHROOM:
             # Use 'or []' to handle None values (dict.get returns None if value is None)
             lights = self.room_config.get(CONF_LIGHTS) or []
@@ -251,19 +277,19 @@ class RoomManager:
                     self._current_mode = MODE_ECO
                     return
 
-        # PRIORITY 3: Check schedule/calendar (v0.3.0+)
+        # PRIORITY 4: Check schedule/calendar (v0.3.0+)
         # Schedule has priority over night period (explicit user config)
         schedule_mode = self.get_schedule_mode()
         if schedule_mode:
             self._current_mode = schedule_mode
             return
 
-        # PRIORITY 4: Night period
+        # PRIORITY 5: Night period
         if self._is_night:
             self._current_mode = MODE_NIGHT
             return
 
-        # PRIORITY 5: Check legacy comfort time ranges (backward compatibility)
+        # PRIORITY 6: Check legacy comfort time ranges (backward compatibility)
         if self._is_in_comfort_time_range():
             self._current_mode = MODE_COMFORT
             return
