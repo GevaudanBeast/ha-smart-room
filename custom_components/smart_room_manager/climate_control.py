@@ -135,7 +135,7 @@ class ClimateController:
                     self.room_manager.room_name,
                 )
                 self._current_priority = PRIORITY_WINDOWS_OPEN
-                await self._set_frost_protection(climate_entity)
+                await self._set_frost_protection(climate_entity, reason="window")
                 return
 
         # PRIORITY 3: Check External Control (Solar Optimizer, etc.)
@@ -171,7 +171,7 @@ class ClimateController:
                 self.room_manager.room_name,
             )
             self._current_priority = PRIORITY_AWAY
-            await self._set_frost_protection(climate_entity)
+            await self._set_frost_protection(climate_entity, reason="away")
             return
 
         # PRIORITY 4.5: Bathroom special logic (light controls heating)
@@ -248,14 +248,21 @@ class ClimateController:
             controller = self._get_thermostat_controller()
             await controller.control(climate_entity, mode, is_summer)
 
-    async def _set_frost_protection(self, climate_entity: str) -> None:
-        """Set frost protection when windows open or away."""
+    async def _set_frost_protection(
+        self, climate_entity: str, reason: str = "window"
+    ) -> None:
+        """Set frost protection when windows open or away.
+
+        Args:
+            climate_entity: The climate entity to control
+            reason: "window" for windows open, "away" for away mode
+        """
         if self._climate_type == CLIMATE_TYPE_FIL_PILOTE:
             controller = self._get_fil_pilote_controller()
-            await controller.set_frost_protection(climate_entity)
+            await controller.set_frost_protection(climate_entity, reason=reason)
         else:
             controller = self._get_thermostat_controller()
-            await controller.set_frost_protection(climate_entity)
+            await controller.set_frost_protection(climate_entity, reason=reason)
 
     async def _is_external_control_active(self) -> bool:
         """Check if external control (Solar Optimizer, etc.) is active."""

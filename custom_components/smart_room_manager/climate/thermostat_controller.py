@@ -235,14 +235,33 @@ class ThermostatController:
                         err,
                     )
 
-    async def set_frost_protection(self, climate_entity: str) -> None:
-        """Set frost protection temperature and preset if supported."""
+    async def set_frost_protection(
+        self, climate_entity: str, reason: str = "window"
+    ) -> None:
+        """Set frost protection temperature and preset if supported.
+
+        Args:
+            climate_entity: The climate entity to control
+            reason: "window" for windows open, "away" for away mode
+        """
         # Detect preset support on first call
         self._detect_preset_support(climate_entity)
 
         # If thermostat supports "away" preset, set it
         if self._supports_away_preset:
             await self._set_preset(climate_entity, PRESET_AWAY)
+
+        # Get configured frost protection temperature
+        frost_temp = self.room_config.get(
+            CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
+        )
+
+        _LOGGER.debug(
+            "Setting thermostat frost protection for %s to %.1f°C (reason: %s)",
+            self.room_manager.room_name,
+            frost_temp,
+            reason,
+        )
 
         # Set frost protection temperature
         try:
@@ -251,11 +270,11 @@ class ThermostatController:
                 SERVICE_SET_TEMPERATURE,
                 {
                     "entity_id": climate_entity,
-                    ATTR_TEMPERATURE: DEFAULT_TEMP_FROST_PROTECTION,
+                    ATTR_TEMPERATURE: frost_temp,
                 },
                 blocking=True,
             )
-            self._target_temperature = DEFAULT_TEMP_FROST_PROTECTION
+            self._target_temperature = frost_temp
         except Exception as err:
             _LOGGER.error(
                 "Error setting frost protection for %s: %s",

@@ -280,10 +280,20 @@ class FilPiloteController:
                 err,
             )
 
-    async def set_frost_protection(self, climate_entity: str) -> None:
-        """Set frost protection preset."""
-        # Use configurable preset for windows open
-        window_preset = self.room_config.get(CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW)
+    async def set_frost_protection(
+        self, climate_entity: str, reason: str = "window"
+    ) -> None:
+        """Set frost protection preset.
+
+        Args:
+            climate_entity: The climate entity to control
+            reason: "window" for windows open, "away" for away mode
+        """
+        # Use configurable preset based on reason
+        if reason == "away":
+            target_preset = self.room_config.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY)
+        else:  # "window"
+            target_preset = self.room_config.get(CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW)
 
         # Get actual preset from entity state (sync with reality)
         state = self.hass.states.get(climate_entity)
@@ -293,8 +303,15 @@ class FilPiloteController:
             if actual_preset and self._current_preset != actual_preset:
                 self._current_preset = actual_preset
 
-        if actual_preset == window_preset:
+        if actual_preset == target_preset:
             return
+
+        _LOGGER.debug(
+            "Setting Fil Pilote frost protection for %s to %s (reason: %s)",
+            self.room_manager.room_name,
+            target_preset,
+            reason,
+        )
 
         try:
             await self.hass.services.async_call(
@@ -302,11 +319,11 @@ class FilPiloteController:
                 SERVICE_SET_PRESET_MODE,
                 {
                     "entity_id": climate_entity,
-                    ATTR_PRESET_MODE: window_preset,
+                    ATTR_PRESET_MODE: target_preset,
                 },
                 blocking=True,
             )
-            self._current_preset = window_preset
+            self._current_preset = target_preset
         except Exception as err:
             _LOGGER.error(
                 "Error setting frost protection for %s: %s",
