@@ -64,6 +64,14 @@ class LightController:
         - For normal types (bedrooms): no auto-off
         - For bathroom: trigger VMC high speed when lights go off
         """
+        # Check if manual pause is active - skip all automation
+        if self.room_manager.is_paused():
+            _LOGGER.debug(
+                "⏸️ Manual pause active in %s - skipping light automation",
+                self.room_manager.room_name,
+            )
+            return
+
         # Use 'or []' to handle None values (dict.get returns None if value is None)
         light_entities = self.room_config.get(CONF_LIGHTS) or []
         room_type = self.room_config.get(CONF_ROOM_TYPE, "normal")

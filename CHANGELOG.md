@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fix Thermostat** : Support des presets "away" et "home" si le thermostat les supporte
 - **Comportement** : X4FP away→eco/comfort, Thermostat away→home + heat/cool
 
+#### Fix : Pause manuelle n'arrêtait pas les lumières
+- **Problème** : Le switch pause n'arrêtait que le chauffage, pas le contrôle des lumières
+- **Fix** : Ajout de la vérification `is_paused()` dans `light_control.py`
+
 ### 🔧 Refactoring
 
 - **Consolidé** : Méthodes VMC on/off en `_control_entity()` générique
