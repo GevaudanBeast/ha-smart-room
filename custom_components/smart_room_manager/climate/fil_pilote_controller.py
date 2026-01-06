@@ -23,6 +23,9 @@ from ..const import (
     CONF_PRESET_WINDOW,
     CONF_SETPOINT_INPUT,
     CONF_SUMMER_POLICY,
+    CONF_TEMP_COMFORT,
+    CONF_TEMP_ECO,
+    CONF_TEMP_NIGHT,
     CONF_TEMPERATURE_SENSOR,
     DEFAULT_HYSTERESIS,
     DEFAULT_MAX_SETPOINT,
@@ -35,6 +38,9 @@ from ..const import (
     DEFAULT_PRESET_NIGHT,
     DEFAULT_PRESET_WINDOW,
     DEFAULT_SUMMER_POLICY,
+    DEFAULT_TEMP_COMFORT,
+    DEFAULT_TEMP_ECO,
+    DEFAULT_TEMP_NIGHT,
     FP_PRESET_AWAY,
     FP_PRESET_ECO,
     FP_PRESET_OFF,
@@ -42,6 +48,7 @@ from ..const import (
     HYSTERESIS_HEATING,
     HYSTERESIS_IDLE,
     MODE_COMFORT,
+    MODE_ECO,
     MODE_FROST_PROTECTION,
     MODE_NIGHT,
 )
@@ -151,7 +158,15 @@ class FilPiloteController:
     async def _control_with_hysteresis(
         self, climate_entity: str, mode: str, is_summer: bool
     ) -> None:
-        """Control Fil Pilote with temperature hysteresis (Type 3b)."""
+        """Control Fil Pilote with temperature hysteresis.
+
+        Uses hysteresis to prevent rapid switching between presets.
+        The temperature sensor provides feedback to stop heating at the right temp.
+
+        Setpoint source (in order of priority):
+        1. setpoint_input (input_number) if configured - for dynamic setpoint control
+        2. Configured temperatures based on current mode (comfort, eco, night)
+        """
         if is_summer:
             # Summer: apply summer policy (off or eco)
             summer_policy = self.room_config.get(
@@ -188,33 +203,12 @@ class FilPiloteController:
                 await self._control_normal(climate_entity, mode, is_summer)
                 return
 
-            # Get setpoint
-            setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
-            setpoint_state = self.hass.states.get(setpoint_input)
-            if not setpoint_state:
-                _LOGGER.warning(
-                    "Setpoint input %s not found for %s",
-                    setpoint_input,
-                    self.room_manager.room_name,
-                )
+            # Get setpoint - priority: setpoint_input > mode-based temperature
+            setpoint = self._get_setpoint(mode)
+            if setpoint is None:
+                # No valid setpoint, fallback to preset-only
                 await self._control_normal(climate_entity, mode, is_summer)
                 return
-
-            try:
-                setpoint = float(setpoint_state.state)
-            except (ValueError, TypeError):
-                _LOGGER.warning(
-                    "Invalid setpoint value from %s: %s",
-                    setpoint_input,
-                    setpoint_state.state,
-                )
-                await self._control_normal(climate_entity, mode, is_summer)
-                return
-
-            # Clamp setpoint to min/max
-            min_setpoint = self.room_config.get(CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT)
-            max_setpoint = self.room_config.get(CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT)
-            setpoint = max(min_setpoint, min(max_setpoint, setpoint))
 
             # Get hysteresis
             hysteresis = self.room_config.get(CONF_HYSTERESIS, DEFAULT_HYSTERESIS)
@@ -280,6 +274,55 @@ class FilPiloteController:
                 err,
             )
 
+    def _get_setpoint(self, mode: str) -> float | None:
+        """Get the setpoint temperature for hysteresis control.
+
+        Priority:
+        1. setpoint_input (input_number) if configured
+        2. Mode-based temperature (comfort, eco, night)
+        """
+        # Try setpoint_input first (for dynamic control)
+        setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
+        if setpoint_input:
+            setpoint_state = self.hass.states.get(setpoint_input)
+            if setpoint_state:
+                try:
+                    setpoint = float(setpoint_state.state)
+                    # Clamp to min/max
+                    min_setpoint = self.room_config.get(
+                        CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT
+                    )
+                    max_setpoint = self.room_config.get(
+                        CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT
+                    )
+                    return max(min_setpoint, min(max_setpoint, setpoint))
+                except (ValueError, TypeError):
+                    _LOGGER.warning(
+                        "Invalid setpoint value from %s: %s",
+                        setpoint_input,
+                        setpoint_state.state,
+                    )
+            else:
+                _LOGGER.warning(
+                    "Setpoint input %s not found for %s",
+                    setpoint_input,
+                    self.room_manager.room_name,
+                )
+
+        # Fall back to mode-based temperature
+        if mode == MODE_COMFORT:
+            return self.room_config.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT)
+        elif mode == MODE_NIGHT:
+            return self.room_config.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT)
+        elif mode == MODE_ECO:
+            return self.room_config.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
+        elif mode == MODE_FROST_PROTECTION:
+            # For frost protection, use a low setpoint (don't need hysteresis really)
+            return 7.0
+
+        # Unknown mode
+        return None
+
     async def set_frost_protection(
         self, climate_entity: str, reason: str = "window"
     ) -> None:
@@ -343,10 +386,15 @@ class FilPiloteController:
             return self.room_config.get(CONF_PRESET_ECO, DEFAULT_PRESET_ECO)
 
     def _has_hysteresis_control(self) -> bool:
-        """Check if hysteresis control is configured."""
+        """Check if hysteresis control is available.
+
+        Hysteresis control requires only a temperature sensor.
+        The setpoint can come from:
+        - setpoint_input (input_number) if configured
+        - Mode-based temperatures (comfort, eco, night) as fallback
+        """
         temp_sensor = self.room_config.get(CONF_TEMPERATURE_SENSOR)
-        setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
-        return temp_sensor is not None and setpoint_input is not None
+        return temp_sensor is not None
 
     def get_state(self) -> dict[str, Any]:
         """Get current controller state."""

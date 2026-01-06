@@ -30,6 +30,12 @@ CLIMATE_MODE_THERMOSTAT_HEAT_COOL: Final = (
     "thermostat_heat_cool"  # Thermostat chaud/froid
 )
 
+# Thermostat control mode (how SRM controls the thermostat)
+CONF_THERMOSTAT_CONTROL_MODE: Final = "thermostat_control_mode"
+THERMOSTAT_CONTROL_PRESET: Final = "preset_only"  # Use presets only (recommended)
+THERMOSTAT_CONTROL_TEMPERATURE: Final = "temperature"  # Control temperature directly
+THERMOSTAT_CONTROL_BOTH: Final = "preset_and_temp"  # Use presets and set temperature
+
 # Sensor configuration
 CONF_DOOR_WINDOW_SENSORS: Final = "door_window_sensors"
 CONF_TEMPERATURE_SENSOR: Final = "temperature_sensor"
@@ -172,6 +178,9 @@ DEFAULT_PAUSE_INFINITE: Final = False
 
 # Default values - Climate mode
 DEFAULT_CLIMATE_MODE: Final = CLIMATE_MODE_FIL_PILOTE  # Most common in France
+
+# Default values - Thermostat control mode
+DEFAULT_THERMOSTAT_CONTROL_MODE: Final = THERMOSTAT_CONTROL_PRESET  # Use presets only
 
 # Default values - Window delays (Priority 2)
 DEFAULT_WINDOW_DELAY_OPEN: Final = 2  # minutes

@@ -68,6 +68,7 @@ from .const import (
     CONF_TEMP_FROST_PROTECTION,
     CONF_TEMP_NIGHT,
     CONF_TEMPERATURE_SENSOR,
+    CONF_THERMOSTAT_CONTROL_MODE,
     CONF_VMC_ENTITY,
     CONF_VMC_TIMER,
     CONF_WINDOW_DELAY_CLOSE,
@@ -97,10 +98,15 @@ from .const import (
     DEFAULT_TEMP_ECO,
     DEFAULT_TEMP_FROST_PROTECTION,
     DEFAULT_TEMP_NIGHT,
+    DEFAULT_THERMOSTAT_CONTROL_MODE,
     DEFAULT_VMC_TIMER,
     DEFAULT_WINDOW_DELAY_CLOSE,
     DEFAULT_WINDOW_DELAY_OPEN,
     DOMAIN,
+    FP_PRESET_AWAY,
+    FP_PRESET_COMFORT,
+    FP_PRESET_ECO,
+    FP_PRESET_OFF,
     MODE_COMFORT,
     MODE_ECO,
     MODE_FROST_PROTECTION,
@@ -108,10 +114,9 @@ from .const import (
     ROOM_TYPE_BATHROOM,
     ROOM_TYPE_CORRIDOR,
     ROOM_TYPE_NORMAL,
-    FP_PRESET_AWAY,
-    FP_PRESET_COMFORT,
-    FP_PRESET_ECO,
-    FP_PRESET_OFF,
+    THERMOSTAT_CONTROL_BOTH,
+    THERMOSTAT_CONTROL_PRESET,
+    THERMOSTAT_CONTROL_TEMPERATURE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -857,8 +862,36 @@ def build_fil_pilote_presets_schema(room_data: dict[str, Any]) -> vol.Schema:
 
 
 def build_thermostat_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
-    """Build schema for Thermostat advanced configuration (external control)."""
+    """Build schema for Thermostat advanced configuration."""
     schema_dict = {}
+
+    # Thermostat control mode
+    schema_dict[
+        vol.Optional(
+            CONF_THERMOSTAT_CONTROL_MODE,
+            default=room_data.get(
+                CONF_THERMOSTAT_CONTROL_MODE, DEFAULT_THERMOSTAT_CONTROL_MODE
+            ),
+        )
+    ] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(
+                    value=THERMOSTAT_CONTROL_PRESET,
+                    label="Presets uniquement (recommandé)",
+                ),
+                selector.SelectOptionDict(
+                    value=THERMOSTAT_CONTROL_TEMPERATURE,
+                    label="Températures (contrôle direct)",
+                ),
+                selector.SelectOptionDict(
+                    value=THERMOSTAT_CONTROL_BOTH,
+                    label="Presets et températures",
+                ),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
 
     # External Control configuration for Thermostat
     schema_dict[
@@ -1463,13 +1496,14 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     async def async_step_thermostat_advanced(
         self, user_input: dict[str, Any] | None = None
     ) -> config_entries.FlowResult:
-        """Configure Thermostat external control."""
-        # Skip if no external control switch configured
-        if not self._current_room.get(CONF_EXTERNAL_CONTROL_SWITCH):
-            return await self.async_step_room_schedule()
-
+        """Configure Thermostat control mode and external control."""
         if user_input is not None:
             update_data = {}
+
+            # Thermostat control mode
+            update_data[CONF_THERMOSTAT_CONTROL_MODE] = user_input.get(
+                CONF_THERMOSTAT_CONTROL_MODE, DEFAULT_THERMOSTAT_CONTROL_MODE
+            )
 
             # External Control configuration for Thermostat
             update_data[CONF_EXTERNAL_CONTROL_TEMP] = user_input.get(
@@ -1487,7 +1521,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             data_schema=build_thermostat_advanced_schema(self._current_room),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
-                "info": "Contrôle externe : température cible.",
+                "info": "Mode de contrôle et contrôle externe.",
             },
         )
 
