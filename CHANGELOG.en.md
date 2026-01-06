@@ -25,6 +25,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fix**: Schedule now has priority over night period (explicit user config)
 - **Fix**: Bathrooms use light-based logic before schedule
 
+#### Fix: Respect ignore_in_away option for schedule
+- **Problem**: Schedule was ignored even with "ignore_in_away" option checked
+- **Fix**: Check `ignore_in_away` in away mode priority
+
+#### Fix: Away → disarmed transition (X4FP and Thermostats)
+- **Problem**: Transitioning from armed_away to disarmed didn't change presets
+- **X4FP Fix**: Sync with actual preset state before comparison
+- **Thermostat Fix**: Support "away" and "home" presets if thermostat supports them
+- **Behavior**: X4FP away→eco/comfort, Thermostat away→home + heat/cool
+
+#### Fix: Manual pause didn't stop light control
+- **Problem**: Pause switch only stopped climate control, not light automation
+- **Fix**: Added `is_paused()` check in `light_control.py`
+
+#### Fix: State sensor inconsistent with priorities
+- **Problem**: State sensor ignored windows open and ignore_in_away option
+- **Fix**: Aligned priorities in `room_manager._update_current_mode()`
+- **Behavior**: Sensor now shows the actual applied mode
+
 ### 🔧 Refactoring
 
 - **Consolidated**: VMC on/off methods into generic `_control_entity()`

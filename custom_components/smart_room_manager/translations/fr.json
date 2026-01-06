@@ -58,13 +58,13 @@
         "data": {
           "lights": "Lumières",
           "climate_mode": "Type de chauffage",
-          "climate_entity": "Entité climat (thermostat ou X4FP)",
+          "climate_entity": "Entité climat (thermostat ou Fil Pilote)",
           "climate_bypass_switch": "Mode manuel (désactive SRM)",
           "external_control_switch": "Contrôle externe (Solar Optimizer...)"
         },
         "data_description": {
           "lights": "Lumières à contrôler (timer auto pour SDB/couloir)",
-          "climate_mode": "Fil Pilote pour X4FP/IPX800, Thermostat pour les autres",
+          "climate_mode": "Fil Pilote pour IPX800/Qubino, Thermostat pour les autres",
           "climate_entity": "Entité climate.xxx à piloter",
           "climate_bypass_switch": "Quand ON, SRM ne touche plus au chauffage de cette pièce",
           "external_control_switch": "Quand ON, SRM utilise le preset/température de contrôle externe"
@@ -79,7 +79,7 @@
       },
       "room_climate_config": {
         "title": "Configuration du chauffage",
-        "description": "Températures hiver/été. Délais fenêtres : temps avant réaction aux fenêtres. Politique été : X4FP en été.",
+        "description": "Températures hiver/été. Délais fenêtres : temps avant réaction aux fenêtres. Politique été : Fil Pilote en été.",
         "data": {
           "temp_comfort": "Température confort (hiver)",
           "temp_eco": "Température éco (hiver)",
@@ -90,7 +90,7 @@
           "climate_window_check": "Activer vérification fenêtres",
           "window_delay_open": "Délai ouverture fenêtre (minutes)",
           "window_delay_close": "Délai fermeture fenêtre (minutes)",
-          "summer_policy": "Politique été pour X4FP"
+          "summer_policy": "Politique été pour Fil Pilote"
         }
       },
       "room_climate_advanced": {
@@ -112,7 +112,7 @@
       },
       "fil_pilote_presets": {
         "title": "Fil Pilote - Presets et contrôle externe",
-        "description": "Presets Fil Pilote : commande X4FP pour chaque mode. Contrôle externe : Solar Optimizer, etc.",
+        "description": "Presets Fil Pilote : preset pour chaque mode. Contrôle externe : Solar Optimizer, etc.",
         "data": {
           "preset_comfort": "Preset pour mode Confort",
           "preset_eco": "Preset pour mode Éco",

@@ -21,6 +21,10 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 - 🌙 **Night period fix**: Now works correctly after midnight (22:00-06:00)
 - 💨 **VMC multi-bathroom**: Fixed conflict when multiple bathrooms share one VMC
 - 📊 **Priority alignment**: Display mode now matches actual heating action
+- 🏠 **Ignore in away**: Schedule now respected when "ignore_in_away" option is checked
+- 🔄 **Away→Disarmed transition**: X4FP and thermostat presets now update correctly
+- ⏸️ **Pause for lights**: Manual pause now also stops light automation
+- 🪟 **Sensor priorities**: State sensor now reflects windows open and ignore_in_away
 
 **v0.3.3** - VMC & Debug Sensors:
 - 💨 **VMC Support**: Global VMC entity with configurable timer
@@ -270,6 +274,10 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 - 🌙 **Période nuit** : Fonctionne maintenant après minuit (22:00-06:00)
 - 💨 **VMC multi-SDB** : Corrige conflit quand plusieurs SDB partagent une VMC
 - 📊 **Priorités alignées** : Le mode affiché correspond à l'action réelle
+- 🏠 **Ignore in away** : Le schedule est respecté quand l'option est cochée
+- 🔄 **Transition away→disarmed** : Les presets X4FP et thermostat se mettent à jour
+- ⏸️ **Pause lumières** : La pause manuelle arrête aussi l'automation des lumières
+- 🪟 **Sensor priorités** : Le sensor reflète fenêtres ouvertes et ignore_in_away
 
 **v0.3.3** - VMC & Capteurs Debug :
 - 💨 **Support VMC** : Entité VMC globale avec timer configurable

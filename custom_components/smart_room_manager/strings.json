@@ -71,7 +71,7 @@
       },
       "room_climate_config": {
         "title": "Climate Configuration",
-        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: X4FP in summer.",
+        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: Fil Pilote in summer.",
         "data": {
           "temp_comfort": "Comfort temperature (winter)",
           "temp_eco": "Eco temperature (winter)",
@@ -82,12 +82,12 @@
           "climate_window_check": "Enable window check",
           "window_delay_open": "Window open delay (minutes)",
           "window_delay_close": "Window close delay (minutes)",
-          "summer_policy": "Summer policy for X4FP"
+          "summer_policy": "Summer policy for Fil Pilote"
         }
       },
       "room_climate_advanced": {
         "title": "Advanced Climate Configuration",
-        "description": "Hysteresis: X4FP control via temp (setpoint required). External Control: Solar Optimizer config. Presets: customize X4FP.",
+        "description": "Hysteresis: Fil Pilote control via temp (setpoint required). External Control: Solar Optimizer config. Presets: customize Fil Pilote.",
         "data": {
           "setpoint_input": "Setpoint input entity",
           "hysteresis": "Hysteresis (°C)",
@@ -98,11 +98,11 @@
           "external_control_preset": "External control preset",
           "external_control_temp": "External control temperature (°C)",
           "allow_external_in_away": "Allow external control in away mode",
-          "preset_comfort": "X4FP preset for Comfort mode",
-          "preset_eco": "X4FP preset for Eco mode",
-          "preset_night": "X4FP preset for Night mode",
-          "preset_away": "X4FP preset for Away mode",
-          "preset_window": "X4FP preset for Window open"
+          "preset_comfort": "Fil Pilote preset for Comfort mode",
+          "preset_eco": "Fil Pilote preset for Eco mode",
+          "preset_night": "Fil Pilote preset for Night mode",
+          "preset_away": "Fil Pilote preset for Away mode",
+          "preset_window": "Fil Pilote preset for Window open"
         }
       },
       "room_schedule": {

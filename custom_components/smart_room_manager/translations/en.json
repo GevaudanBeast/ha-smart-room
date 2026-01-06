@@ -58,13 +58,13 @@
         "data": {
           "lights": "Lights",
           "climate_mode": "Climate type",
-          "climate_entity": "Climate entity (thermostat or X4FP)",
+          "climate_entity": "Climate entity (thermostat or Fil Pilote)",
           "climate_bypass_switch": "Manual mode (disables SRM)",
           "external_control_switch": "External control (Solar Optimizer...)"
         },
         "data_description": {
           "lights": "Lights to control (auto timer for bathroom/corridor)",
-          "climate_mode": "Wire Pilot for X4FP/IPX800, Thermostat for others",
+          "climate_mode": "Wire Pilot for IPX800/Qubino, Thermostat for others",
           "climate_entity": "climate.xxx entity to control",
           "climate_bypass_switch": "When ON, SRM stops controlling this room's climate",
           "external_control_switch": "When ON, SRM uses the external control preset/temperature"
@@ -79,7 +79,7 @@
       },
       "room_climate_config": {
         "title": "Climate Configuration",
-        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: X4FP in summer.",
+        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: Fil Pilote in summer.",
         "data": {
           "temp_comfort": "Comfort temperature (winter)",
           "temp_eco": "Eco temperature (winter)",
@@ -90,7 +90,7 @@
           "climate_window_check": "Enable window check",
           "window_delay_open": "Window open delay (minutes)",
           "window_delay_close": "Window close delay (minutes)",
-          "summer_policy": "Summer policy for X4FP"
+          "summer_policy": "Summer policy for Fil Pilote"
         }
       },
       "room_climate_advanced": {
@@ -112,7 +112,7 @@
       },
       "fil_pilote_presets": {
         "title": "Wire Pilot - Presets and External Control",
-        "description": "Wire Pilot presets: X4FP command for each mode. External control: Solar Optimizer, etc.",
+        "description": "Wire Pilot presets: preset for each mode. External control: Solar Optimizer, etc.",
         "data": {
           "preset_comfort": "Preset for Comfort mode",
           "preset_eco": "Preset for Eco mode",
