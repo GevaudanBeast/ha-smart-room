@@ -24,12 +24,17 @@ from .climate.fil_pilote_controller import FilPiloteController
 from .climate.thermostat_controller import ThermostatController
 from .const import (
     ALARM_STATE_ARMED_AWAY,
+    CLIMATE_MODE_FIL_PILOTE,
+    CLIMATE_MODE_THERMOSTAT_COOL,
+    CLIMATE_MODE_THERMOSTAT_HEAT,
+    CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
     CLIMATE_TYPE_FIL_PILOTE,
     CLIMATE_TYPE_THERMOSTAT,
     CONF_ALARM_ENTITY,
     CONF_ALLOW_EXTERNAL_IN_AWAY,
     CONF_CLIMATE_BYPASS_SWITCH,
     CONF_CLIMATE_ENTITY,
+    CONF_CLIMATE_MODE,
     CONF_CLIMATE_WINDOW_CHECK,
     CONF_EXTERNAL_CONTROL_PRESET,
     CONF_EXTERNAL_CONTROL_SWITCH,
@@ -37,6 +42,7 @@ from .const import (
     CONF_IGNORE_IN_AWAY,
     CONF_SEASON_CALENDAR,
     DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
+    DEFAULT_CLIMATE_MODE,
     DEFAULT_EXTERNAL_CONTROL_PRESET,
     DEFAULT_EXTERNAL_CONTROL_TEMP,
     PRIORITY_AWAY,
@@ -97,11 +103,13 @@ class ClimateController:
 
         # Detect climate type if not already done
         if self._climate_type is None:
+            climate_mode = self.room_config.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
             self._climate_type = self._detect_climate_type(climate_entity)
             _LOGGER.info(
-                "Climate type detected for %s: %s (%s)",
+                "Climate type for %s: %s (configured: %s, entity: %s)",
                 self.room_manager.room_name,
                 self._climate_type,
+                climate_mode,
                 climate_entity,
             )
 
@@ -209,7 +217,26 @@ class ClimateController:
         await self._apply_mode(climate_entity, mode, is_summer)
 
     def _detect_climate_type(self, climate_entity: str) -> str:
-        """Detect if climate entity is Fil Pilote (preset_mode) or thermostat (hvac_mode)."""
+        """Detect if climate entity is Fil Pilote (preset_mode) or thermostat (hvac_mode).
+
+        Uses the user-configured CONF_CLIMATE_MODE setting, not auto-detection.
+        """
+        # Use the configured climate mode from room config
+        climate_mode = self.room_config.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
+
+        # Map climate_mode to climate_type
+        if climate_mode == CLIMATE_MODE_FIL_PILOTE:
+            return CLIMATE_TYPE_FIL_PILOTE
+
+        # All thermostat modes (heat, cool, heat_cool) use thermostat controller
+        if climate_mode in [
+            CLIMATE_MODE_THERMOSTAT_HEAT,
+            CLIMATE_MODE_THERMOSTAT_COOL,
+            CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
+        ]:
+            return CLIMATE_TYPE_THERMOSTAT
+
+        # Fallback: check entity state if climate_mode is not set or is "none"
         state = self.hass.states.get(climate_entity)
         if not state:
             _LOGGER.warning("Climate entity %s not found", climate_entity)
