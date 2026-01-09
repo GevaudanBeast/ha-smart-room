@@ -124,11 +124,27 @@
         }
       },
       "thermostat_advanced": {
-        "title": "Thermostat - Contrôle externe",
-        "description": "Contrôle externe : température cible pour Solar Optimizer, etc.",
+        "title": "Thermostat - Mode de contrôle",
+        "description": "Choisissez comment SRM contrôle le thermostat. Presets uniquement (recommandé) : le thermostat gère ses propres températures.",
         "data": {
+          "thermostat_control_mode": "Mode de contrôle",
           "external_control_temp": "Température contrôle externe (°C)",
           "allow_external_in_away": "Autoriser contrôle externe en mode absence"
+        },
+        "data_description": {
+          "thermostat_control_mode": "Presets : SRM change le preset du thermostat. Températures : SRM force la température cible."
+        }
+      },
+      "thermostat_temperatures": {
+        "title": "Thermostat - Températures",
+        "description": "Températures cibles pour le contrôle du thermostat (modes température/les deux).",
+        "data": {
+          "temp_comfort": "Température confort",
+          "temp_eco": "Température éco",
+          "temp_night": "Température nuit",
+          "temp_frost_protection": "Température hors-gel",
+          "temp_cool_comfort": "Température confort (refroidissement)",
+          "temp_cool_eco": "Température éco (refroidissement)"
         }
       },
       "room_schedule": {
