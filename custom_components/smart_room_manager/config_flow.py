@@ -1274,13 +1274,20 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             }
 
             # Add optional sensors only if they are configured
+            # Also explicitly remove them if they were cleared
             if user_input.get(CONF_TEMPERATURE_SENSOR):
                 update_data[CONF_TEMPERATURE_SENSOR] = user_input.get(
                     CONF_TEMPERATURE_SENSOR
                 )
+            else:
+                # Remove if previously set but now cleared
+                self._current_room.pop(CONF_TEMPERATURE_SENSOR, None)
 
             if user_input.get(CONF_HUMIDITY_SENSOR):
                 update_data[CONF_HUMIDITY_SENSOR] = user_input.get(CONF_HUMIDITY_SENSOR)
+            else:
+                # Remove if previously set but now cleared
+                self._current_room.pop(CONF_HUMIDITY_SENSOR, None)
 
             self._current_room.update(update_data)
             return await self.async_step_room_actuators()
@@ -1321,12 +1328,23 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     update_data[CONF_CLIMATE_BYPASS_SWITCH] = user_input.get(
                         CONF_CLIMATE_BYPASS_SWITCH
                     )
+                else:
+                    # Remove if previously set but now cleared
+                    self._current_room.pop(CONF_CLIMATE_BYPASS_SWITCH, None)
 
                 # External control switch (only relevant with climate)
                 if user_input.get(CONF_EXTERNAL_CONTROL_SWITCH):
                     update_data[CONF_EXTERNAL_CONTROL_SWITCH] = user_input.get(
                         CONF_EXTERNAL_CONTROL_SWITCH
                     )
+                else:
+                    # Remove if previously set but now cleared
+                    self._current_room.pop(CONF_EXTERNAL_CONTROL_SWITCH, None)
+            else:
+                # No climate: remove all climate-related settings
+                self._current_room.pop(CONF_CLIMATE_ENTITY, None)
+                self._current_room.pop(CONF_CLIMATE_BYPASS_SWITCH, None)
+                self._current_room.pop(CONF_EXTERNAL_CONTROL_SWITCH, None)
 
             # Note: VMC entity is now in global settings, not per-room
 
@@ -1478,6 +1496,26 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             # Hysteresis configuration (only if setpoint is configured)
             if user_input.get(CONF_SETPOINT_INPUT):
                 update_data[CONF_SETPOINT_INPUT] = user_input.get(CONF_SETPOINT_INPUT)
+                update_data[CONF_HYSTERESIS] = user_input.get(
+                    CONF_HYSTERESIS, DEFAULT_HYSTERESIS
+                )
+                update_data[CONF_MIN_SETPOINT] = user_input.get(
+                    CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT
+                )
+                update_data[CONF_MAX_SETPOINT] = user_input.get(
+                    CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT
+                )
+                update_data[CONF_PRESET_HEAT] = user_input.get(
+                    CONF_PRESET_HEAT, DEFAULT_PRESET_HEAT
+                )
+                update_data[CONF_PRESET_IDLE] = user_input.get(
+                    CONF_PRESET_IDLE, DEFAULT_PRESET_IDLE
+                )
+            else:
+                # Remove hysteresis settings if setpoint_input is cleared
+                self._current_room.pop(CONF_SETPOINT_INPUT, None)
+                # Keep other hysteresis settings as they may still be useful
+                # for default values, but update them if provided
                 update_data[CONF_HYSTERESIS] = user_input.get(
                     CONF_HYSTERESIS, DEFAULT_HYSTERESIS
                 )
@@ -1756,17 +1794,23 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
         """Remove all entities associated with a room from the entity registry."""
         entity_registry = er.async_get(self.hass)
 
-        # List of entity suffixes for each room
+        # List of entity suffixes for each room (must match all entities created)
         entity_suffixes = [
+            # Switches
             "automation",
             "pause",
+            # Sensors
             "state",
             "current_priority",
             "hysteresis_state",
+            "activity",
+            # Binary sensors
             "occupied",
             "light_needed",
             "external_control_active",
             "schedule_active",
+            "light_timer",
+            "vmc_active",
         ]
 
         for suffix in entity_suffixes:

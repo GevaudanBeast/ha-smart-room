@@ -167,6 +167,47 @@ class FilPiloteController:
         1. setpoint_input (input_number) if configured - for dynamic setpoint control
         2. Configured temperatures based on current mode (comfort, eco, night)
         """
+        # Frost protection mode bypasses hysteresis - always use the configured preset
+        if mode == MODE_FROST_PROTECTION:
+            target_preset = self.room_config.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY)
+            self._hysteresis_state = HYSTERESIS_DEADBAND
+
+            # Get actual preset and apply if different
+            state = self.hass.states.get(climate_entity)
+            actual_preset = None
+            if state:
+                actual_preset = state.attributes.get(ATTR_PRESET_MODE)
+                if actual_preset and self._current_preset != actual_preset:
+                    self._current_preset = actual_preset
+
+            if actual_preset == target_preset:
+                return
+
+            _LOGGER.debug(
+                "Setting Fil Pilote frost protection (hysteresis mode) for %s to %s",
+                self.room_manager.room_name,
+                target_preset,
+            )
+
+            try:
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN,
+                    SERVICE_SET_PRESET_MODE,
+                    {
+                        "entity_id": climate_entity,
+                        ATTR_PRESET_MODE: target_preset,
+                    },
+                    blocking=True,
+                )
+                self._current_preset = target_preset
+            except Exception as err:
+                _LOGGER.error(
+                    "Error setting frost protection preset for %s: %s",
+                    climate_entity,
+                    err,
+                )
+            return
+
         if is_summer:
             # Summer: apply summer policy (off or eco)
             summer_policy = self.room_config.get(
