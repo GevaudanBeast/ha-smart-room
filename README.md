@@ -1,11 +1,11 @@
 # Smart Room Manager - Home Assistant Integration
 
-[![Version](https://img.shields.io/badge/version-0.3.4-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
+[![Version](https://img.shields.io/badge/version-0.3.5-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-**Version 0.3.4** - Bug fixes & VMC support!
+**Version 0.3.5** - Critical fix for Wire Pilot/Thermostat routing!
 
 [English](#english) | [Français](#français)
 
@@ -17,20 +17,24 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 ### 🆕 What's New
 
-**v0.3.4** (Latest) - New Features & Bug Fixes:
-- 🔥 **Fil Pilote**: X4FP renamed to "Fil Pilote" (clearer, more generic)
+**v0.3.5** (Latest) - Critical Bug Fix:
+- 🔧 **Climate type detection fix**: Wire Pilot entities were incorrectly routed to the thermostat controller, causing `set_temperature` errors. Now uses user-configured `climate_mode` instead of auto-detection.
+- 🌍 **English translation**: "Fil Pilote" → "Wire Pilot" (correct technical term)
+
+**v0.3.4** - New Features & Bug Fixes:
+- 🔥 **Wire Pilot**: X4FP renamed to "Wire Pilot" / "Fil Pilote" (clearer, more generic)
 - 🎛️ **Thermostat control modes**:
   - `preset_only` (default, recommended): Uses thermostat presets only - you control temperatures in your thermostat app (Netatmo, Tado, etc.)
   - `temperature`: SRM controls temperatures directly (legacy behavior)
   - `preset_and_temp`: Uses both presets and temperatures
   - **Smart config flow**: Temperature settings only shown when needed (not in preset_only mode)
-- 🌡️ **Fil Pilote hysteresis simplified**: Temperature sensor acts as a safeguard (garde-fou), setpoint_input optional
+- 🌡️ **Wire Pilot hysteresis simplified**: Temperature sensor acts as a safeguard, setpoint_input optional
 - 🪟 **Separate frost presets**: Different presets for away mode vs windows open
 - 🌙 **Night period fix**: Now works correctly after midnight (22:00-06:00)
 - 💨 **VMC multi-bathroom**: Fixed conflict when multiple bathrooms share one VMC
 - 📊 **Priority alignment**: Display mode now matches actual heating action
 - 🏠 **Ignore in away**: Schedule now respected when "ignore_in_away" option is checked
-- 🔄 **Away→Disarmed transition**: Fil Pilote and thermostat presets now update correctly
+- 🔄 **Away→Disarmed transition**: Wire Pilot and thermostat presets now update correctly
 - ⏸️ **Pause for lights**: Manual pause now also stops light automation
 
 **v0.3.3** - VMC & Debug Sensors:
@@ -277,7 +281,10 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 
 ### 🆕 Nouveautés
 
-**v0.3.4** (Dernière) - Nouveautés & Corrections :
+**v0.3.5** (Dernière) - Correction Critique :
+- 🔧 **Fix détection type climat** : Les entités Fil Pilote étaient envoyées au contrôleur thermostat, causant des erreurs `set_temperature`. Utilise désormais `climate_mode` configuré au lieu de l'auto-détection.
+
+**v0.3.4** - Nouveautés & Corrections :
 - 🔥 **Fil Pilote** : X4FP renommé en "Fil Pilote" (plus clair, plus générique)
 - 🎛️ **Modes contrôle thermostat** :
   - `preset_only` (défaut, recommandé) : Utilise uniquement les presets - vous contrôlez les températures dans l'app du thermostat (Netatmo, Tado, etc.)
