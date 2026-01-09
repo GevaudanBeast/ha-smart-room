@@ -15,6 +15,7 @@ from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.core import callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 
@@ -1832,6 +1833,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
             if entity_id:
                 entity_registry.async_remove(entity_id)
+
+        # Also remove the device from device registry
+        device_registry = dr.async_get(self.hass)
+        device = device_registry.async_get_device(identifiers={(DOMAIN, room_id)})
+        if device:
+            device_registry.async_remove_device(device.id)
 
     async def async_step_global_settings(
         self, user_input: dict[str, Any] | None = None

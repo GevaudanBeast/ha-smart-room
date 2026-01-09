@@ -136,11 +136,12 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
 async def async_cleanup_orphaned_entities(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict[str, int]:
-    """Clean up orphaned entities that no longer belong to any configured room.
+    """Clean up orphaned entities and devices that no longer belong to any configured room.
 
-    Returns a dict with counts of entities found and removed.
+    Returns a dict with counts of entities and devices found and removed.
     """
     entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
 
     # Get all configured room IDs
     rooms = entry.options.get(CONF_ROOMS, [])
@@ -150,6 +151,7 @@ async def async_cleanup_orphaned_entities(
 
     # Find all entities belonging to this integration
     entities_to_remove = []
+    orphaned_room_ids = set()
     for entity_entry in list(entity_registry.entities.values()):
         if entity_entry.platform != DOMAIN:
             continue
@@ -163,6 +165,7 @@ async def async_cleanup_orphaned_entities(
                 room_id = parts[2]
                 if room_id not in configured_room_ids:
                     entities_to_remove.append(entity_entry)
+                    orphaned_room_ids.add(room_id)
                     _LOGGER.debug(
                         "Found orphaned entity: %s (room_id: %s)",
                         entity_entry.entity_id,
@@ -170,20 +173,54 @@ async def async_cleanup_orphaned_entities(
                     )
 
     # Remove orphaned entities
-    removed_count = 0
+    removed_entities = 0
     for entity_entry in entities_to_remove:
         try:
             entity_registry.async_remove(entity_entry.entity_id)
-            removed_count += 1
+            removed_entities += 1
             _LOGGER.info("Removed orphaned entity: %s", entity_entry.entity_id)
         except Exception as err:
             _LOGGER.warning(
                 "Failed to remove entity %s: %s", entity_entry.entity_id, err
             )
 
+    # Remove orphaned devices
+    removed_devices = 0
+    for room_id in orphaned_room_ids:
+        device = device_registry.async_get_device(identifiers={(DOMAIN, room_id)})
+        if device:
+            try:
+                device_registry.async_remove_device(device.id)
+                removed_devices += 1
+                _LOGGER.info("Removed orphaned device for room_id: %s", room_id)
+            except Exception as err:
+                _LOGGER.warning(
+                    "Failed to remove device for room_id %s: %s", room_id, err
+                )
+
+    # Also check for orphaned devices that have no entities left
+    for device_entry in list(device_registry.devices.values()):
+        for identifier in device_entry.identifiers:
+            if identifier[0] == DOMAIN and identifier[1] not in configured_room_ids:
+                # This is an orphaned device
+                if identifier[1] not in orphaned_room_ids:
+                    try:
+                        device_registry.async_remove_device(device_entry.id)
+                        removed_devices += 1
+                        _LOGGER.info(
+                            "Removed orphaned device: %s (room_id: %s)",
+                            device_entry.name,
+                            identifier[1],
+                        )
+                    except Exception as err:
+                        _LOGGER.warning(
+                            "Failed to remove device %s: %s", device_entry.name, err
+                        )
+
     return {
-        "found": len(entities_to_remove),
-        "removed": removed_count,
+        "entities_found": len(entities_to_remove),
+        "entities_removed": removed_entities,
+        "devices_removed": removed_devices,
     }
 
 
@@ -194,9 +231,10 @@ def register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Handle the cleanup_entities service call."""
         result = await async_cleanup_orphaned_entities(hass, entry)
         _LOGGER.info(
-            "Cleanup completed: found %d orphaned entities, removed %d",
-            result["found"],
-            result["removed"],
+            "Cleanup completed: found %d orphaned entities, removed %d entities and %d devices",
+            result["entities_found"],
+            result["entities_removed"],
+            result["devices_removed"],
         )
         # Create a persistent notification with the result
         await hass.services.async_call(
@@ -206,8 +244,9 @@ def register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
                 "title": "Smart Room Manager - Nettoyage",
                 "message": (
                     f"Nettoyage terminé :\n"
-                    f"- Entités orphelines trouvées : {result['found']}\n"
-                    f"- Entités supprimées : {result['removed']}"
+                    f"- Entités orphelines trouvées : {result['entities_found']}\n"
+                    f"- Entités supprimées : {result['entities_removed']}\n"
+                    f"- Appareils supprimés : {result['devices_removed']}"
                 ),
                 "notification_id": "smart_room_cleanup",
             },
