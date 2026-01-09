@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-01-09
+
+### 🐛 Corrections critiques
+
+#### Fix : Détection du type de climat (Fil Pilote vs Thermostat)
+- **Problème** : Les entités Fil Pilote (`climate.x4fp_fp_*`) étaient envoyées au contrôleur thermostat, qui appelait `set_temperature` (non supporté par Fil Pilote)
+- **Cause** : Auto-détection basée sur les attributs de l'entité au lieu d'utiliser la configuration utilisateur
+- **Fix** : Utilise désormais `CONF_CLIMATE_MODE` configuré par l'utilisateur
+  - `fil_pilote` → `CLIMATE_TYPE_FIL_PILOTE` (utilise `set_preset_mode`)
+  - `thermostat_heat/cool/heat_cool` → `CLIMATE_TYPE_THERMOSTAT` (utilise `set_temperature`)
+- **Fallback** : Détection par attributs seulement si `climate_mode` n'est pas configuré
+
+### 🌍 Traductions
+
+#### Wire Pilot (terme technique anglais)
+- **Renommé** : "Fil Pilote" → "Wire Pilot" dans toutes les traductions anglaises
+- **Fichiers** : `strings.json`, `translations/en.json`
+- **Note** : Le français conserve "Fil Pilote"
+
 ## [0.3.4] - 2026-01-09
 
 ### 🐛 Corrections critiques

@@ -58,7 +58,7 @@
         "data": {
           "lights": "Lights",
           "climate_mode": "Climate type",
-          "climate_entity": "Climate entity (thermostat or Fil Pilote)",
+          "climate_entity": "Climate entity (thermostat or Wire Pilot)",
           "climate_bypass_switch": "Manual mode (disables SRM)",
           "external_control_switch": "External control (Solar Optimizer...)"
         },
@@ -79,7 +79,7 @@
       },
       "room_climate_config": {
         "title": "Climate Configuration",
-        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: Fil Pilote in summer.",
+        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: Wire Pilot in summer.",
         "data": {
           "temp_comfort": "Comfort temperature (winter)",
           "temp_eco": "Eco temperature (winter)",
@@ -90,7 +90,7 @@
           "climate_window_check": "Enable window check",
           "window_delay_open": "Window open delay (minutes)",
           "window_delay_close": "Window close delay (minutes)",
-          "summer_policy": "Summer policy for Fil Pilote"
+          "summer_policy": "Summer policy for Wire Pilot"
         }
       },
       "room_climate_advanced": {

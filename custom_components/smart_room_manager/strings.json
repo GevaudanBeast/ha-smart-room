@@ -71,7 +71,7 @@
       },
       "room_climate_config": {
         "title": "Climate Configuration",
-        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: Fil Pilote in summer.",
+        "description": "Winter/summer temperatures. Window delays: time before reacting to windows. Summer policy: Wire Pilot in summer.",
         "data": {
           "temp_comfort": "Comfort temperature (winter)",
           "temp_eco": "Eco temperature (winter)",
@@ -82,15 +82,15 @@
           "climate_window_check": "Enable window check",
           "window_delay_open": "Window open delay (minutes)",
           "window_delay_close": "Window close delay (minutes)",
-          "summer_policy": "Summer policy for Fil Pilote"
+          "summer_policy": "Summer policy for Wire Pilot"
         }
       },
       "room_climate_advanced": {
         "title": "Advanced Climate Configuration",
-        "description": "Dispatch to Fil Pilote or Thermostat advanced configuration."
+        "description": "Dispatch to Wire Pilot or Thermostat advanced configuration."
       },
       "fil_pilote_hysteresis": {
-        "title": "Fil Pilote - Hysteresis",
+        "title": "Wire Pilot - Hysteresis",
         "description": "Temperature sensor acts as a safeguard. Setpoint input is optional.",
         "data": {
           "setpoint_input": "Setpoint input entity (optional)",
@@ -102,14 +102,14 @@
         }
       },
       "fil_pilote_presets": {
-        "title": "Fil Pilote - Presets & External Control",
-        "description": "Customize Fil Pilote presets and external control settings.",
+        "title": "Wire Pilot - Presets & External Control",
+        "description": "Customize Wire Pilot presets and external control settings.",
         "data": {
-          "preset_comfort": "Fil Pilote preset for Comfort mode",
-          "preset_eco": "Fil Pilote preset for Eco mode",
-          "preset_night": "Fil Pilote preset for Night mode",
-          "preset_away": "Fil Pilote preset for Away mode",
-          "preset_window": "Fil Pilote preset for Window open",
+          "preset_comfort": "Wire Pilot preset for Comfort mode",
+          "preset_eco": "Wire Pilot preset for Eco mode",
+          "preset_night": "Wire Pilot preset for Night mode",
+          "preset_away": "Wire Pilot preset for Away mode",
+          "preset_window": "Wire Pilot preset for Window open",
           "external_control_preset": "External control preset",
           "allow_external_in_away": "Allow external control in away mode"
         }
