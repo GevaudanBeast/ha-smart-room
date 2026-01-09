@@ -485,19 +485,13 @@ def build_climate_config_schema(
     # Check if temperature sensor is configured
     has_temp_sensor = room_data.get(CONF_TEMPERATURE_SENSOR) is not None
 
-    # Thermostat modes always need temperature setpoints
-    # Fil Pilote needs them only if a temperature sensor is available
-    thermostat_heating_modes = [
-        CLIMATE_MODE_THERMOSTAT_HEAT,
-        CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
-    ]
+    # Temperature setpoints:
+    # - Fil Pilote with temp sensor: Show temps here (garde-fou for hysteresis)
+    # - Thermostat: Temps shown in thermostat_advanced step (only if control_mode != preset_only)
     fil_pilote_with_sensor = climate_mode == CLIMATE_MODE_FIL_PILOTE and has_temp_sensor
-    show_heating_temps = (
-        climate_mode in thermostat_heating_modes or fil_pilote_with_sensor
-    )
 
-    # Heating temperatures
-    if show_heating_temps:
+    # Heating temperatures - only for Fil Pilote with temperature sensor
+    if fil_pilote_with_sensor:
         schema_dict[
             vol.Optional(
                 CONF_TEMP_COMFORT,
@@ -557,39 +551,8 @@ def build_climate_config_schema(
             )
         )
 
-    # Cooling temperatures (thermostat_cool, thermostat_heat_cool)
-    cooling_modes = [CLIMATE_MODE_THERMOSTAT_COOL, CLIMATE_MODE_THERMOSTAT_HEAT_COOL]
-    if climate_mode in cooling_modes:
-        schema_dict[
-            vol.Optional(
-                CONF_TEMP_COOL_COMFORT,
-                default=room_data.get(
-                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
-                ),
-            )
-        ] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=20,
-                max=28,
-                step=0.5,
-                mode=selector.NumberSelectorMode.SLIDER,
-                unit_of_measurement="°C",
-            )
-        )
-        schema_dict[
-            vol.Optional(
-                CONF_TEMP_COOL_ECO,
-                default=room_data.get(CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO),
-            )
-        ] = selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=20,
-                max=30,
-                step=0.5,
-                mode=selector.NumberSelectorMode.SLIDER,
-                unit_of_measurement="°C",
-            )
-        )
+    # Note: Cooling temperatures for thermostats are in thermostat_advanced step
+    # (only shown when control_mode != preset_only)
 
     # Window check (for all modes with climate)
     if climate_mode != CLIMATE_MODE_NONE:
@@ -919,6 +882,114 @@ def build_thermostat_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
             ),
         )
     ] = selector.BooleanSelector()
+
+    return vol.Schema(schema_dict)
+
+
+def build_thermostat_temperatures_schema(room_data: dict[str, Any]) -> vol.Schema:
+    """Build schema for thermostat temperature setpoints.
+
+    Only shown when control_mode is 'temperature' or 'preset_and_temp'.
+    In preset_only mode, the user configures temperatures in the thermostat app.
+    """
+    schema_dict = {}
+
+    # Heating temperatures
+    schema_dict[
+        vol.Optional(
+            CONF_TEMP_COMFORT,
+            default=room_data.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT),
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=15,
+            max=25,
+            step=0.5,
+            mode=selector.NumberSelectorMode.SLIDER,
+            unit_of_measurement="°C",
+        )
+    )
+    schema_dict[
+        vol.Optional(
+            CONF_TEMP_ECO,
+            default=room_data.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO),
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=15,
+            max=25,
+            step=0.5,
+            mode=selector.NumberSelectorMode.SLIDER,
+            unit_of_measurement="°C",
+        )
+    )
+    schema_dict[
+        vol.Optional(
+            CONF_TEMP_NIGHT,
+            default=room_data.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT),
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=15,
+            max=25,
+            step=0.5,
+            mode=selector.NumberSelectorMode.SLIDER,
+            unit_of_measurement="°C",
+        )
+    )
+    schema_dict[
+        vol.Optional(
+            CONF_TEMP_FROST_PROTECTION,
+            default=room_data.get(
+                CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
+            ),
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=5,
+            max=15,
+            step=0.5,
+            mode=selector.NumberSelectorMode.SLIDER,
+            unit_of_measurement="°C",
+        )
+    )
+
+    # Cooling temperatures (for thermostat_cool, thermostat_heat_cool)
+    climate_mode = room_data.get(CONF_CLIMATE_MODE)
+    if climate_mode in [
+        CLIMATE_MODE_THERMOSTAT_COOL,
+        CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
+    ]:
+        schema_dict[
+            vol.Optional(
+                CONF_TEMP_COOL_COMFORT,
+                default=room_data.get(
+                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
+                ),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=20,
+                max=28,
+                step=0.5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="°C",
+            )
+        )
+        schema_dict[
+            vol.Optional(
+                CONF_TEMP_COOL_ECO,
+                default=room_data.get(CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO),
+            )
+        ] = selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=20,
+                max=30,
+                step=0.5,
+                mode=selector.NumberSelectorMode.SLIDER,
+                unit_of_measurement="°C",
+            )
+        )
 
     return vol.Schema(schema_dict)
 
@@ -1317,15 +1388,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 self._current_room.get(CONF_TEMPERATURE_SENSOR) is not None
             )
 
-            # Heating temperatures: thermostat modes OR Fil Pilote with temp sensor
-            thermostat_heating_modes = [
-                CLIMATE_MODE_THERMOSTAT_HEAT,
-                CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
-            ]
+            # Heating temperatures: only for Fil Pilote with temp sensor
+            # (thermostat temps are in thermostat_temperatures step)
             fil_pilote_with_sensor = (
                 climate_mode == CLIMATE_MODE_FIL_PILOTE and has_temp_sensor
             )
-            if climate_mode in thermostat_heating_modes or fil_pilote_with_sensor:
+            if fil_pilote_with_sensor:
                 update_data[CONF_TEMP_COMFORT] = user_input.get(
                     CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
                 )
@@ -1339,18 +1407,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                     CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
                 )
 
-            # Cooling temperatures (thermostat_cool, thermostat_heat_cool)
-            cooling_modes = [
-                CLIMATE_MODE_THERMOSTAT_COOL,
-                CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
-            ]
-            if climate_mode in cooling_modes:
-                update_data[CONF_TEMP_COOL_COMFORT] = user_input.get(
-                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
-                )
-                update_data[CONF_TEMP_COOL_ECO] = user_input.get(
-                    CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO
-                )
+            # Note: Cooling temperatures for thermostats are in thermostat_temperatures step
 
             # Window check (for all climate modes)
             update_data[CONF_CLIMATE_WINDOW_CHECK] = user_input.get(
@@ -1501,9 +1558,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             update_data = {}
 
             # Thermostat control mode
-            update_data[CONF_THERMOSTAT_CONTROL_MODE] = user_input.get(
+            control_mode = user_input.get(
                 CONF_THERMOSTAT_CONTROL_MODE, DEFAULT_THERMOSTAT_CONTROL_MODE
             )
+            update_data[CONF_THERMOSTAT_CONTROL_MODE] = control_mode
 
             # External Control configuration for Thermostat
             update_data[CONF_EXTERNAL_CONTROL_TEMP] = user_input.get(
@@ -1514,6 +1572,11 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             )
 
             self._current_room.update(update_data)
+
+            # If control_mode needs temperatures, show temperatures step
+            if control_mode != THERMOSTAT_CONTROL_PRESET:
+                return await self.async_step_thermostat_temperatures()
+
             return await self.async_step_room_schedule()
 
         return self.async_show_form(
@@ -1522,6 +1585,49 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Mode de contrôle et contrôle externe.",
+            },
+        )
+
+    async def async_step_thermostat_temperatures(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Configure thermostat temperature setpoints (only for temperature/both modes)."""
+        if user_input is not None:
+            # Save heating temperatures
+            self._current_room[CONF_TEMP_COMFORT] = user_input.get(
+                CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT
+            )
+            self._current_room[CONF_TEMP_ECO] = user_input.get(
+                CONF_TEMP_ECO, DEFAULT_TEMP_ECO
+            )
+            self._current_room[CONF_TEMP_NIGHT] = user_input.get(
+                CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT
+            )
+            self._current_room[CONF_TEMP_FROST_PROTECTION] = user_input.get(
+                CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
+            )
+
+            # Save cooling temperatures if applicable
+            climate_mode = self._current_room.get(CONF_CLIMATE_MODE)
+            if climate_mode in [
+                CLIMATE_MODE_THERMOSTAT_COOL,
+                CLIMATE_MODE_THERMOSTAT_HEAT_COOL,
+            ]:
+                self._current_room[CONF_TEMP_COOL_COMFORT] = user_input.get(
+                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
+                )
+                self._current_room[CONF_TEMP_COOL_ECO] = user_input.get(
+                    CONF_TEMP_COOL_ECO, DEFAULT_TEMP_COOL_ECO
+                )
+
+            return await self.async_step_room_schedule()
+
+        return self.async_show_form(
+            step_id="thermostat_temperatures",
+            data_schema=build_thermostat_temperatures_schema(self._current_room),
+            description_placeholders={
+                "room_name": self._current_room[CONF_ROOM_NAME],
+                "info": "Températures cibles pour le thermostat.",
             },
         )
 

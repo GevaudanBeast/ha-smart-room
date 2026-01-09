@@ -87,22 +87,52 @@
       },
       "room_climate_advanced": {
         "title": "Advanced Climate Configuration",
-        "description": "Hysteresis: Fil Pilote control via temp (setpoint required). External Control: Solar Optimizer config. Presets: customize Fil Pilote.",
+        "description": "Dispatch to Fil Pilote or Thermostat advanced configuration."
+      },
+      "fil_pilote_hysteresis": {
+        "title": "Fil Pilote - Hysteresis",
+        "description": "Temperature sensor acts as a safeguard. Setpoint input is optional.",
         "data": {
-          "setpoint_input": "Setpoint input entity",
+          "setpoint_input": "Setpoint input entity (optional)",
           "hysteresis": "Hysteresis (°C)",
           "min_setpoint": "Minimum setpoint (°C)",
           "max_setpoint": "Maximum setpoint (°C)",
           "preset_heat": "Preset when heating",
-          "preset_idle": "Preset when idle",
-          "external_control_preset": "External control preset",
-          "external_control_temp": "External control temperature (°C)",
-          "allow_external_in_away": "Allow external control in away mode",
+          "preset_idle": "Preset when idle"
+        }
+      },
+      "fil_pilote_presets": {
+        "title": "Fil Pilote - Presets & External Control",
+        "description": "Customize Fil Pilote presets and external control settings.",
+        "data": {
           "preset_comfort": "Fil Pilote preset for Comfort mode",
           "preset_eco": "Fil Pilote preset for Eco mode",
           "preset_night": "Fil Pilote preset for Night mode",
           "preset_away": "Fil Pilote preset for Away mode",
-          "preset_window": "Fil Pilote preset for Window open"
+          "preset_window": "Fil Pilote preset for Window open",
+          "external_control_preset": "External control preset",
+          "allow_external_in_away": "Allow external control in away mode"
+        }
+      },
+      "thermostat_advanced": {
+        "title": "Thermostat - Control Mode",
+        "description": "Choose how SRM controls the thermostat. Preset only: thermostat manages temperatures.",
+        "data": {
+          "thermostat_control_mode": "Control mode",
+          "external_control_temp": "External control temperature (°C)",
+          "allow_external_in_away": "Allow external control in away mode"
+        }
+      },
+      "thermostat_temperatures": {
+        "title": "Thermostat - Temperatures",
+        "description": "Target temperatures for thermostat control (temperature/both modes).",
+        "data": {
+          "temp_comfort": "Comfort temperature",
+          "temp_eco": "Eco temperature",
+          "temp_night": "Night temperature",
+          "temp_frost_protection": "Frost protection temperature",
+          "temp_cool_comfort": "Comfort temperature (cooling)",
+          "temp_cool_eco": "Eco temperature (cooling)"
         }
       },
       "room_schedule": {
