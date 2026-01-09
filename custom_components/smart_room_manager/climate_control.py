@@ -309,13 +309,21 @@ class ClimateController:
         if not is_active:
             is_active = state.state.lower() == STATE_ON.lower()
 
-        # Check if we should override away mode
+        # Check if we should allow external control based on presence
         if is_active:
             allow_in_away = self.room_config.get(
                 CONF_ALLOW_EXTERNAL_IN_AWAY, DEFAULT_ALLOW_EXTERNAL_IN_AWAY
             )
-            if not allow_in_away and self._is_away_mode():
-                # External control wants to activate, but away mode blocks it
+            is_away = self._is_away_mode()
+
+            # If allow_in_away is True: external control ONLY works when away
+            # If allow_in_away is False: external control works anytime
+            if allow_in_away and not is_away:
+                # External control only when away, but user is present
+                _LOGGER.debug(
+                    "External control blocked in %s - user is present (allow_in_away=True)",
+                    self.room_manager.room_name,
+                )
                 self._external_control_active = False
                 return False
 

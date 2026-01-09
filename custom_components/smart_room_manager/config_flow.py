@@ -15,6 +15,7 @@ from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.core import callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 
@@ -327,31 +328,17 @@ def build_room_sensors_schema(room_data: dict[str, Any]) -> vol.Schema:
         )
     )
 
-    # Temperature sensor (only set default if it exists and is not None)
-    temp_sensor = room_data.get(CONF_TEMPERATURE_SENSOR)
-    if temp_sensor is not None:
-        schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR, default=temp_sensor)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-            )
-        )
-    else:
-        schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-        )
+    # Temperature sensor
+    # Note: Don't use default= for entity selectors as it prevents proper clearing
+    schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+    )
 
-    # Humidity sensor (only set default if it exists and is not None)
-    humidity_sensor = room_data.get(CONF_HUMIDITY_SENSOR)
-    if humidity_sensor is not None:
-        schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR, default=humidity_sensor)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-            )
-        )
-    else:
-        schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR)] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-        )
+    # Humidity sensor
+    # Note: Don't use default= for entity selectors as it prevents proper clearing
+    schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR)] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+    )
 
     return vol.Schema(schema_dict)
 
@@ -405,45 +392,23 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
     )
 
     # Climate entity (shown for all climate modes except "none")
-    climate_entity = room_data.get(CONF_CLIMATE_ENTITY)
-    if climate_entity is not None:
-        schema_dict[vol.Optional(CONF_CLIMATE_ENTITY, default=climate_entity)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
-            )
-        )
-    else:
-        schema_dict[vol.Optional(CONF_CLIMATE_ENTITY)] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
-        )
+    # Note: Don't use default= for entity selectors as it prevents proper clearing
+    schema_dict[vol.Optional(CONF_CLIMATE_ENTITY)] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
+    )
 
     # Bypass switch
-    bypass_switch = room_data.get(CONF_CLIMATE_BYPASS_SWITCH)
-    if bypass_switch is not None:
-        schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH, default=bypass_switch)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
-            )
-        )
-    else:
-        schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
-        )
+    # Note: Don't use default= for entity selectors as it prevents proper clearing
+    schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+    )
 
     # External control switch (v0.3.0)
-    external_switch = room_data.get(CONF_EXTERNAL_CONTROL_SWITCH)
-    if external_switch is not None:
-        schema_dict[
-            vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH, default=external_switch)
-        ] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
-        )
-    else:
-        schema_dict[vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH)] = (
-            selector.EntitySelector(
-                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
-            )
-        )
+    # Note: Don't use default= for entity selectors as it prevents proper clearing
+    # Instead, we'll show current value in description and handle None properly
+    schema_dict[vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH)] = selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+    )
 
     # Note: VMC entity is now in global settings, not per-room
 
@@ -1273,21 +1238,27 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 CONF_DOOR_WINDOW_SENSORS: user_input.get(CONF_DOOR_WINDOW_SENSORS, []),
             }
 
-            # Add optional sensors only if they are configured
-            # Also explicitly remove them if they were cleared
-            if user_input.get(CONF_TEMPERATURE_SENSOR):
-                update_data[CONF_TEMPERATURE_SENSOR] = user_input.get(
-                    CONF_TEMPERATURE_SENSOR
-                )
-            else:
-                # Remove if previously set but now cleared
-                self._current_room.pop(CONF_TEMPERATURE_SENSOR, None)
+            # Handle optional entity selectors:
+            # - If key in user_input with value → update
+            # - If key in user_input with None/empty → remove
+            # - If key not in user_input → keep existing (user didn't interact)
+            if CONF_TEMPERATURE_SENSOR in user_input:
+                if user_input.get(CONF_TEMPERATURE_SENSOR):
+                    update_data[CONF_TEMPERATURE_SENSOR] = user_input[
+                        CONF_TEMPERATURE_SENSOR
+                    ]
+                else:
+                    # User explicitly cleared the field
+                    self._current_room.pop(CONF_TEMPERATURE_SENSOR, None)
+            # else: user didn't interact, keep existing value
 
-            if user_input.get(CONF_HUMIDITY_SENSOR):
-                update_data[CONF_HUMIDITY_SENSOR] = user_input.get(CONF_HUMIDITY_SENSOR)
-            else:
-                # Remove if previously set but now cleared
-                self._current_room.pop(CONF_HUMIDITY_SENSOR, None)
+            if CONF_HUMIDITY_SENSOR in user_input:
+                if user_input.get(CONF_HUMIDITY_SENSOR):
+                    update_data[CONF_HUMIDITY_SENSOR] = user_input[CONF_HUMIDITY_SENSOR]
+                else:
+                    # User explicitly cleared the field
+                    self._current_room.pop(CONF_HUMIDITY_SENSOR, None)
+            # else: user didn't interact, keep existing value
 
             self._current_room.update(update_data)
             return await self.async_step_room_actuators()
@@ -1306,11 +1277,19 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
     ) -> config_entries.FlowResult:
         """Configure room actuators (v0.4.0 - with climate mode selection)."""
         if user_input is not None:
-            # Get climate entity and mode
-            has_climate = user_input.get(CONF_CLIMATE_ENTITY)
             climate_mode = user_input.get(CONF_CLIMATE_MODE, DEFAULT_CLIMATE_MODE)
 
-            # If no climate entity, force mode to "none"
+            # Handle climate entity: check if user interacted with the field
+            # - If key in user_input with value → update
+            # - If key in user_input with None/empty → remove
+            # - If key not in user_input → keep existing (user didn't interact)
+            if CONF_CLIMATE_ENTITY in user_input:
+                has_climate = user_input.get(CONF_CLIMATE_ENTITY)
+            else:
+                # User didn't interact, keep existing
+                has_climate = self._current_room.get(CONF_CLIMATE_ENTITY)
+
+            # If no climate entity selected, force mode to "none"
             if not has_climate:
                 climate_mode = CLIMATE_MODE_NONE
 
@@ -1323,23 +1302,27 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             if climate_mode != CLIMATE_MODE_NONE and has_climate:
                 update_data[CONF_CLIMATE_ENTITY] = has_climate
 
-                # Bypass switch (only relevant with climate)
-                if user_input.get(CONF_CLIMATE_BYPASS_SWITCH):
-                    update_data[CONF_CLIMATE_BYPASS_SWITCH] = user_input.get(
-                        CONF_CLIMATE_BYPASS_SWITCH
-                    )
-                else:
-                    # Remove if previously set but now cleared
-                    self._current_room.pop(CONF_CLIMATE_BYPASS_SWITCH, None)
+                # Bypass switch - handle like entity selectors
+                if CONF_CLIMATE_BYPASS_SWITCH in user_input:
+                    if user_input.get(CONF_CLIMATE_BYPASS_SWITCH):
+                        update_data[CONF_CLIMATE_BYPASS_SWITCH] = user_input[
+                            CONF_CLIMATE_BYPASS_SWITCH
+                        ]
+                    else:
+                        # User explicitly cleared the field
+                        self._current_room.pop(CONF_CLIMATE_BYPASS_SWITCH, None)
+                # else: user didn't interact, keep existing value
 
-                # External control switch (only relevant with climate)
-                if user_input.get(CONF_EXTERNAL_CONTROL_SWITCH):
-                    update_data[CONF_EXTERNAL_CONTROL_SWITCH] = user_input.get(
-                        CONF_EXTERNAL_CONTROL_SWITCH
-                    )
-                else:
-                    # Remove if previously set but now cleared
-                    self._current_room.pop(CONF_EXTERNAL_CONTROL_SWITCH, None)
+                # External control switch - handle like entity selectors
+                if CONF_EXTERNAL_CONTROL_SWITCH in user_input:
+                    if user_input.get(CONF_EXTERNAL_CONTROL_SWITCH):
+                        update_data[CONF_EXTERNAL_CONTROL_SWITCH] = user_input[
+                            CONF_EXTERNAL_CONTROL_SWITCH
+                        ]
+                    else:
+                        # User explicitly cleared the field
+                        self._current_room.pop(CONF_EXTERNAL_CONTROL_SWITCH, None)
+                # else: user didn't interact, keep existing value
             else:
                 # No climate: remove all climate-related settings
                 self._current_room.pop(CONF_CLIMATE_ENTITY, None)
@@ -1832,6 +1815,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
 
             if entity_id:
                 entity_registry.async_remove(entity_id)
+
+        # Also remove the device from device registry
+        device_registry = dr.async_get(self.hass)
+        device = device_registry.async_get_device(identifiers={(DOMAIN, room_id)})
+        if device:
+            device_registry.async_remove_device(device.id)
 
     async def async_step_global_settings(
         self, user_input: dict[str, Any] | None = None
