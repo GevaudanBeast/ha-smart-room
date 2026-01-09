@@ -336,7 +336,9 @@ class FilPiloteController:
         if reason == "away":
             target_preset = self.room_config.get(CONF_PRESET_AWAY, DEFAULT_PRESET_AWAY)
         else:  # "window"
-            target_preset = self.room_config.get(CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW)
+            target_preset = self.room_config.get(
+                CONF_PRESET_WINDOW, DEFAULT_PRESET_WINDOW
+            )
 
         # Get actual preset from entity state (sync with reality)
         state = self.hass.states.get(climate_entity)

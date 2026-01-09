@@ -419,7 +419,10 @@ class ClimateController:
         }
 
         # Get state from active controller
-        if self._climate_type == CLIMATE_TYPE_FIL_PILOTE and self._fil_pilote_controller:
+        if (
+            self._climate_type == CLIMATE_TYPE_FIL_PILOTE
+            and self._fil_pilote_controller
+        ):
             state.update(self._fil_pilote_controller.get_state())
         elif (
             self._climate_type == CLIMATE_TYPE_THERMOSTAT

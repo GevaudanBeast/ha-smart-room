@@ -194,6 +194,14 @@ class ThermostatController:
             CONF_THERMOSTAT_CONTROL_MODE, DEFAULT_THERMOSTAT_CONTROL_MODE
         )
 
+        _LOGGER.debug(
+            "Thermostat control for %s: mode=%s, control_mode=%s, presets=%s",
+            self.room_manager.room_name,
+            mode,
+            control_mode,
+            self._preset_modes,
+        )
+
         # Preset-only mode: just switch presets
         if control_mode == THERMOSTAT_CONTROL_PRESET:
             await self._control_preset_only(climate_entity, mode, is_summer)
@@ -219,6 +227,12 @@ class ThermostatController:
         The thermostat manages its own temperatures for each preset.
         User configures temperatures in the thermostat app.
         """
+        _LOGGER.debug(
+            "Using preset_only mode for %s (mode: %s)",
+            self.room_manager.room_name,
+            mode,
+        )
+
         state = self.hass.states.get(climate_entity)
         if not state:
             return
@@ -236,8 +250,15 @@ class ThermostatController:
         # Find the best preset for this mode
         target_preset = self._get_best_preset_for_mode(mode)
 
+        _LOGGER.debug(
+            "Preset_only for %s: mode=%s -> target_preset=%s",
+            self.room_manager.room_name,
+            mode,
+            target_preset,
+        )
+
         if target_preset:
-            # Set the preset
+            # Set the preset (no temperature change!)
             await self._set_preset(climate_entity, target_preset)
 
             # Ensure thermostat is ON (not OFF)

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.4] - 2026-01-04
+## [0.3.4] - 2026-01-09
 
 ### 🐛 Corrections critiques
 
@@ -44,12 +44,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fix** : Alignement des priorités dans `room_manager._update_current_mode()`
 - **Comportement** : Le sensor affiche maintenant le vrai mode appliqué
 
+#### Fix : Presets hors-gel différenciés (away vs fenêtres)
+- **Problème** : Le preset "fenêtre" était utilisé pour les deux cas (absence et fenêtres)
+- **Fix** : Paramètre `reason` ajouté à `set_frost_protection()`
+- **Comportement** : `CONF_PRESET_AWAY` pour absence, `CONF_PRESET_WINDOW` pour fenêtres
+
+### ✨ Nouvelles fonctionnalités
+
+#### Thermostat : Mode de contrôle configurable
+- **Nouveau** : Option `thermostat_control_mode` dans la configuration avancée
+- **Modes disponibles** :
+  - `preset_only` (défaut, recommandé) : Utilise uniquement les presets du thermostat, l'utilisateur contrôle les températures dans l'app native
+  - `temperature` : Contrôle direct de la température (ancien comportement)
+  - `preset_and_temp` : Utilise les presets ET définit la température
+- **Mapping automatique** : Modes SRM → presets thermostat avec fallbacks
+  - Confort → comfort, home, boost
+  - Eco → eco, home
+  - Nuit → sleep, eco, home
+  - Absence → away
+
+#### Fil Pilote : Hystérésis simplifiée
+- **Amélioration** : Ne nécessite plus qu'un capteur de température (pas de setpoint_input obligatoire)
+- **Consigne automatique** : Utilise les températures configurées (confort, eco, nuit) selon le mode actif
+- **Optionnel** : `setpoint_input` (input_number) reste disponible pour un contrôle dynamique
+- **Garde-fou** : Le capteur de température fournit le retour pour arrêter à la bonne température
+
 ### 🔧 Refactoring
 
+#### Renommage X4FP → Fil Pilote
+- **Renommé** : `x4fp_controller.py` → `fil_pilote_controller.py`
+- **Renommé** : Classe `X4FPController` → `FilPiloteController`
+- **Nouvelles constantes** : `FP_PRESET_*` avec alias `X4FP_PRESET_*` pour rétro-compatibilité
+- **Nouvelle constante** : `CLIMATE_TYPE_FIL_PILOTE` avec alias `CLIMATE_TYPE_X4FP`
+- **Traductions** : "X4FP" remplacé par "Fil Pilote" (en, fr)
+- **Note** : Le nom "Fil Pilote" est plus générique et clair pour les utilisateurs français (IPX800, Qubino, etc.)
+
+#### Autres améliorations
 - **Consolidé** : Méthodes VMC on/off en `_control_entity()` générique
 - **Ajouté** : Helper `_get_entity_domain()` pour extraction du domaine
 - **Corrigé** : Null check sur `state.last_changed`
 - **Uniformisé** : Tous les binary_sensor retournent `None` quand pas de données
+
+### ✅ Rétro-compatibilité
+- Les configurations existantes restent fonctionnelles
+- Les alias `X4FP_PRESET_*` et `CLIMATE_TYPE_X4FP` préservent la compatibilité
+- Le mode `preset_only` est le défaut pour les thermostats (nouveau comportement recommandé)
+- Les anciennes configurations avec `setpoint_input` continuent de fonctionner
 
 ## [0.3.3] - 2026-01-04
 

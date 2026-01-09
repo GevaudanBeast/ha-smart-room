@@ -17,14 +17,17 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 ### 🆕 What's New
 
-**v0.3.4** (Latest) - Bug Fixes:
+**v0.3.4** (Latest) - New Features & Bug Fixes:
+- 🔥 **Fil Pilote**: X4FP renamed to "Fil Pilote" (clearer, more generic)
+- 🎛️ **Thermostat control modes**: Choose preset_only (recommended), temperature, or both
+- 🌡️ **Simplified hysteresis**: Only requires temperature sensor (no more setpoint_input needed)
+- 🪟 **Separate frost presets**: Different presets for away mode vs windows open
 - 🌙 **Night period fix**: Now works correctly after midnight (22:00-06:00)
 - 💨 **VMC multi-bathroom**: Fixed conflict when multiple bathrooms share one VMC
 - 📊 **Priority alignment**: Display mode now matches actual heating action
 - 🏠 **Ignore in away**: Schedule now respected when "ignore_in_away" option is checked
-- 🔄 **Away→Disarmed transition**: X4FP and thermostat presets now update correctly
+- 🔄 **Away→Disarmed transition**: Fil Pilote and thermostat presets now update correctly
 - ⏸️ **Pause for lights**: Manual pause now also stops light automation
-- 🪟 **Sensor priorities**: State sensor now reflects windows open and ignore_in_away
 
 **v0.3.3** - VMC & Debug Sensors:
 - 💨 **VMC Support**: Global VMC entity with configurable timer
@@ -34,12 +37,12 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 **v0.3.0** - Advanced Climate Control:
 - 🌞 **External Control** : Solar Optimizer and other external control systems support
-- 🌡️ **Hysteresis X4FP** : Temperature-based control with hysteresis for X4FP radiators
+- 🌡️ **Hysteresis Fil Pilote** : Temperature-based control with hysteresis for Fil Pilote radiators
 - 📅 **Room Calendars** : Per-room schedule/calendar support (Google Calendar, etc.)
 - ⏸️ **Manual Pause** : Pause automation temporarily per room (15min to 8h)
 - 🪟 **Window Delays** : Configurable delays before reacting to windows open/close
-- 🎯 **Configurable Presets** : Customize X4FP presets per room
-- ☀️ **Summer Policy** : Choose "off" or "eco" for X4FP in summer
+- 🎯 **Configurable Presets** : Customize Fil Pilote presets per room
+- ☀️ **Summer Policy** : Choose "off" or "eco" for Fil Pilote in summer
 - 🔍 **Debug Sensors** : Priority, external control, hysteresis state, schedule active
 - 🎛️ **7-Level Priority System** : Paused, Bypass, Windows, External, Away, Schedule, Normal
 - ✅ **Fully Configurable** : All features available in UI wizard (8 steps)
@@ -66,7 +69,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
   - **Eco** : Default mode outside comfort ranges
   - **Night** : Night period (configurable)
   - **Frost Protection** : Alarm armed_away or window open
-- ✅ **X4FP/Thermostat auto-detection** : Automatic control based on type
+- ✅ **Fil Pilote/Thermostat auto-detection** : Automatic control based on type
 - ✅ **Summer/winter support** : Heat/cool temperatures via calendar
 - ✅ **Generic bypass** : Switch to disable control (Solar Optimizer, etc.)
 - ✅ **Open windows** : Automatic frost protection mode
@@ -131,7 +134,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 
 **Step 3: Actuators (all optional)**
 - **Lights** : light.* or switch.* entities
-- **Climate entity** : Thermostat or X4FP (auto-detection)
+- **Climate entity** : Thermostat or Fil Pilote (auto-detection)
 - **Bypass switch** : Disables climate control
 
 **Step 4: Light Configuration** (if type = Corridor or Bathroom)
@@ -270,14 +273,17 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 
 ### 🆕 Nouveautés
 
-**v0.3.4** (Dernière) - Corrections :
+**v0.3.4** (Dernière) - Nouveautés & Corrections :
+- 🔥 **Fil Pilote** : X4FP renommé en "Fil Pilote" (plus clair, plus générique)
+- 🎛️ **Modes contrôle thermostat** : Choix preset_only (recommandé), température, ou les deux
+- 🌡️ **Hystérésis simplifiée** : Ne nécessite qu'un capteur de température (plus de setpoint_input obligatoire)
+- 🪟 **Presets hors-gel séparés** : Presets différents pour absence vs fenêtres ouvertes
 - 🌙 **Période nuit** : Fonctionne maintenant après minuit (22:00-06:00)
 - 💨 **VMC multi-SDB** : Corrige conflit quand plusieurs SDB partagent une VMC
 - 📊 **Priorités alignées** : Le mode affiché correspond à l'action réelle
 - 🏠 **Ignore in away** : Le schedule est respecté quand l'option est cochée
-- 🔄 **Transition away→disarmed** : Les presets X4FP et thermostat se mettent à jour
+- 🔄 **Transition away→disarmed** : Les presets Fil Pilote et thermostat se mettent à jour
 - ⏸️ **Pause lumières** : La pause manuelle arrête aussi l'automation des lumières
-- 🪟 **Sensor priorités** : Le sensor reflète fenêtres ouvertes et ignore_in_away
 
 **v0.3.3** - VMC & Capteurs Debug :
 - 💨 **Support VMC** : Entité VMC globale avec timer configurable
@@ -311,7 +317,7 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
   - **Eco** : Mode par défaut hors plages confort
   - **Nuit** : Période nocturne (configurable)
   - **Hors-gel** : Alarme armed_away ou fenêtre ouverte
-- ✅ **Auto-détection X4FP/Thermostat** : Contrôle automatique selon type
+- ✅ **Auto-détection Fil Pilote/Thermostat** : Contrôle automatique selon type
 - ✅ **Support été/hiver** : Températures heat/cool via calendrier
 - ✅ **Bypass générique** : Switch pour désactiver contrôle
 - ✅ **Fenêtres ouvertes** : Passage automatique en hors-gel
@@ -376,7 +382,7 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 
 **Étape 3 : Actionneurs (tous optionnels)**
 - **Lumières** : Entités light.* ou switch.*
-- **Entité climat** : Thermostat ou X4FP (auto-détection)
+- **Entité climat** : Thermostat ou Fil Pilote (auto-détection)
 - **Switch bypass** : Désactive contrôle chauffage
 
 **Étape 4 : Configuration lumières** (si type = Couloir ou Salle de bain)
@@ -509,7 +515,7 @@ logger:
 
 ---
 
-**Version** : 0.2.3
+**Version** : 0.3.4
 **Author / Auteur** : GevaudanBeast
 **Compatibility / Compatibilité** : Home Assistant 2023.1+
 
