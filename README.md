@@ -19,8 +19,12 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 **v0.3.4** (Latest) - New Features & Bug Fixes:
 - 🔥 **Fil Pilote**: X4FP renamed to "Fil Pilote" (clearer, more generic)
-- 🎛️ **Thermostat control modes**: Choose preset_only (recommended), temperature, or both
-- 🌡️ **Simplified hysteresis**: Only requires temperature sensor (no more setpoint_input needed)
+- 🎛️ **Thermostat control modes**:
+  - `preset_only` (default, recommended): Uses thermostat presets only - you control temperatures in your thermostat app (Netatmo, Tado, etc.)
+  - `temperature`: SRM controls temperatures directly (legacy behavior)
+  - `preset_and_temp`: Uses both presets and temperatures
+  - **Smart config flow**: Temperature settings only shown when needed (not in preset_only mode)
+- 🌡️ **Fil Pilote hysteresis simplified**: Temperature sensor acts as a safeguard (garde-fou), setpoint_input optional
 - 🪟 **Separate frost presets**: Different presets for away mode vs windows open
 - 🌙 **Night period fix**: Now works correctly after midnight (22:00-06:00)
 - 💨 **VMC multi-bathroom**: Fixed conflict when multiple bathrooms share one VMC
@@ -275,8 +279,12 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 
 **v0.3.4** (Dernière) - Nouveautés & Corrections :
 - 🔥 **Fil Pilote** : X4FP renommé en "Fil Pilote" (plus clair, plus générique)
-- 🎛️ **Modes contrôle thermostat** : Choix preset_only (recommandé), température, ou les deux
-- 🌡️ **Hystérésis simplifiée** : Ne nécessite qu'un capteur de température (plus de setpoint_input obligatoire)
+- 🎛️ **Modes contrôle thermostat** :
+  - `preset_only` (défaut, recommandé) : Utilise uniquement les presets - vous contrôlez les températures dans l'app du thermostat (Netatmo, Tado, etc.)
+  - `temperature` : SRM contrôle les températures directement (ancien comportement)
+  - `preset_and_temp` : Utilise presets et températures
+  - **Config flow intelligent** : Les températures n'apparaissent que si nécessaire (pas en mode preset_only)
+- 🌡️ **Hystérésis Fil Pilote simplifiée** : Le capteur de température sert de garde-fou, setpoint_input optionnel
 - 🪟 **Presets hors-gel séparés** : Presets différents pour absence vs fenêtres ouvertes
 - 🌙 **Période nuit** : Fonctionne maintenant après minuit (22:00-06:00)
 - 💨 **VMC multi-SDB** : Corrige conflit quand plusieurs SDB partagent une VMC

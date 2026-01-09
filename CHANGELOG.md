@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Thermostat : Mode de contrôle configurable
 - **Nouveau** : Option `thermostat_control_mode` dans la configuration avancée
 - **Modes disponibles** :
-  - `preset_only` (défaut, recommandé) : Utilise uniquement les presets du thermostat, l'utilisateur contrôle les températures dans l'app native
+  - `preset_only` (défaut, recommandé) : Utilise uniquement les presets du thermostat, l'utilisateur contrôle les températures dans l'app native (Netatmo, Tado, etc.)
   - `temperature` : Contrôle direct de la température (ancien comportement)
   - `preset_and_temp` : Utilise les presets ET définit la température
 - **Mapping automatique** : Modes SRM → presets thermostat avec fallbacks
@@ -62,6 +62,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Eco → eco, home
   - Nuit → sleep, eco, home
   - Absence → away
+- **Config Flow intelligent** : Les températures ne sont affichées que si `control_mode != preset_only`
+  - Mode `preset_only` : Pas d'étape températures (l'utilisateur configure dans l'app thermostat)
+  - Mode `temperature`/`both` : Nouvelle étape `thermostat_temperatures` avec toutes les consignes
 
 #### Fil Pilote : Hystérésis simplifiée
 - **Amélioration** : Ne nécessite plus qu'un capteur de température (pas de setpoint_input obligatoire)
