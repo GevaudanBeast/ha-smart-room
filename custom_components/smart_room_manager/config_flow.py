@@ -328,17 +328,21 @@ def build_room_sensors_schema(room_data: dict[str, Any]) -> vol.Schema:
         )
     )
 
-    # Temperature sensor
-    # Note: Don't use default= for entity selectors as it prevents proper clearing
-    schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-    )
+    # Temperature sensor - use suggested_value to show current without forcing default
+    schema_dict[
+        vol.Optional(
+            CONF_TEMPERATURE_SENSOR,
+            description={"suggested_value": room_data.get(CONF_TEMPERATURE_SENSOR)},
+        )
+    ] = selector.EntitySelector(selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN]))
 
-    # Humidity sensor
-    # Note: Don't use default= for entity selectors as it prevents proper clearing
-    schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR)] = selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
-    )
+    # Humidity sensor - use suggested_value to show current without forcing default
+    schema_dict[
+        vol.Optional(
+            CONF_HUMIDITY_SENSOR,
+            description={"suggested_value": room_data.get(CONF_HUMIDITY_SENSOR)},
+        )
+    ] = selector.EntitySelector(selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN]))
 
     return vol.Schema(schema_dict)
 
@@ -391,22 +395,33 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
         )
     )
 
-    # Climate entity (shown for all climate modes except "none")
-    # Note: Don't use default= for entity selectors as it prevents proper clearing
-    schema_dict[vol.Optional(CONF_CLIMATE_ENTITY)] = selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
-    )
+    # Climate entity - use suggested_value to show current without forcing default
+    schema_dict[
+        vol.Optional(
+            CONF_CLIMATE_ENTITY,
+            description={"suggested_value": room_data.get(CONF_CLIMATE_ENTITY)},
+        )
+    ] = selector.EntitySelector(selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN]))
 
-    # Bypass switch
-    # Note: Don't use default= for entity selectors as it prevents proper clearing
-    schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = selector.EntitySelector(
+    # Bypass switch - use suggested_value to show current without forcing default
+    schema_dict[
+        vol.Optional(
+            CONF_CLIMATE_BYPASS_SWITCH,
+            description={"suggested_value": room_data.get(CONF_CLIMATE_BYPASS_SWITCH)},
+        )
+    ] = selector.EntitySelector(
         selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
     )
 
-    # External control switch (v0.3.0)
-    # Note: Don't use default= for entity selectors as it prevents proper clearing
-    # Instead, we'll show current value in description and handle None properly
-    schema_dict[vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH)] = selector.EntitySelector(
+    # External control switch - use suggested_value to show current without forcing default
+    schema_dict[
+        vol.Optional(
+            CONF_EXTERNAL_CONTROL_SWITCH,
+            description={
+                "suggested_value": room_data.get(CONF_EXTERNAL_CONTROL_SWITCH)
+            },
+        )
+    ] = selector.EntitySelector(
         selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
     )
 

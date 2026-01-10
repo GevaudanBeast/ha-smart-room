@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-01-09
+
+### 🐛 Corrections critiques
+
+#### Fix : X4FP hystérésis appliquait comfort au lieu de away
+- **Problème** : En mode hystérésis avec Fil Pilote, le mode "absent" (frost_protection) passait par la logique d'hystérésis et appliquait le preset "comfort" ou "eco" basé sur la température, au lieu du preset "away"
+- **Fix** : Le mode `MODE_FROST_PROTECTION` bypass maintenant l'hystérésis et applique directement le preset away configuré
+- **Impact** : Le chauffage passe correctement en hors-gel quand l'alarme est armée
+
+#### Fix : Contrôle externe actif quand présent
+- **Problème** : Le contrôle externe (Solar Optimizer) était actif même quand l'utilisateur était présent
+- **Fix** : Inversion de la logique - `allow_in_away=True` (défaut) signifie que le contrôle externe fonctionne **uniquement** quand absent
+- **Impact** : Solar Optimizer ne force plus le chauffage quand vous êtes à la maison
+
+#### Fix : Modifications d'entités qui revenaient
+- **Problème** : Lors de l'édition d'une pièce, les modifications des sélecteurs d'entités (climate, bypass, external switch, sensors) n'étaient pas sauvegardées
+- **Cause** : Utilisation de `default=` dans les schémas voluptuous qui forçait la valeur par défaut
+- **Fix** : Utilisation de `suggested_value` qui affiche la valeur actuelle sans la forcer
+- **Impact** : On peut maintenant supprimer un switch ou capteur configuré
+
+#### Fix : Suppression de pièce incomplète
+- **Problème** : Après suppression d'une pièce, elle restait visible dans la liste des appareils
+- **Cause** : Seules les entités étaient supprimées, pas le device du registre
+- **Fix** : Ajout de la suppression du device dans `_remove_room_entities()` + entités manquantes (activity, light_timer, vmc_active)
+- **Impact** : Les pièces supprimées disparaissent complètement
+
+### 🔧 Améliorations
+
+#### Service cleanup_entities amélioré
+- Supprime maintenant les **devices orphelins** en plus des entités
+- Notification affiche le nombre d'appareils supprimés
+- Double vérification : entités orphelines + devices sans entités
+
 ## [0.3.5] - 2026-01-09
 
 ### 🐛 Corrections critiques

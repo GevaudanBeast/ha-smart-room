@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-01-09
+
+### 🐛 Critical Bug Fixes
+
+#### Fix: X4FP hysteresis applied comfort instead of away
+- **Problem**: In hysteresis mode with Wire Pilot, the "away" mode (frost_protection) went through hysteresis logic and applied "comfort" or "eco" preset based on temperature, instead of the "away" preset
+- **Fix**: `MODE_FROST_PROTECTION` now bypasses hysteresis and directly applies the configured away preset
+- **Impact**: Heating correctly switches to frost protection when the alarm is armed
+
+#### Fix: External control active when present
+- **Problem**: External control (Solar Optimizer) was active even when user was present
+- **Fix**: Inverted the logic - `allow_in_away=True` (default) means external control ONLY works when away
+- **Impact**: Solar Optimizer no longer forces heating when you are home
+
+#### Fix: Entity modifications reverting
+- **Problem**: When editing a room, entity selector modifications (climate, bypass, external switch, sensors) were not saved
+- **Cause**: Using `default=` in voluptuous schemas that forced the default value
+- **Fix**: Using `suggested_value` which displays the current value without forcing it
+- **Impact**: You can now remove a configured switch or sensor
+
+#### Fix: Incomplete room deletion
+- **Problem**: After deleting a room, it still appeared in the device list
+- **Cause**: Only entities were deleted, not the device from the registry
+- **Fix**: Added device deletion in `_remove_room_entities()` + missing entities (activity, light_timer, vmc_active)
+- **Impact**: Deleted rooms completely disappear
+
+### 🔧 Improvements
+
+#### Enhanced cleanup_entities service
+- Now removes **orphaned devices** in addition to entities
+- Notification shows the number of devices removed
+- Double check: orphaned entities + devices without entities
+
+## [0.3.5] - 2026-01-09
+
+### 🐛 Critical Bug Fixes
+
+#### Fix: Climate type detection (Wire Pilot vs Thermostat)
+- **Problem**: Wire Pilot entities (`climate.x4fp_fp_*`) were sent to the thermostat controller, which called `set_temperature` (not supported by Wire Pilot)
+- **Cause**: Auto-detection based on entity attributes instead of using user configuration
+- **Fix**: Now uses the user-configured `CONF_CLIMATE_MODE`
+  - `fil_pilote` → `CLIMATE_TYPE_FIL_PILOTE` (uses `set_preset_mode`)
+  - `thermostat_heat/cool/heat_cool` → `CLIMATE_TYPE_THERMOSTAT` (uses `set_temperature`)
+- **Fallback**: Attribute-based detection only if `climate_mode` is not configured
+
+### 🌍 Translations
+
+#### Wire Pilot (English technical term)
+- **Renamed**: "Fil Pilote" → "Wire Pilot" in all English translations
+- **Files**: `strings.json`, `translations/en.json`
+- **Note**: French retains "Fil Pilote"
+
 ## [0.3.4] - 2026-01-04
 
 ### 🐛 Critical Bug Fixes
