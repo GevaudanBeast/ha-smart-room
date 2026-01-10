@@ -328,21 +328,31 @@ def build_room_sensors_schema(room_data: dict[str, Any]) -> vol.Schema:
         )
     )
 
-    # Temperature sensor - use suggested_value to show current without forcing default
-    schema_dict[
-        vol.Optional(
-            CONF_TEMPERATURE_SENSOR,
-            description={"suggested_value": room_data.get(CONF_TEMPERATURE_SENSOR)},
+    # Temperature sensor - use default= only when value exists (so key is in user_input)
+    temp_sensor = room_data.get(CONF_TEMPERATURE_SENSOR)
+    if temp_sensor:
+        schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR, default=temp_sensor)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            )
         )
-    ] = selector.EntitySelector(selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN]))
+    else:
+        schema_dict[vol.Optional(CONF_TEMPERATURE_SENSOR)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+        )
 
-    # Humidity sensor - use suggested_value to show current without forcing default
-    schema_dict[
-        vol.Optional(
-            CONF_HUMIDITY_SENSOR,
-            description={"suggested_value": room_data.get(CONF_HUMIDITY_SENSOR)},
+    # Humidity sensor - use default= only when value exists
+    humidity_sensor = room_data.get(CONF_HUMIDITY_SENSOR)
+    if humidity_sensor:
+        schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR, default=humidity_sensor)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+            )
         )
-    ] = selector.EntitySelector(selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN]))
+    else:
+        schema_dict[vol.Optional(CONF_HUMIDITY_SENSOR)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SENSOR_DOMAIN])
+        )
 
     return vol.Schema(schema_dict)
 
@@ -395,35 +405,46 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
         )
     )
 
-    # Climate entity - use suggested_value to show current without forcing default
-    schema_dict[
-        vol.Optional(
-            CONF_CLIMATE_ENTITY,
-            description={"suggested_value": room_data.get(CONF_CLIMATE_ENTITY)},
+    # Climate entity - use default= only when value exists (so key is in user_input)
+    climate_entity = room_data.get(CONF_CLIMATE_ENTITY)
+    if climate_entity:
+        schema_dict[vol.Optional(CONF_CLIMATE_ENTITY, default=climate_entity)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
+            )
         )
-    ] = selector.EntitySelector(selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN]))
+    else:
+        schema_dict[vol.Optional(CONF_CLIMATE_ENTITY)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[CLIMATE_DOMAIN])
+        )
 
-    # Bypass switch - use suggested_value to show current without forcing default
-    schema_dict[
-        vol.Optional(
-            CONF_CLIMATE_BYPASS_SWITCH,
-            description={"suggested_value": room_data.get(CONF_CLIMATE_BYPASS_SWITCH)},
+    # Bypass switch - use default= only when value exists
+    bypass_switch = room_data.get(CONF_CLIMATE_BYPASS_SWITCH)
+    if bypass_switch:
+        schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH, default=bypass_switch)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+            )
         )
-    ] = selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
-    )
+    else:
+        schema_dict[vol.Optional(CONF_CLIMATE_BYPASS_SWITCH)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+        )
 
-    # External control switch - use suggested_value to show current without forcing default
-    schema_dict[
-        vol.Optional(
-            CONF_EXTERNAL_CONTROL_SWITCH,
-            description={
-                "suggested_value": room_data.get(CONF_EXTERNAL_CONTROL_SWITCH)
-            },
+    # External control switch - use default= only when value exists
+    external_switch = room_data.get(CONF_EXTERNAL_CONTROL_SWITCH)
+    if external_switch:
+        schema_dict[
+            vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH, default=external_switch)
+        ] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
         )
-    ] = selector.EntitySelector(
-        selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
-    )
+    else:
+        schema_dict[vol.Optional(CONF_EXTERNAL_CONTROL_SWITCH)] = (
+            selector.EntitySelector(
+                selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
+            )
+        )
 
     # Note: VMC entity is now in global settings, not per-room
 

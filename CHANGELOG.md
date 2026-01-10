@@ -9,452 +9,179 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.6] - 2026-01-09
 
-### 🐛 Corrections critiques
+### 🐛 Critical Bug Fixes
 
-#### Fix : X4FP hystérésis appliquait comfort au lieu de away
-- **Problème** : En mode hystérésis avec Fil Pilote, le mode "absent" (frost_protection) passait par la logique d'hystérésis et appliquait le preset "comfort" ou "eco" basé sur la température, au lieu du preset "away"
-- **Fix** : Le mode `MODE_FROST_PROTECTION` bypass maintenant l'hystérésis et applique directement le preset away configuré
-- **Impact** : Le chauffage passe correctement en hors-gel quand l'alarme est armée
+#### Fix: X4FP hysteresis applied comfort instead of away
+- **Problem**: In hysteresis mode with Wire Pilot, the "away" mode (frost_protection) went through hysteresis logic and applied "comfort" or "eco" preset based on temperature, instead of the "away" preset
+- **Fix**: `MODE_FROST_PROTECTION` now bypasses hysteresis and directly applies the configured away preset
+- **Impact**: Heating correctly switches to frost protection when the alarm is armed
 
-#### Fix : Contrôle externe actif quand présent
-- **Problème** : Le contrôle externe (Solar Optimizer) était actif même quand l'utilisateur était présent
-- **Fix** : Inversion de la logique - `allow_in_away=True` (défaut) signifie que le contrôle externe fonctionne **uniquement** quand absent
-- **Impact** : Solar Optimizer ne force plus le chauffage quand vous êtes à la maison
+#### Fix: External control active when present
+- **Problem**: External control (Solar Optimizer) was active even when user was present
+- **Fix**: Inverted the logic - `allow_in_away=True` (default) means external control ONLY works when away
+- **Impact**: Solar Optimizer no longer forces heating when you are home
 
-#### Fix : Modifications d'entités qui revenaient
-- **Problème** : Lors de l'édition d'une pièce, les modifications des sélecteurs d'entités (climate, bypass, external switch, sensors) n'étaient pas sauvegardées
-- **Cause** : Utilisation de `default=` dans les schémas voluptuous qui forçait la valeur par défaut
-- **Fix** : Utilisation de `suggested_value` qui affiche la valeur actuelle sans la forcer
-- **Impact** : On peut maintenant supprimer un switch ou capteur configuré
+#### Fix: Entity modifications reverting
+- **Problem**: When editing a room, entity selector modifications (climate, bypass, external switch, sensors) were not saved
+- **Cause**: Using `default=` always forced values, using `suggested_value` didn't include cleared fields in form submission
+- **Fix**: Conditional `default=` - only set when value exists, otherwise no default. Cleared fields are properly detected and removed
+- **Impact**: You can now remove a configured switch or sensor
 
-#### Fix : Suppression de pièce incomplète
-- **Problème** : Après suppression d'une pièce, elle restait visible dans la liste des appareils
-- **Cause** : Seules les entités étaient supprimées, pas le device du registre
-- **Fix** : Ajout de la suppression du device dans `_remove_room_entities()` + entités manquantes (activity, light_timer, vmc_active)
-- **Impact** : Les pièces supprimées disparaissent complètement
+#### Fix: Incomplete room deletion
+- **Problem**: After deleting a room, it still appeared in the device list
+- **Cause**: Only entities were deleted, not the device from the registry
+- **Fix**: Added device deletion in `_remove_room_entities()` + missing entities (activity, light_timer, vmc_active)
+- **Impact**: Deleted rooms completely disappear
 
-### 🔧 Améliorations
+### 🔧 Improvements
 
-#### Service cleanup_entities amélioré
-- Supprime maintenant les **devices orphelins** en plus des entités
-- Notification affiche le nombre d'appareils supprimés
-- Double vérification : entités orphelines + devices sans entités
+#### Enhanced cleanup_entities service
+- Now removes **orphaned devices** in addition to entities
+- Notification shows the number of devices removed
+- Double check: orphaned entities + devices without entities
 
 ## [0.3.5] - 2026-01-09
 
-### 🐛 Corrections critiques
+### 🐛 Critical Bug Fixes
 
-#### Fix : Détection du type de climat (Fil Pilote vs Thermostat)
-- **Problème** : Les entités Fil Pilote (`climate.x4fp_fp_*`) étaient envoyées au contrôleur thermostat, qui appelait `set_temperature` (non supporté par Fil Pilote)
-- **Cause** : Auto-détection basée sur les attributs de l'entité au lieu d'utiliser la configuration utilisateur
-- **Fix** : Utilise désormais `CONF_CLIMATE_MODE` configuré par l'utilisateur
-  - `fil_pilote` → `CLIMATE_TYPE_FIL_PILOTE` (utilise `set_preset_mode`)
-  - `thermostat_heat/cool/heat_cool` → `CLIMATE_TYPE_THERMOSTAT` (utilise `set_temperature`)
-- **Fallback** : Détection par attributs seulement si `climate_mode` n'est pas configuré
+#### Fix: Climate type detection (Wire Pilot vs Thermostat)
+- **Problem**: Wire Pilot entities (`climate.x4fp_fp_*`) were sent to the thermostat controller, which called `set_temperature` (not supported by Wire Pilot)
+- **Cause**: Auto-detection based on entity attributes instead of using user configuration
+- **Fix**: Now uses the user-configured `CONF_CLIMATE_MODE`
+  - `fil_pilote` → `CLIMATE_TYPE_FIL_PILOTE` (uses `set_preset_mode`)
+  - `thermostat_heat/cool/heat_cool` → `CLIMATE_TYPE_THERMOSTAT` (uses `set_temperature`)
+- **Fallback**: Attribute-based detection only if `climate_mode` is not configured
 
-### 🌍 Traductions
+### 🌍 Translations
 
-#### Wire Pilot (terme technique anglais)
-- **Renommé** : "Fil Pilote" → "Wire Pilot" dans toutes les traductions anglaises
-- **Fichiers** : `strings.json`, `translations/en.json`
-- **Note** : Le français conserve "Fil Pilote"
+#### Wire Pilot (English technical term)
+- **Renamed**: "Fil Pilote" → "Wire Pilot" in all English translations
+- **Files**: `strings.json`, `translations/en.json`
+- **Note**: French retains "Fil Pilote"
 
-## [0.3.4] - 2026-01-09
+## [0.3.4] - 2026-01-04
 
-### 🐛 Corrections critiques
+### 🐛 Critical Bug Fixes
 
-#### Fix : Période nuit après minuit
-- **Problème** : La période nuit ne fonctionnait qu'entre 22:00 et 23:59
-- **Fix** : Ajout de `DEFAULT_DAY_START` (06:00), la nuit est maintenant 22:00-06:00
-- **Logique** : `is_night = now >= 22:00 OR now < 06:00`
+#### Fix: Night period after midnight
+- **Problem**: Night period only worked between 22:00 and 23:59
+- **Fix**: Added `DEFAULT_DAY_START` (06:00), night is now 22:00-06:00
+- **Logic**: `is_night = now >= 22:00 OR now < 06:00`
 
-#### Fix : VMC multi-salles de bain
-- **Problème** : Le timer VMC d'une salle de bain pouvait éteindre la VMC globale alors qu'une autre salle de bain était encore active
-- **Fix** : Ajout de `_any_other_bathroom_active()` qui vérifie si d'autres salles de bain ont besoin de la VMC avant de l'éteindre
+#### Fix: VMC with multiple bathrooms
+- **Problem**: One bathroom's VMC timer could turn off the global VMC while another bathroom was still active
+- **Fix**: Added `_any_other_bathroom_active()` that checks if other bathrooms need the VMC before turning it off
 
-#### Fix : Priorités mode chauffage
-- **Fix** : Alignement des priorités entre `room_manager` et `climate_control`
-- **Fix** : Le calendrier a maintenant priorité sur la période nuit (config explicite)
-- **Fix** : Les salles de bain utilisent la logique lumière avant le calendrier
+#### Fix: Heating mode priorities
+- **Fix**: Aligned priorities between `room_manager` and `climate_control`
+- **Fix**: Schedule now has priority over night period (explicit user config)
+- **Fix**: Bathrooms use light-based logic before schedule
 
-#### Fix : Option ignore_in_away respectée
-- **Problème** : Le schedule était ignoré même avec l'option "ignore_in_away" cochée
-- **Fix** : Vérification de `ignore_in_away` dans la priorité away mode
+#### Fix: Respect ignore_in_away option for schedule
+- **Problem**: Schedule was ignored even with "ignore_in_away" option checked
+- **Fix**: Check `ignore_in_away` in away mode priority
 
-#### Fix : Transition away → disarmed (X4FP et Thermostats)
-- **Problème** : Passage de armed_away à disarmed ne changeait pas les presets
-- **Fix X4FP** : Synchronisation avec l'état réel du preset avant comparaison
-- **Fix Thermostat** : Support des presets "away" et "home" si le thermostat les supporte
-- **Comportement** : X4FP away→eco/comfort, Thermostat away→home + heat/cool
+#### Fix: Away → disarmed transition (X4FP and Thermostats)
+- **Problem**: Transitioning from armed_away to disarmed didn't change presets
+- **X4FP Fix**: Sync with actual preset state before comparison
+- **Thermostat Fix**: Support "away" and "home" presets if thermostat supports them
+- **Behavior**: X4FP away→eco/comfort, Thermostat away→home + heat/cool
 
-#### Fix : Pause manuelle n'arrêtait pas les lumières
-- **Problème** : Le switch pause n'arrêtait que le chauffage, pas le contrôle des lumières
-- **Fix** : Ajout de la vérification `is_paused()` dans `light_control.py`
+#### Fix: Manual pause didn't stop light control
+- **Problem**: Pause switch only stopped climate control, not light automation
+- **Fix**: Added `is_paused()` check in `light_control.py`
 
-#### Fix : Sensor état incohérent avec priorités
-- **Problème** : Le sensor d'état ignorait fenêtres ouvertes et ignore_in_away
-- **Fix** : Alignement des priorités dans `room_manager._update_current_mode()`
-- **Comportement** : Le sensor affiche maintenant le vrai mode appliqué
-
-#### Fix : Presets hors-gel différenciés (away vs fenêtres)
-- **Problème** : Le preset "fenêtre" était utilisé pour les deux cas (absence et fenêtres)
-- **Fix** : Paramètre `reason` ajouté à `set_frost_protection()`
-- **Comportement** : `CONF_PRESET_AWAY` pour absence, `CONF_PRESET_WINDOW` pour fenêtres
-
-### ✨ Nouvelles fonctionnalités
-
-#### Thermostat : Mode de contrôle configurable
-- **Nouveau** : Option `thermostat_control_mode` dans la configuration avancée
-- **Modes disponibles** :
-  - `preset_only` (défaut, recommandé) : Utilise uniquement les presets du thermostat, l'utilisateur contrôle les températures dans l'app native (Netatmo, Tado, etc.)
-  - `temperature` : Contrôle direct de la température (ancien comportement)
-  - `preset_and_temp` : Utilise les presets ET définit la température
-- **Mapping automatique** : Modes SRM → presets thermostat avec fallbacks
-  - Confort → comfort, home, boost
-  - Eco → eco, home
-  - Nuit → sleep, eco, home
-  - Absence → away
-- **Config Flow intelligent** : Les températures ne sont affichées que si `control_mode != preset_only`
-  - Mode `preset_only` : Pas d'étape températures (l'utilisateur configure dans l'app thermostat)
-  - Mode `temperature`/`both` : Nouvelle étape `thermostat_temperatures` avec toutes les consignes
-
-#### Fil Pilote : Hystérésis simplifiée
-- **Amélioration** : Ne nécessite plus qu'un capteur de température (pas de setpoint_input obligatoire)
-- **Consigne automatique** : Utilise les températures configurées (confort, eco, nuit) selon le mode actif
-- **Optionnel** : `setpoint_input` (input_number) reste disponible pour un contrôle dynamique
-- **Garde-fou** : Le capteur de température fournit le retour pour arrêter à la bonne température
+#### Fix: State sensor inconsistent with priorities
+- **Problem**: State sensor ignored windows open and ignore_in_away option
+- **Fix**: Aligned priorities in `room_manager._update_current_mode()`
+- **Behavior**: Sensor now shows the actual applied mode
 
 ### 🔧 Refactoring
 
-#### Renommage X4FP → Fil Pilote
-- **Renommé** : `x4fp_controller.py` → `fil_pilote_controller.py`
-- **Renommé** : Classe `X4FPController` → `FilPiloteController`
-- **Nouvelles constantes** : `FP_PRESET_*` avec alias `X4FP_PRESET_*` pour rétro-compatibilité
-- **Nouvelle constante** : `CLIMATE_TYPE_FIL_PILOTE` avec alias `CLIMATE_TYPE_X4FP`
-- **Traductions** : "X4FP" remplacé par "Fil Pilote" (en, fr)
-- **Note** : Le nom "Fil Pilote" est plus générique et clair pour les utilisateurs français (IPX800, Qubino, etc.)
-
-#### Autres améliorations
-- **Consolidé** : Méthodes VMC on/off en `_control_entity()` générique
-- **Ajouté** : Helper `_get_entity_domain()` pour extraction du domaine
-- **Corrigé** : Null check sur `state.last_changed`
-- **Uniformisé** : Tous les binary_sensor retournent `None` quand pas de données
-
-### ✅ Rétro-compatibilité
-- Les configurations existantes restent fonctionnelles
-- Les alias `X4FP_PRESET_*` et `CLIMATE_TYPE_X4FP` préservent la compatibilité
-- Le mode `preset_only` est le défaut pour les thermostats (nouveau comportement recommandé)
-- Les anciennes configurations avec `setpoint_input` continuent de fonctionner
+- **Consolidated**: VMC on/off methods into generic `_control_entity()`
+- **Added**: `_get_entity_domain()` helper for domain extraction
+- **Fixed**: Null check on `state.last_changed`
+- **Unified**: All binary_sensors return `None` when no data available
 
 ## [0.3.3] - 2026-01-04
 
-### ✨ Améliorations UX - Configuration contextuelle
+### ✨ UX Improvements - Contextual Configuration
 
-#### Nouveau : Sélection du mode climat
-- **Ajouté** : Sélecteur de type de chauffage dans les actionneurs :
-  - Aucun (couloirs, etc.)
-  - Fil Pilote (X4FP, IPX800...)
-  - Thermostat (chauffage seul)
-  - Thermostat (climatisation seule)
-  - Thermostat (chaud/froid)
-- **Amélioré** : Configuration contextuelle basée sur le mode sélectionné
+#### New: Climate Mode Selection
+- **Added**: Climate type selector in actuators:
+  - None (corridors, etc.)
+  - Wire Pilot / Fil Pilote (X4FP, IPX800...)
+  - Thermostat (heat only)
+  - Thermostat (cool only)
+  - Thermostat (heat/cool)
+- **Improved**: Contextual configuration based on selected mode
 
-#### Nouveau : Support VMC (Ventilation)
-- **Ajouté** : Entité VMC globale dans paramètres généraux (switch ou fan)
-- **Ajouté** : Timer VMC configurable (durée après extinction lumière)
-- **Comportement** : VMC grande vitesse s'active à l'allumage, timer démarre à l'extinction
-- **Ajouté** : binary_sensor VMC Grande Vitesse (affiche countdown)
+#### New: VMC (Ventilation) Support
+- **Added**: Global VMC entity in general settings (switch or fan)
+- **Added**: Configurable VMC timer (duration after light turns off)
+- **Behavior**: VMC high speed activates when light turns on, timer starts when light turns off
+- **Added**: VMC High Speed binary_sensor (shows countdown)
 
-#### Nouveau : Capteurs de debug et traçage
-- **Ajouté** : sensor Activité pour chaque pièce (log lisible avec emojis)
-- **Ajouté** : binary_sensor Timer Lumière (countdown avant extinction auto)
-- **Ajouté** : Descriptions claires pour bypass vs contrôle externe
+#### New: Debug and Tracing Sensors
+- **Added**: Activity sensor for each room (human-readable log with emojis)
+- **Added**: Light Timer binary_sensor (countdown before auto-off)
+- **Added**: Clear descriptions for bypass vs external control
 
-#### Nouveau : Service de nettoyage
-- **Ajouté** : Service `smart_room_manager.cleanup_entities` pour supprimer les entités orphelines
-- **Comportement** : Supprime automatiquement les entités des pièces qui n'existent plus
+#### New: Cleanup Service
+- **Added**: `smart_room_manager.cleanup_entities` service to remove orphaned entities
+- **Behavior**: Automatically removes entities from rooms that no longer exist
 
-#### Améliorations des types de pièces
-- **Renommé** : "Normal" → "Pièce de vie" (chambre, salon, cuisine, bureau...)
-- **Renommé** : "Couloir" → "Pièce de passage" (couloir, grenier, cave, buanderie...)
-- **Renommé** : "Salle de bain" → "Salle de bain / WC" (timer lumière + VMC)
+#### Room Type Improvements
+- **Renamed**: "Normal" → "Living space" (bedroom, living room, kitchen, office...)
+- **Renamed**: "Corridor" → "Passage/utility" (corridor, attic, cellar, laundry...)
+- **Renamed**: "Bathroom" → "Bathroom / WC" (light timer + VMC)
 
-#### Logique de configuration intelligente
-- **Amélioré** : Pas d'entité climat → mode forcé à "Aucun", config climat sautée
-- **Amélioré** : Fil Pilote + capteur temp → températures de consigne affichées
-- **Amélioré** : Fil Pilote sans capteur temp → températures masquées
-- **Amélioré** : Bypass et contrôle externe ignorés si pas de climat configuré
+#### Smart Configuration Logic
+- **Improved**: No climate entity → mode forced to "None", climate config skipped
+- **Improved**: Fil Pilote + temp sensor → temperature setpoints shown
+- **Improved**: Fil Pilote without temp sensor → temperatures hidden
+- **Improved**: Bypass and external control ignored if no climate configured
 
-### 🐛 Corrections
+### 🐛 Bug Fixes
 
-#### Fix : Erreur de validation SelectSelector
-- **Problème** : "unknown error" lors de la création/édition de pièces
-- **Cause** : SelectSelector pour pause_duration utilisait des entiers au lieu de chaînes
-- **Fix** : Conversion en options string ["15", "30", "60", "120", "240", "480"]
+#### Fix: SelectSelector Validation Error
+- **Problem**: "unknown error" when creating/editing rooms
+- **Cause**: SelectSelector for pause_duration used integers instead of strings
+- **Fix**: Converted to string options ["15", "30", "60", "120", "240", "480"]
 
-#### Fix : Erreurs de longueur de ligne (E501)
-- **Fix** : Toutes les lignes respectent la limite de 88 caractères pour ruff/HACS
+#### Fix: Line Length Errors (E501)
+- **Fix**: All lines comply with 88 character limit for ruff/HACS
 
-#### Fix : Imports non utilisés
-- **Fix** : Suppression des imports F401 dans plusieurs fichiers
+#### Fix: Unused Imports
+- **Fix**: Removed F401 unused imports in multiple files
 
-### ✅ Compatibilité ascendante
-- Les configurations existantes restent fonctionnelles
-- Les nouveaux champs (VMC, climate_mode) sont optionnels avec valeurs par défaut
-- Pas de migration nécessaire
-
-### 🌍 Internationalization Improvements
-
-#### Complete translation system for English and French
-- **Added**: SelectSelector with translation_key for room types (Normal, Corridor, Bathroom)
-- **Added**: SelectSelector with translation_key for summer policy (Off, Eco, Comfort)
-- **Added**: SelectSelector with translation_key for pause duration (15min to 8h)
-- **Fixed**: French translations for bypass and external control switches
-- **Fixed**: Mixed French/English strings in room_control options
-- **Updated**: All translation files (strings.json, en.json, fr.json) with new selectors
-
-#### Simplified Schedule Configuration
-- **Removed from UI**: `night_start` and `comfort_ranges` fields from schedule configuration step
-- **Added**: `ignore_in_away` option to skip schedule when alarm is in away mode
-- **Backward Compatibility**: Existing installations with `night_start` and `comfort_ranges` configured will continue to work with these values
-- **Note**: New installations will use default values (night_start: 22:00, comfort_ranges: empty)
-
-#### Technical Changes
-- Marked `CONF_NIGHT_START` and `CONF_COMFORT_TIME_RANGES` as DEPRECATED in const.py
-- Helper functions `parse_comfort_ranges()` and `format_comfort_ranges()` kept for backward compatibility
-- Removed unused imports from config_flow.py
-
-### ✅ Backward Compatibility Guarantees
-- **Existing configurations**: All existing room configurations with `night_start` and `comfort_ranges` will continue to work
-- **Runtime behavior**: RoomManager still uses these values if present in configuration
-- **Default values**: New configurations use `DEFAULT_NIGHT_START = "22:00:00"` and empty comfort_ranges
-- **No migration needed**: Upgrade is safe and non-breaking for existing users
-
-## [0.3.2] - 2026-01-02
-
-### 🐛 Critical Bug Fix - Module Import Conflict
-
-#### Fix: config_flow module naming conflict
-- **Problem**: Integration failed to load with "Invalid handler specified" error, no logs generated
-- **Root Cause**: Both `config_flow.py` file AND `config_flow/` directory existed, creating Python import ambiguity
-- **Impact**: Home Assistant could not load the integration at all in v0.3.0 and v0.3.1
-- **Fix**: Removed `config_flow.py` file, consolidated all code into `config_flow/__init__.py` package
-- **Files Changed**:
-  - Deleted: `config_flow.py` (653 lines)
-  - Updated: `config_flow/__init__.py` (now contains full config flow implementation)
-
-**⚠️ Users affected by v0.3.0/v0.3.1**: Please upgrade to v0.3.2 immediately. The previous versions were non-functional due to this module conflict.
-
-### 📊 Verified Compatibility
-- ✅ Home Assistant 2023.1+ through 2025.12+
-- ✅ All fixes from v0.3.1 preserved (OptionsFlow and async_shutdown)
-
-## [0.3.1] - 2025-12-31
-
-### 🐛 Bug Fixes - Critical Compatibility Issues
-
-#### Fix: Config Flow "Invalid handler specified" error (HA 2025.12 compatibility)
-- **Problem**: Config flow failed to load with "Invalid handler specified" error in Home Assistant 2025.12+
-- **Root Cause**: `OptionsFlow.__init__()` accepted `config_entry` parameter which is now deprecated
-- **Fix**: Remove `config_entry` parameter from both `async_get_options_flow()` and `OptionsFlow.__init__()`
-- **Impact**: Config flow now loads correctly on HA 2025.12+
-- **File**: `config_flow.py:191, 197`
-- **Change**:
-  ```python
-  # Before (deprecated)
-  return SmartRoomManagerOptionsFlow(config_entry)
-  def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-
-  # After (HA 2025.12+ compatible)
-  return SmartRoomManagerOptionsFlow()
-  def __init__(self) -> None:
-  ```
-
-#### Fix: Home Assistant 2023.x compatibility for async_shutdown
-- **Problem**: `AttributeError: 'super' object has no attribute 'async_shutdown'` on HA 2023.x
-- **Root Cause**: `DataUpdateCoordinator.async_shutdown()` was added in HA 2024.x
-- **Fix**: Check if method exists before calling using `hasattr()`
-- **Impact**: Integration now works on both HA 2023.1+ and 2024.x+
-- **File**: `coordinator.py:98`
-- **Change**:
-  ```python
-  # Before (HA 2024.x only)
-  await super().async_shutdown()
-
-  # After (HA 2023.1+ compatible)
-  if hasattr(super(), "async_shutdown"):
-      await super().async_shutdown()
-  ```
-
-### 📊 Compatibility Matrix
-- ✅ **Home Assistant 2023.1+** - Minimum supported (with async_shutdown check)
-- ✅ **Home Assistant 2024.x** - Fully supported
-- ✅ **Home Assistant 2025.12+** - Latest tested (with OptionsFlow fix)
-
-### 🔄 Migration from v0.3.0
-No configuration changes required. This is a compatibility patch release.
-
-**Recommended actions:**
-1. Update integration via HACS or manual installation
-2. Restart Home Assistant completely
-3. Clear Python cache if issues persist:
-   ```bash
-   cd /config/custom_components/smart_room_manager
-   find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
-   find . -name "*.pyc" -delete
-   ha core restart
-   ```
-
-## [0.3.0] - 2025-01-31
-
-### 🎯 Major Feature Release - Advanced Climate Control
-
-#### Priority 1 Features Added
-
-- **External Control (Solar Optimizer, etc.)**
-  - Generic external control support via switch entity
-  - `CONF_EXTERNAL_CONTROL_SWITCH`: Entity to monitor (input_boolean, switch)
-  - `CONF_EXTERNAL_CONTROL_PRESET`: X4FP preset when active (default: comfort)
-  - `CONF_EXTERNAL_CONTROL_TEMP`: Thermostat temperature when active (default: 20°C)
-  - `CONF_ALLOW_EXTERNAL_IN_AWAY`: Allow external control override when away (default: false)
-  - Priority: Higher than away mode, lower than windows open
-  - Monitors `is_active` attribute or state ON
-
-- **Hysteresis X4FP Type 3b**
-  - Temperature-based control for X4FP radiators with hysteresis
-  - `CONF_SETPOINT_INPUT`: Input number or sensor for target temperature
-  - `CONF_HYSTERESIS`: Temperature deadband (default: 0.5°C)
-  - `CONF_MIN_SETPOINT`, `CONF_MAX_SETPOINT`: Limits for setpoint clamping (17-23°C)
-  - `CONF_PRESET_HEAT`: Preset when heating needed (default: comfort)
-  - `CONF_PRESET_IDLE`: Preset when temperature reached (default: eco)
-  - Three states: heating, idle, deadband (no change)
-  - Hysteresis state available via debug sensor
-
-- **Schedule/Calendar per Room**
-  - Per-room calendar/schedule entity support
-  - `CONF_SCHEDULE_ENTITY`: Calendar or schedule entity
-  - `CONF_PRESET_SCHEDULE_ON`: Mode when calendar event active (default: comfort)
-  - `CONF_PRESET_SCHEDULE_OFF`: Mode when no event (default: eco)
-  - Priority: Higher than normal mode, lower than away
-  - Overrides time-based comfort ranges when configured
-  - Schedule active status via debug sensor
-
-- **Manual Pause Switch**
-  - Per-room pause switch to temporarily disable automation
-  - `CONF_PAUSE_DURATION_MINUTES`: Auto-resume duration (15, 30, 60, 120, 240, 480 minutes)
-  - `CONF_PAUSE_INFINITE`: Enable infinite pause (no auto-resume)
-  - Highest priority (paused = 0.5, above bypass)
-  - Switch entity: `switch.smart_room_{room_id}_pause`
-  - Attributes: duration_minutes, infinite_enabled, pause_until, remaining_minutes
-  - Auto-turn off after duration or manual turn off
-
-- **Debug Sensors**
-  - `sensor.smart_room_{room_id}_current_priority`: Current priority level (paused, bypass, windows_open, external_control, away, schedule, normal)
-  - `binary_sensor.smart_room_{room_id}_external_control_active`: External control status
-  - `sensor.smart_room_{room_id}_hysteresis_state`: Hysteresis state (heating, idle, deadband)
-  - `binary_sensor.smart_room_{room_id}_schedule_active`: Schedule active status
-  - Detailed hysteresis attributes: current_temp, setpoint, hysteresis_value, lower/upper thresholds
-
-#### Priority 2 Features Added
-
-- **Window Delays**
-  - Configurable delays before reacting to windows open/close
-  - `CONF_WINDOW_DELAY_OPEN`: Minutes before setting frost protection (default: 2)
-  - `CONF_WINDOW_DELAY_CLOSE`: Minutes before resuming after close (default: 2)
-  - Prevents false reactions to brief window openings
-  - Timestamp-based tracking with `is_windows_open_delayed()` method
-
-- **Configurable X4FP Presets**
-  - Customize X4FP presets per room
-  - `CONF_PRESET_COMFORT`: Preset for comfort mode (default: comfort)
-  - `CONF_PRESET_ECO`: Preset for eco mode (default: eco)
-  - `CONF_PRESET_NIGHT`: Preset for night mode (default: eco)
-  - `CONF_PRESET_AWAY`: Preset for away/frost protection (default: away)
-  - `CONF_PRESET_WINDOW`: Preset for windows open (default: away)
-  - Adapts to different radiator types
-
-- **Summer Policy**
-  - Configurable X4FP behavior in summer mode
-  - `CONF_SUMMER_POLICY`: "off" or "eco" (default: "off")
-  - "off": Turn off radiators completely in summer
-  - "eco": Keep radiators on eco preset in summer
-  - Applied in both normal and hysteresis control modes
-
-#### Priority System (v0.3.0)
-
-New 7-level priority hierarchy (0.5 = highest, 6 = lowest):
-1. **Priority 0.5 - Paused**: Manual pause active
-2. **Priority 1 - Bypass**: Climate bypass switch ON
-3. **Priority 2 - Windows Open**: Windows detected open (with delay)
-4. **Priority 3 - External Control**: Solar Optimizer or similar active
-5. **Priority 4 - Away**: Alarm armed_away
-6. **Priority 5 - Schedule**: Calendar event active
-7. **Priority 6 - Normal**: Time-based or default mode
-
-#### Config Flow Updated
-
-- Wizard updated from v0.2.0 to v0.3.0 (6 → 8 steps)
-- **Step 3 (Actuators)**: Added external_control_switch field
-- **Step 5 (Climate Config)**: Added window_delay_open, window_delay_close, summer_policy
-- **Step 6 (Climate Advanced)**: NEW - Hysteresis, External Control config, X4FP Presets
-- **Step 7 (Schedule)**: Added schedule_entity, preset_schedule_on, preset_schedule_off
-- **Step 8 (Room Control)**: NEW - Pause duration, pause infinite
-- All features configurable via UI
-- Sensible defaults for all optional features
-
-#### Technical Improvements
-
-- **Code Refactoring**: Modularized codebase for better maintainability
-  - `config_flow.py`: Reduced from 1223 to 654 lines (-47%) by extracting schemas and helpers
-  - `climate_control.py`: Reduced from 768 to 392 lines (-49%) by extracting specialized controllers
-  - Created `config_flow/` module: schemas.py (715 lines), helpers.py (70 lines)
-  - Created `climate/` module: x4fp_controller.py (337 lines), thermostat_controller.py (201 lines)
-  - Improved testability and separation of concerns
-  - Lazy-loaded controllers for better performance
-- Fixed forward reference bug in const.py (X4FP_PRESET_* used before definition)
-- Proper timestamp tracking for window states
-- Improved logging with emojis for better visibility
-- Comprehensive state tracking for debug purposes
-- All features have proper defaults and validation
-
-### Migration from v0.2.x
-
-No breaking changes. All new features are optional with sensible defaults.
-Existing configurations continue to work without modification.
-Reconfigure rooms via UI to enable new v0.3.0 features.
-
-## [0.2.4] - 2025-11-16
-
-### Added
-- MIT License file
-- Badges to README (Version, License, Home Assistant compatibility, HACS)
-
-### Changed
-- Version bump to 0.2.4
-- Improved documentation
+### ✅ Backward Compatibility
+- Existing configurations remain functional
+- New fields (VMC, climate_mode) are optional with default values
+- No migration required
 
 ## [0.2.3] - 2025-01-14
 
 ### Fixed
-- **Erreurs critiques multiples** : Corrections complètes pour v0.2.3
-  - **Import DOMAIN manquant** : Ajout de `from .const import DOMAIN` dans switch.py et binary_sensor.py
-    - Résout : `NameError: name 'DOMAIN' is not defined`
-  - **Warning deprecated** : Suppression de l'assignment explicite de config_entry dans OptionsFlow
-    - Compatible avec Home Assistant 2025.12
-  - **"Entity None" dans formulaires** : Corrections multiples
-    - Migration étendue : Nettoyage de door_window_sensors et lights (en plus de temperature_sensor, humidity_sensor, climate_entity, climate_bypass_switch)
-    - Correction de `.get(field, [])` en `.get(field) or []` dans 7 emplacements (config_flow.py, light_control.py, room_manager.py)
-    - Schémas de formulaires conditionnels pour ne pas afficher None comme valeur par défaut
-  - Résout complètement l'erreur "Entity None is neither a valid entity ID nor a valid UUID"
-  - Migration transparente au démarrage, aucune action utilisateur requise
+- **Multiple critical errors** : Comprehensive fixes for v0.2.3
+  - **Missing DOMAIN imports** : Added `from .const import DOMAIN` in switch.py and binary_sensor.py
+    - Resolves: `NameError: name 'DOMAIN' is not defined`
+  - **Deprecated warning** : Removed explicit config_entry assignment in OptionsFlow
+    - Compatible with Home Assistant 2025.12
+  - **"Entity None" in forms** : Multiple fixes
+    - Extended migration: Cleanup of door_window_sensors and lights (in addition to temperature_sensor, humidity_sensor, climate_entity, climate_bypass_switch)
+    - Fixed `.get(field, [])` to `.get(field) or []` in 7 locations (config_flow.py, light_control.py, room_manager.py)
+    - Conditional form schemas to avoid None as default value
+  - Completely resolves "Entity None is neither a valid entity ID nor a valid UUID" error
+  - Transparent migration on startup, no user action required
 
 ## [0.2.2] - 2025-01-14
 
 ### Improved
-- **Configuration optionnelle** : Les champs température/humidité et autres capteurs/actionneurs ne sont plus sauvegardés avec une valeur `None` lorsqu'ils ne sont pas configurés
-  - Seuls les champs réellement configurés sont enregistrés dans la configuration
-  - Configuration plus propre et minimale possible
-  - Compatible avec des pièces minimalistes (juste un nom) jusqu'à des pièces ultra-équipées
+- **Optional configuration** : Temperature/humidity sensors and other actuators are no longer saved with `None` value when not configured
+  - Only actually configured fields are stored in the configuration
+  - Cleaner and more minimal configuration possible
+  - Compatible with minimalist rooms (just a name) to fully-equipped rooms
 
 ## [0.2.1] - 2025-01-14
 
@@ -478,7 +205,7 @@ Reconfigure rooms via UI to enable new v0.3.0 features.
 #### Added
 - **Room types** system:
   - Normal (bedrooms): No light timer
-  - Corridor: 5-minute auto-off timer (configurable)
+  - Corridor: 5-minute auto-off timer (configurable 60-1800s)
   - Bathroom: 15-minute timer + light controls heating (ON=comfort, OFF=eco)
 - **Generic bypass switch** : Single switch to disable climate control (Solar Optimizer, manual, etc.)
 - **Summer/winter mode** : Separate cool/heat temperatures with calendar-based season detection
