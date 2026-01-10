@@ -408,7 +408,17 @@ class ThermostatController:
                 )
                 return
 
-        # Get configured frost protection temperature
+        # In preset_only mode without away preset support, turn off thermostat
+        if control_mode == THERMOSTAT_CONTROL_PRESET:
+            _LOGGER.debug(
+                "No 'away' preset available for %s in preset_only mode, turning off (reason: %s)",
+                self.room_manager.room_name,
+                reason,
+            )
+            await self._set_hvac_mode(climate_entity, HVACMode.OFF)
+            return
+
+        # Only set temperature if NOT in preset_only mode
         frost_temp = self.room_config.get(
             CONF_TEMP_FROST_PROTECTION, DEFAULT_TEMP_FROST_PROTECTION
         )
