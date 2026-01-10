@@ -417,7 +417,9 @@ def build_room_actuators_schema(room_data: dict[str, Any]) -> vol.Schema:
     schema_dict[
         vol.Optional(
             CONF_EXTERNAL_CONTROL_SWITCH,
-            description={"suggested_value": room_data.get(CONF_EXTERNAL_CONTROL_SWITCH)},
+            description={
+                "suggested_value": room_data.get(CONF_EXTERNAL_CONTROL_SWITCH)
+            },
         )
     ] = selector.EntitySelector(
         selector.EntitySelectorConfig(domain=[SWITCH_DOMAIN, "input_boolean"])
