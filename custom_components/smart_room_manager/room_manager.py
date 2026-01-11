@@ -383,6 +383,11 @@ class RoomManager:
         # Check if calendar entity exists
         calendar_state = self.hass.states.get(schedule_entity)
         if not calendar_state:
+            _LOGGER.warning(
+                "%s: Schedule entity %s not found",
+                self.room_name,
+                schedule_entity,
+            )
             return None
 
         # Get presets for on/off states
@@ -391,8 +396,21 @@ class RoomManager:
 
         # Calendar state ON = event active
         if calendar_state.state == STATE_ON:
+            _LOGGER.debug(
+                "%s: Schedule %s is ON (event active) → mode %s",
+                self.room_name,
+                schedule_entity,
+                preset_on,
+            )
             return preset_on
         else:
+            _LOGGER.debug(
+                "%s: Schedule %s is %s (no event) → mode %s",
+                self.room_name,
+                schedule_entity,
+                calendar_state.state,
+                preset_off,
+            )
             return preset_off
 
     def get_state(self) -> dict[str, Any]:
@@ -430,6 +448,14 @@ class RoomManager:
         schedule_active = self.get_schedule_mode() is not None
         pause_active = self.is_paused()
 
+        # Get calendar state for debugging
+        schedule_entity = self.room_config.get(CONF_SCHEDULE_ENTITY)
+        schedule_calendar_state = None
+        if schedule_entity:
+            calendar_state = self.hass.states.get(schedule_entity)
+            if calendar_state:
+                schedule_calendar_state = calendar_state.state
+
         return {
             "room_id": self.room_id,
             "room_name": self.room_name,
@@ -447,6 +473,7 @@ class RoomManager:
             # v0.3.0 additions
             "schedule_active": schedule_active,
             "pause_active": pause_active,
+            "schedule_calendar_state": schedule_calendar_state,
         }
 
     async def async_shutdown(self) -> None:

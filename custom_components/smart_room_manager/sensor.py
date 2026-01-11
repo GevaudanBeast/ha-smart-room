@@ -348,7 +348,9 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
         elif priority == "bypass":
             log_lines.append("🔌 Mode: Manuel (bypass ON)")
         elif priority == "schedule":
-            log_lines.append(f"📅 Mode: {mode_label} (selon planning)")
+            # Show calendar state for debugging
+            schedule_state = room_data.get("schedule_calendar_state", "?")
+            log_lines.append(f"📅 Mode: {mode_label} (planning: {schedule_state})")
         else:
             log_lines.append(f"🏠 Mode: {mode_label}")
 
@@ -358,19 +360,19 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
             # Handle both old "x4fp" and new "fil_pilote" values
             if climate_type in ("x4fp", "fil_pilote"):
                 preset = climate_state.get("current_preset", "?")
-                log_lines.append(f"🔥 Fil Pilote: preset {preset}")
+                # Hysteresis info if applicable
+                hyst_state = climate_state.get(ATTR_HYSTERESIS_STATE)
+                if hyst_state and hyst_state != HYSTERESIS_DEADBAND:
+                    if hyst_state == "heating":
+                        log_lines.append(f"🔥 Fil Pilote: chauffe (preset {preset})")
+                    elif hyst_state == "idle":
+                        log_lines.append(f"🔥 Fil Pilote: repos (preset {preset})")
+                else:
+                    log_lines.append(f"🔥 Fil Pilote: preset {preset}")
             else:
                 temp = climate_state.get("target_temperature")
                 if temp:
                     log_lines.append(f"🌡️ Thermostat: consigne {temp}°C")
-
-        # Hysteresis info if applicable
-        hyst_state = climate_state.get(ATTR_HYSTERESIS_STATE)
-        if hyst_state and hyst_state != HYSTERESIS_DEADBAND:
-            if hyst_state == "heating":
-                log_lines.append("📈 Hystérésis: chauffe")
-            elif hyst_state == "idle":
-                log_lines.append("📉 Hystérésis: repos")
 
         # Windows state
         if room_data.get("windows_open"):
@@ -380,7 +382,7 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
         if room_type == "bathroom" and room_data.get("light_on"):
             log_lines.append("💡 Lumière: allumée")
 
-        return {
+        attrs = {
             "log": "\n".join(log_lines),
             "mode": mode,
             "priority": priority,
@@ -388,6 +390,12 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
             "windows_open": room_data.get("windows_open", False),
             "occupied": room_data.get("occupied", True),
         }
+
+        # Add schedule debug info if available
+        if room_data.get("schedule_calendar_state") is not None:
+            attrs["schedule_calendar_state"] = room_data.get("schedule_calendar_state")
+
+        return attrs
 
     @callback
     def _handle_coordinator_update(self) -> None:
