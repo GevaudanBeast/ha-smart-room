@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # English
 
+## [0.3.7] - 2026-05-11
+
+### 🐛 Critical Bug Fixes
+
+- **Summer mode external control fix**: External control (Solar Optimizer) no longer forces `HEAT` mode in summer. For reversible AC units it now switches to `COOL` with the configured cool comfort temperature; for heater-only thermostats and Wire Pilot heaters it is skipped during summer. Previously bedroom AC units kept reverting to heating each control cycle whenever external control was active.
+
 ## [0.3.6] - 2026-01-09
 
 ### 🐛 Critical Bug Fixes
@@ -79,6 +85,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 # Français
+
+## [0.3.7] - 2026-05-11
+
+### 🐛 Corrections critiques
+
+#### Fix : Mode été ignoré par le contrôle externe
+- **Problème** : Quand le contrôle externe (Solar Optimizer) était actif, les climatisations des chambres repassaient sans cesse en mode chauffage, même en été. `_apply_external_control()` forçait `HVACMode.HEAT` à chaque cycle sans tenir compte du calendrier de saison.
+- **Fix** : En mode été, les thermostats réversibles passent désormais en `COOL` avec la température `temp_cool_comfort`. Les thermostats non réversibles et les Fil Pilote (chauffage uniquement) sont ignorés par le contrôle externe en été plutôt que forcés en chauffage.
 
 ## [0.3.6] - 2026-01-09
 
