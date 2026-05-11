@@ -41,10 +41,12 @@ from .const import (
     CONF_EXTERNAL_CONTROL_TEMP,
     CONF_IGNORE_IN_AWAY,
     CONF_SEASON_CALENDAR,
+    CONF_TEMP_COOL_COMFORT,
     DEFAULT_ALLOW_EXTERNAL_IN_AWAY,
     DEFAULT_CLIMATE_MODE,
     DEFAULT_EXTERNAL_CONTROL_PRESET,
     DEFAULT_EXTERNAL_CONTROL_TEMP,
+    DEFAULT_TEMP_COOL_COMFORT,
     PRIORITY_AWAY,
     PRIORITY_BYPASS,
     PRIORITY_EXTERNAL_CONTROL,
@@ -332,8 +334,17 @@ class ClimateController:
 
     async def _apply_external_control(self, climate_entity: str) -> None:
         """Apply external control preset/temperature."""
+        is_summer = self._is_summer_mode()
+
         if self._climate_type == CLIMATE_TYPE_FIL_PILOTE:
-            # Fil Pilote: use preset
+            # Fil Pilote (heater only): external control drives heating, skip in summer
+            if is_summer:
+                _LOGGER.debug(
+                    "External control skipped for %s - summer mode (Fil Pilote heater)",
+                    self.room_manager.room_name,
+                )
+                return
+
             preset = self.room_config.get(
                 CONF_EXTERNAL_CONTROL_PRESET, DEFAULT_EXTERNAL_CONTROL_PRESET
             )
@@ -365,60 +376,78 @@ class ClimateController:
                     err,
                 )
         else:
-            # Thermostat: use temperature
-            target_temp = self.room_config.get(
-                CONF_EXTERNAL_CONTROL_TEMP, DEFAULT_EXTERNAL_CONTROL_TEMP
-            )
+            # Thermostat: respect summer mode for reversible units
+            state = self.hass.states.get(climate_entity)
+            if not state:
+                return
+
+            hvac_modes = state.attributes.get("hvac_modes", [])
+            is_reversible = HVACMode.COOL in hvac_modes
+
+            if is_summer:
+                if not is_reversible:
+                    # Heater-only thermostat: don't force HEAT in summer
+                    _LOGGER.debug(
+                        "External control skipped for %s - summer mode (non-reversible thermostat)",
+                        self.room_manager.room_name,
+                    )
+                    return
+                target_hvac = HVACMode.COOL
+                target_temp = self.room_config.get(
+                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
+                )
+            else:
+                target_hvac = HVACMode.HEAT
+                target_temp = self.room_config.get(
+                    CONF_EXTERNAL_CONTROL_TEMP, DEFAULT_EXTERNAL_CONTROL_TEMP
+                )
 
             controller = self._get_thermostat_controller()
 
-            # Set to HEAT mode and target temperature
-            state = self.hass.states.get(climate_entity)
-            if state:
-                current_hvac = state.state
-                if current_hvac != HVACMode.HEAT:
-                    try:
-                        await self.hass.services.async_call(
-                            CLIMATE_DOMAIN,
-                            SERVICE_SET_HVAC_MODE,
-                            {
-                                "entity_id": climate_entity,
-                                ATTR_HVAC_MODE: HVACMode.HEAT,
-                            },
-                            blocking=True,
-                        )
-                    except Exception as err:
-                        _LOGGER.error(
-                            "Error setting HVAC mode for external control %s: %s",
-                            climate_entity,
-                            err,
-                        )
-                        return
-
-                current_temp = state.attributes.get(ATTR_TEMPERATURE)
-                if current_temp is None or abs(current_temp - target_temp) >= 0.5:
-                    _LOGGER.debug(
-                        "Setting External Control temperature for %s to %.1f°C",
-                        self.room_manager.room_name,
-                        target_temp,
+            current_hvac = state.state
+            if current_hvac != target_hvac:
+                try:
+                    await self.hass.services.async_call(
+                        CLIMATE_DOMAIN,
+                        SERVICE_SET_HVAC_MODE,
+                        {
+                            "entity_id": climate_entity,
+                            ATTR_HVAC_MODE: target_hvac,
+                        },
+                        blocking=True,
                     )
-                    try:
-                        await self.hass.services.async_call(
-                            CLIMATE_DOMAIN,
-                            SERVICE_SET_TEMPERATURE,
-                            {
-                                "entity_id": climate_entity,
-                                ATTR_TEMPERATURE: target_temp,
-                            },
-                            blocking=True,
-                        )
-                        controller._target_temperature = target_temp
-                    except Exception as err:
-                        _LOGGER.error(
-                            "Error setting external control temperature for %s: %s",
-                            climate_entity,
-                            err,
-                        )
+                except Exception as err:
+                    _LOGGER.error(
+                        "Error setting HVAC mode for external control %s: %s",
+                        climate_entity,
+                        err,
+                    )
+                    return
+
+            current_temp = state.attributes.get(ATTR_TEMPERATURE)
+            if current_temp is None or abs(current_temp - target_temp) >= 0.5:
+                _LOGGER.debug(
+                    "Setting External Control temperature for %s to %.1f°C",
+                    self.room_manager.room_name,
+                    target_temp,
+                )
+                try:
+                    await self.hass.services.async_call(
+                        CLIMATE_DOMAIN,
+                        SERVICE_SET_TEMPERATURE,
+                        {
+                            "entity_id": climate_entity,
+                            ATTR_TEMPERATURE: target_temp,
+                        },
+                        blocking=True,
+                    )
+                    controller._target_temperature = target_temp
+                except Exception as err:
+                    _LOGGER.error(
+                        "Error setting external control temperature for %s: %s",
+                        climate_entity,
+                        err,
+                    )
 
     def _is_away_mode(self) -> bool:
         """Check if alarm is in armed_away mode."""
