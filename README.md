@@ -1,11 +1,11 @@
 # Smart Room Manager - Home Assistant Integration
 
-[![Version](https://img.shields.io/badge/version-0.3.6-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
+[![Version](https://img.shields.io/badge/version-0.3.7-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-**Version 0.3.6** - Critical fixes for room management and X4FP control!
+**Version 0.3.7** - Summer mode now honored by Solar Optimizer / external control!
 
 [English](#english) | [Français](#français)
 
@@ -17,7 +17,10 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 ### 🆕 What's New
 
-**v0.3.6** (Latest) - Critical Bug Fixes:
+**v0.3.7** (Latest) - Critical Bug Fix:
+- ☀️ **Summer mode + external control**: Solar Optimizer no longer forces `HEAT` in summer. Reversible AC units now switch to `COOL` with the cool comfort temperature; heater-only thermostats and Wire Pilot heaters are skipped during summer. Previously bedroom AC units kept reverting to heating each control cycle.
+
+**v0.3.6** - Critical Bug Fixes:
 - 🔥 **X4FP hysteresis fix**: Frost protection mode now bypasses hysteresis and correctly applies the away preset
 - 🏠 **External control fix**: Solar Optimizer now only activates when you're away (inverted logic)
 - ✏️ **Entity selector fix**: Clearing sensors/switches in config now works correctly
@@ -288,7 +291,17 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 
 ### 🆕 Nouveautés
 
-**v0.3.5** (Dernière) - Correction Critique :
+**v0.3.7** (Dernière) - Correction Critique :
+- ☀️ **Mode été + contrôle externe** : Le contrôle externe (Solar Optimizer) ne force plus `HEAT` en été. Les thermostats réversibles passent en `COOL` avec `temp_cool_comfort` ; les thermostats chauffage seul et les Fil Pilote sont ignorés en été. Auparavant, les climatisations des chambres repassaient sans cesse en chauffage à chaque cycle.
+
+**v0.3.6** - Corrections Critiques :
+- 🔥 **Fix hystérésis X4FP** : Le mode hors-gel court-circuite maintenant l'hystérésis et applique le preset absence
+- 🏠 **Fix contrôle externe** : Solar Optimizer ne s'active que quand vous êtes absent (logique inversée)
+- ✏️ **Fix sélecteurs d'entités** : La suppression des capteurs/switches sauvegarde correctement
+- 🗑️ **Fix suppression de pièce** : Les pièces supprimées disparaissent du device registry
+- 🧹 **Service cleanup** : Supprime aussi les devices orphelins
+
+**v0.3.5** - Routage Fil Pilote/Thermostat :
 - 🔧 **Fix détection type climat** : Les entités Fil Pilote étaient envoyées au contrôleur thermostat, causant des erreurs `set_temperature`. Utilise désormais `climate_mode` configuré au lieu de l'auto-détection.
 
 **v0.3.4** - Nouveautés & Corrections :
