@@ -35,6 +35,7 @@ from .const import (
     CONF_EXTERNAL_CONTROL_PRESET,
     CONF_EXTERNAL_CONTROL_SWITCH,
     CONF_EXTERNAL_CONTROL_TEMP,
+    CONF_EXTERNAL_CONTROL_TEMP_SUMMER,
     CONF_HUMIDITY_SENSOR,
     CONF_HYSTERESIS,
     CONF_IGNORE_IN_AWAY,
@@ -78,6 +79,7 @@ from .const import (
     DEFAULT_CLIMATE_MODE,
     DEFAULT_EXTERNAL_CONTROL_PRESET,
     DEFAULT_EXTERNAL_CONTROL_TEMP,
+    DEFAULT_EXTERNAL_CONTROL_TEMP_SUMMER,
     DEFAULT_HYSTERESIS,
     DEFAULT_LIGHT_TIMEOUT,
     DEFAULT_LIGHT_TIMEOUT_BATHROOM,
@@ -837,7 +839,7 @@ def build_thermostat_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
         )
     )
 
-    # External Control configuration for Thermostat
+    # External Control configuration for Thermostat (winter/heating)
     schema_dict[
         vol.Optional(
             CONF_EXTERNAL_CONTROL_TEMP,
@@ -849,6 +851,25 @@ def build_thermostat_advanced_schema(room_data: dict[str, Any]) -> vol.Schema:
         selector.NumberSelectorConfig(
             min=15,
             max=25,
+            step=0.5,
+            mode=selector.NumberSelectorMode.SLIDER,
+            unit_of_measurement="°C",
+        )
+    )
+
+    # External Control configuration for Thermostat (summer/cooling)
+    schema_dict[
+        vol.Optional(
+            CONF_EXTERNAL_CONTROL_TEMP_SUMMER,
+            default=room_data.get(
+                CONF_EXTERNAL_CONTROL_TEMP_SUMMER,
+                DEFAULT_EXTERNAL_CONTROL_TEMP_SUMMER,
+            ),
+        )
+    ] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=20,
+            max=30,
             step=0.5,
             mode=selector.NumberSelectorMode.SLIDER,
             unit_of_measurement="°C",
@@ -1582,6 +1603,10 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             # External Control configuration for Thermostat
             update_data[CONF_EXTERNAL_CONTROL_TEMP] = user_input.get(
                 CONF_EXTERNAL_CONTROL_TEMP, DEFAULT_EXTERNAL_CONTROL_TEMP
+            )
+            update_data[CONF_EXTERNAL_CONTROL_TEMP_SUMMER] = user_input.get(
+                CONF_EXTERNAL_CONTROL_TEMP_SUMMER,
+                DEFAULT_EXTERNAL_CONTROL_TEMP_SUMMER,
             )
             update_data[CONF_ALLOW_EXTERNAL_IN_AWAY] = user_input.get(
                 CONF_ALLOW_EXTERNAL_IN_AWAY, DEFAULT_ALLOW_EXTERNAL_IN_AWAY

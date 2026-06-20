@@ -39,6 +39,7 @@ from .const import (
     CONF_EXTERNAL_CONTROL_PRESET,
     CONF_EXTERNAL_CONTROL_SWITCH,
     CONF_EXTERNAL_CONTROL_TEMP,
+    CONF_EXTERNAL_CONTROL_TEMP_SUMMER,
     CONF_IGNORE_IN_AWAY,
     CONF_SEASON_CALENDAR,
     CONF_TEMP_COOL_COMFORT,
@@ -46,7 +47,7 @@ from .const import (
     DEFAULT_CLIMATE_MODE,
     DEFAULT_EXTERNAL_CONTROL_PRESET,
     DEFAULT_EXTERNAL_CONTROL_TEMP,
-    DEFAULT_TEMP_COOL_COMFORT,
+    DEFAULT_EXTERNAL_CONTROL_TEMP_SUMMER,
     PRIORITY_AWAY,
     PRIORITY_BYPASS,
     PRIORITY_EXTERNAL_CONTROL,
@@ -393,8 +394,14 @@ class ClimateController:
                     )
                     return
                 target_hvac = HVACMode.COOL
+                # Summer external control temperature. Fall back to the
+                # cooling comfort temperature for rooms configured before
+                # this dedicated setpoint existed.
                 target_temp = self.room_config.get(
-                    CONF_TEMP_COOL_COMFORT, DEFAULT_TEMP_COOL_COMFORT
+                    CONF_EXTERNAL_CONTROL_TEMP_SUMMER,
+                    self.room_config.get(
+                        CONF_TEMP_COOL_COMFORT, DEFAULT_EXTERNAL_CONTROL_TEMP_SUMMER
+                    ),
                 )
             else:
                 target_hvac = HVACMode.HEAT
