@@ -61,7 +61,9 @@ CONF_PRESET_IDLE: Final = "preset_idle"  # Preset when temperature OK
 # External Control configuration (Solar Optimizer, etc.)
 CONF_EXTERNAL_CONTROL_SWITCH: Final = "external_control_switch"  # Switch/binary_sensor
 CONF_EXTERNAL_CONTROL_PRESET: Final = "external_control_preset"  # Fil Pilote preset
-CONF_EXTERNAL_CONTROL_TEMP: Final = "external_control_temp"  # Thermostat temperature (winter/heating)
+CONF_EXTERNAL_CONTROL_TEMP: Final = (
+    "external_control_temp"  # Thermostat temperature (winter/heating)
+)
 CONF_EXTERNAL_CONTROL_TEMP_SUMMER: Final = (
     "external_control_temp_summer"  # Thermostat temperature (summer/cooling)
 )
