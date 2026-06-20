@@ -64,3 +64,6 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          # Brands check requires registration in the home-assistant/brands
+          # repository; skip it for this self-hosted/custom integration.
+          ignore: brands
