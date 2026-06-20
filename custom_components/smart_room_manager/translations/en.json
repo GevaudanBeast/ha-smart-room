@@ -128,11 +128,14 @@
         "description": "Choose how SRM controls the thermostat. Presets only (recommended): thermostat manages its own temperatures.",
         "data": {
           "thermostat_control_mode": "Control mode",
-          "external_control_temp": "External control temperature (°C)",
+          "external_control_temp": "External control temperature - winter (°C)",
+          "external_control_temp_summer": "External control temperature - summer (°C)",
           "allow_external_in_away": "Allow external control in away mode"
         },
         "data_description": {
-          "thermostat_control_mode": "Presets: SRM changes the thermostat preset. Temperature: SRM forces the target temperature."
+          "thermostat_control_mode": "Presets: SRM changes the thermostat preset. Temperature: SRM forces the target temperature.",
+          "external_control_temp": "Setpoint applied by external control in winter (heating).",
+          "external_control_temp_summer": "Setpoint applied by external control in summer (cooling)."
         }
       },
       "thermostat_temperatures": {

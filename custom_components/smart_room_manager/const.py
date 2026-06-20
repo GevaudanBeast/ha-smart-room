@@ -61,7 +61,12 @@ CONF_PRESET_IDLE: Final = "preset_idle"  # Preset when temperature OK
 # External Control configuration (Solar Optimizer, etc.)
 CONF_EXTERNAL_CONTROL_SWITCH: Final = "external_control_switch"  # Switch/binary_sensor
 CONF_EXTERNAL_CONTROL_PRESET: Final = "external_control_preset"  # Fil Pilote preset
-CONF_EXTERNAL_CONTROL_TEMP: Final = "external_control_temp"  # Thermostat temperature
+CONF_EXTERNAL_CONTROL_TEMP: Final = (
+    "external_control_temp"  # Thermostat temperature (winter/heating)
+)
+CONF_EXTERNAL_CONTROL_TEMP_SUMMER: Final = (
+    "external_control_temp_summer"  # Thermostat temperature (summer/cooling)
+)
 CONF_ALLOW_EXTERNAL_IN_AWAY: Final = "allow_external_in_away"  # Boolean
 
 # Schedule/Calendar configuration
@@ -169,7 +174,8 @@ DEFAULT_PRESET_IDLE: Final = FP_PRESET_ECO
 
 # Default values - External Control
 DEFAULT_EXTERNAL_CONTROL_PRESET: Final = FP_PRESET_COMFORT
-DEFAULT_EXTERNAL_CONTROL_TEMP: Final = 20.0  # °C
+DEFAULT_EXTERNAL_CONTROL_TEMP: Final = 20.0  # °C (winter/heating)
+DEFAULT_EXTERNAL_CONTROL_TEMP_SUMMER: Final = 25.0  # °C (summer/cooling)
 DEFAULT_ALLOW_EXTERNAL_IN_AWAY: Final = False
 
 # Default values - Manual Pause
