@@ -232,5 +232,27 @@
         "frost_protection": "Hors-gel"
       }
     }
+  },
+  "issues": {
+    "missing_entity": {
+      "title": "Entité absente dans la pièce {room}",
+      "description": "La pièce **{room}** référence `{entity}`, qui n'existe pas. Modifiez la pièce dans les options de l'intégration et choisissez l'entité de remplacement."
+    },
+    "unavailable_entity": {
+      "title": "Entité indisponible dans la pièce {room}",
+      "description": "`{entity}`, utilisée par la pièce **{room}**, est indisponible depuis plus de 10 minutes. Smart Room Manager ne peut pas s'y fier."
+    },
+    "climate_without_actuator": {
+      "title": "Chauffage sans actionneur dans la pièce {room}",
+      "description": "La pièce **{room}** a un mode de chauffage configuré mais aucune entité climate. Choisissez-en une dans les options de la pièce, ou mettez le mode de chauffage à aucun."
+    },
+    "multi_controller": {
+      "title": "Actionneur piloté deux fois dans la pièce {room}",
+      "description": "`{entity}` est piloté par Smart Room Manager et par {other}. Gardez un seul pilote (pour Solar Optimizer : faites-lui piloter un input_boolean, utilisé comme contrôle externe dans Smart Room Manager)."
+    },
+    "setpoint_below_eco": {
+      "title": "Consigne confort inférieure à l'eco dans la pièce {room}",
+      "description": "La consigne confort donnée par `{entity}` ({comfort} °C après bornage) est inférieure à la température eco ({eco} °C). Augmentez la valeur du helper ou retirez-le de la pièce."
+    }
   }
 }

@@ -232,5 +232,27 @@
         "frost_protection": "Frost Protection"
       }
     }
+  },
+  "issues": {
+    "missing_entity": {
+      "title": "Missing entity in room {room}",
+      "description": "The room **{room}** references `{entity}`, which does not exist. Edit the room in the integration options and choose the replacement entity."
+    },
+    "unavailable_entity": {
+      "title": "Unavailable entity in room {room}",
+      "description": "`{entity}` used by the room **{room}** has been unavailable for more than 10 minutes. Smart Room Manager cannot use it reliably."
+    },
+    "climate_without_actuator": {
+      "title": "Heating without actuator in room {room}",
+      "description": "The room **{room}** has a heating mode configured but no climate entity. Choose one in the room options, or set the heating mode to none."
+    },
+    "multi_controller": {
+      "title": "Actuator driven twice in room {room}",
+      "description": "`{entity}` is driven by Smart Room Manager and by {other}. Keep a single controller (for Solar Optimizer: let it drive an input_boolean and use it as external control in Smart Room Manager)."
+    },
+    "setpoint_below_eco": {
+      "title": "Comfort setpoint below eco in room {room}",
+      "description": "The comfort setpoint given by `{entity}` ({comfort} °C after clamping) is lower than the eco temperature ({eco} °C). Raise the helper value or remove it from the room."
+    }
   }
 }
