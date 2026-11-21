@@ -1,0 +1,1 @@
+"""Tests Smart Room Manager."""
