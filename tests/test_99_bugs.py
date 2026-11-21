@@ -250,3 +250,30 @@ async def test_b1_pause_expiree_pendant_arret(hass, freezer, calls):
     mock_restore_cache(hass, [State("switch.smart_room_test_test_pause", "on", {"pause_until": until})])
     await setup_srm(hass, [room(pause_duration_minutes=30)])
     assert hass.states.get("switch.smart_room_test_test_pause").state == "off"
+
+
+# B1e (trouvé en direct le 21/11) : désactiver la pause doit relâcher la pièce
+async def test_b1_fin_de_pause_relache_la_piece(hass, freezer, calls):
+    freezer.move_to(at(15))
+    fp(hass, "eco")
+    await setup_srm(hass, [room(climate_mode="fil_pilote", climate_entity=FP)])
+    ent = hass.data["entity_components"]["switch"].get_entity("switch.smart_room_test_test_pause")
+    await ent.async_turn_on(); await hass.async_block_till_done()
+    await ent.async_turn_off(); await hass.async_block_till_done()
+    fp(hass, "comfort")
+    freezer.tick(timedelta(seconds=31)); async_fire_time_changed(hass); await hass.async_block_till_done()
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state != "paused"
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "eco"
+
+
+# B1f : la fin automatique d'une pause minutée doit aussi relâcher la pièce
+async def test_b1_fin_auto_de_pause(hass, freezer, calls):
+    freezer.move_to(at(15))
+    fp(hass, "eco")
+    await setup_srm(hass, [room(climate_mode="fil_pilote", climate_entity=FP, pause_duration_minutes=15)])
+    ent = hass.data["entity_components"]["switch"].get_entity("switch.smart_room_test_test_pause")
+    await ent.async_turn_on(); await hass.async_block_till_done()
+    freezer.tick(timedelta(minutes=16)); async_fire_time_changed(hass); await hass.async_block_till_done()
+    fp(hass, "comfort")
+    freezer.tick(timedelta(seconds=31)); async_fire_time_changed(hass); await hass.async_block_till_done()
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state != "paused"
