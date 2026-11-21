@@ -79,6 +79,7 @@ class RoomManager:
         self._is_night: bool = False
         self._current_mode: str = MODE_COMFORT
         self._automation_enabled: bool = True
+        self._paused: bool = False
 
         # Window delay tracking (Priority 2)
         self._windows_opened_at = None  # Timestamp when windows opened
@@ -362,11 +363,16 @@ class RoomManager:
         )
 
     def is_paused(self) -> bool:
-        """Check if manual pause is active (v0.3.0)."""
-        # Get pause switch state from HA
-        pause_switch_id = f"switch.smart_room_{self.room_id}_pause"
-        pause_state = self.hass.states.get(pause_switch_id)
-        return pause_state and pause_state.state == STATE_ON
+        """Check if manual pause is active.
+
+        v0.3.9: the state is held by the room manager and set by the pause
+        switch (the previous lookup by entity_id never matched the real id).
+        """
+        return self._paused
+
+    def set_paused(self, paused: bool) -> None:
+        """Set manual pause state (called by the pause switch)."""
+        self._paused = paused
 
     def get_schedule_mode(self) -> str | None:
         """Get mode from schedule calendar (v0.3.0).

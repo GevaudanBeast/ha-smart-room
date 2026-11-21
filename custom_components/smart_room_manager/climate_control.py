@@ -116,6 +116,16 @@ class ClimateController:
                 climate_entity,
             )
 
+        # v0.3.9: never send commands to an unavailable entity
+        climate_state = self.hass.states.get(climate_entity)
+        if climate_state is None or climate_state.state in ("unavailable", "unknown"):
+            _LOGGER.debug(
+                "Climate entity %s unavailable in %s - skipping control",
+                climate_entity,
+                self.room_manager.room_name,
+            )
+            return
+
         # PRIORITY 0.5: Check manual pause
         if self.room_manager.is_paused():
             _LOGGER.debug(
@@ -351,7 +361,11 @@ class ClimateController:
             )
 
             controller = self._get_fil_pilote_controller()
-            if controller._current_preset == preset:
+            # v0.3.9: compare with the real preset, not the internal copy
+            state = self.hass.states.get(climate_entity)
+            actual = state.attributes.get(ATTR_PRESET_MODE) if state else None
+            if actual == preset:
+                controller._current_preset = actual
                 return
 
             _LOGGER.debug(

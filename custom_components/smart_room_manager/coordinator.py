@@ -29,6 +29,7 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
         )
         self.entry = entry
         self.room_managers: dict[str, RoomManager] = {}
+        self.anomalies: list[dict[str, Any]] = []
 
         # Initialize room managers
         self._setup_room_managers()

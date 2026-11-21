@@ -9,6 +9,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTR_CLIMATE_STATE  # v0.3.0 debug sensors
 from .const import (
@@ -53,7 +54,39 @@ async def async_setup_entry(
         # v0.3.3 activity log sensor
         entities.append(SmartRoomActivitySensor(coordinator, room_manager.room_id))
 
+    # v0.3.9: integration-level anomalies sensor
+    entities.append(SmartRoomAnomaliesSensor(coordinator, config_entry.entry_id))
+
     async_add_entities(entities)
+
+
+class SmartRoomAnomaliesSensor(CoordinatorEntity, SensorEntity):
+    """Number of configuration anomalies found by the diagnostics (v0.3.9)."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Anomalies"
+    _attr_icon = "mdi:alert-circle-check-outline"
+
+    def __init__(self, coordinator: SmartRoomCoordinator, entry_id: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry_id}_anomalies"
+        self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}}
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of anomalies."""
+        return len(getattr(self.coordinator, "anomalies", []))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the anomalies list."""
+        return {"anomalies": list(getattr(self.coordinator, "anomalies", []))}
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
 
 
 class SmartRoomStateSensor(SmartRoomEntity, SensorEntity):

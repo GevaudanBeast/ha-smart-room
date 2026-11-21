@@ -11,6 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -44,7 +45,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class SmartRoomAutomationSwitch(SmartRoomEntity, SwitchEntity):
+class SmartRoomAutomationSwitch(SmartRoomEntity, SwitchEntity, RestoreEntity):
     """Switch to enable/disable room automation."""
 
     def __init__(self, coordinator: SmartRoomCoordinator, room_id: str) -> None:
@@ -57,6 +58,15 @@ class SmartRoomAutomationSwitch(SmartRoomEntity, SwitchEntity):
             self._attr_name = f"{room_name} Automation"
             self._attr_unique_id = f"smart_room_{room_id}_automation"
             self._attr_icon = "mdi:auto-mode"
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the previous state after a restart (v0.3.9)."""
+        await super().async_added_to_hass()
+        last = await self.async_get_last_state()
+        room_manager = self.coordinator.get_room_manager(self._room_id)
+        if last is not None and room_manager and last.state == "off":
+            room_manager.set_automation_enabled(False)
+            self.async_write_ha_state()
 
     @property
     def is_on(self) -> bool:
@@ -86,7 +96,7 @@ class SmartRoomAutomationSwitch(SmartRoomEntity, SwitchEntity):
         self.async_write_ha_state()
 
 
-class SmartRoomPauseSwitch(SmartRoomEntity, SwitchEntity):
+class SmartRoomPauseSwitch(SmartRoomEntity, SwitchEntity, RestoreEntity):
     """Switch to pause room automation temporarily (v0.3.0)."""
 
     def __init__(self, coordinator: SmartRoomCoordinator, room_id: str) -> None:
@@ -102,7 +112,40 @@ class SmartRoomPauseSwitch(SmartRoomEntity, SwitchEntity):
 
         self._pause_timer = None
         self._pause_until = None
-        self._attr_is_on = False
+        self._set_paused(False)
+
+    async def async_added_to_hass(self) -> None:
+        """Restore an active pause after a restart (v0.3.9)."""
+        await super().async_added_to_hass()
+        last = await self.async_get_last_state()
+        if last is None or last.state != "on":
+            return
+        until = last.attributes.get("pause_until")
+        if until:
+            until_dt = dt_util.parse_datetime(until)
+            if until_dt is None or until_dt <= dt_util.now():
+                return  # pause expired while Home Assistant was stopped
+            self._pause_until = until_dt
+            self._pause_timer = async_call_later(
+                self.hass,
+                (until_dt - dt_util.now()).total_seconds(),
+                self._auto_turn_off,
+            )
+        self._set_paused(True)
+        self.async_write_ha_state()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Cancel the pause timer when the entity is removed (v0.3.9)."""
+        if self._pause_timer:
+            self._pause_timer()
+            self._pause_timer = None
+        await super().async_will_remove_from_hass()
+
+    def _set_paused(self, paused: bool) -> None:
+        self._attr_is_on = paused
+        room_manager = self.coordinator.get_room_manager(self._room_id)
+        if room_manager:
+            room_manager.set_paused(paused)
 
     @property
     def is_on(self) -> bool:
@@ -171,7 +214,7 @@ class SmartRoomPauseSwitch(SmartRoomEntity, SwitchEntity):
                 self._pause_until.strftime("%H:%M:%S"),
             )
 
-        self._attr_is_on = True
+        self._set_paused(True)
         self.async_write_ha_state()
 
         # Request coordinator refresh to update climate control
