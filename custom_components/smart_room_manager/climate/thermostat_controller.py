@@ -77,27 +77,24 @@ class ThermostatController:
         # Preset support detection
         self._preset_modes: list[str] = []
         self._presets_detected: bool = False
+        self._warned_no_preset: set[str] = set()
 
     def _detect_preset_support(self, climate_entity: str) -> None:
-        """Detect which presets the thermostat supports."""
-        if self._presets_detected:
-            return  # Already detected
+        """Read the presets supported by the thermostat.
 
+        v0.3.9: re-read on every call. An entity that was unavailable at
+        startup (empty list) is detected as soon as its presets appear.
+        """
         state = self.hass.states.get(climate_entity)
-        if not state:
-            self._preset_modes = []
-            self._presets_detected = True
-            return
-
-        self._preset_modes = state.attributes.get("preset_modes", []) or []
-        self._presets_detected = True
-
-        if self._preset_modes:
+        presets = (state.attributes.get("preset_modes") or []) if state else []
+        if presets and presets != self._preset_modes:
             _LOGGER.info(
                 "Thermostat %s supports presets: %s",
                 climate_entity,
-                self._preset_modes,
+                presets,
             )
+        self._preset_modes = list(presets)
+        self._presets_detected = bool(presets)
 
     def _supports_preset(self, preset: str) -> bool:
         """Check if thermostat supports a specific preset."""
@@ -257,11 +254,14 @@ class ThermostatController:
                     await self._set_hvac_mode(climate_entity, HVACMode.HEAT_COOL)
         else:
             # No suitable preset found, fallback to hvac_mode control
-            _LOGGER.warning(
-                "%s: No preset for mode %s, falling back to hvac_mode",
-                self.room_manager.room_name,
-                mode,
-            )
+            if mode not in self._warned_no_preset:
+                # v0.3.9: log once per mode instead of every 30 s
+                self._warned_no_preset.add(mode)
+                _LOGGER.warning(
+                    "%s: No preset for mode %s, falling back to hvac_mode",
+                    self.room_manager.room_name,
+                    mode,
+                )
             if mode == MODE_FROST_PROTECTION:
                 # Turn off or set very low temperature
                 await self._set_hvac_mode(climate_entity, HVACMode.OFF)
