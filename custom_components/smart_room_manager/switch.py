@@ -232,7 +232,7 @@ class SmartRoomPauseSwitch(SmartRoomEntity, SwitchEntity, RestoreEntity):
             self._pause_timer = None
 
         self._pause_until = None
-        self._attr_is_on = False
+        self._set_paused(False)
 
         _LOGGER.info(
             "Pause deactivated for %s",
