@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # English
 
+## [0.3.9] - unreleased (branch fix/v0.3.9)
+
+### 🐛 Bug Fixes
+
+- **Pause switch now works** (B1): the pause state is held by the room. The previous lookup used `switch.smart_room_<room_id>_pause`, which never matched the real entity_id. Pause and Automation switches are restored after a restart; a timed pause keeps its end time.
+- **Thermostat presets re-read** (B2/B3): presets are read on every cycle, so a thermostat that was unavailable at startup gets its presets (and the `away` preset when away, instead of `hvac off`). No command is sent to an unavailable climate entity. The "No preset for mode" warning is logged once per mode.
+- **Hysteresis setpoint follows the mode** (B4): eco and night use their temperatures; `setpoint_input` is only used as the comfort setpoint.
+- **External control (Wire Pilot)** (B7): compares with the real preset (no redundant command, re-applies after a manual change).
+- **Timed pause timer** (B9): cancelled when the entity is removed (reload/unload).
+- **Version** (B6): `VERSION` aligned with the manifest. **Minimum Home Assistant** (B8): 2024.11 (options flow).
+
+### ✨ New
+
+- **Configuration diagnostics** (B5): at startup and every 15 minutes, repair issues are created for missing entities, entities unavailable for more than 10 minutes, heating without actuator, actuators also driven by Solar Optimizer, and comfort setpoint below eco. New sensor `Anomalies`.
+
+### 🧪 Tests
+
+- 141 automated tests (`tests/`, pytest-homeassistant-custom-component).
+
 ## [0.3.7] - 2026-05-11
 
 ### 🐛 Critical Bug Fixes
