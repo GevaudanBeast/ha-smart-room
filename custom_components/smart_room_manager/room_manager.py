@@ -6,14 +6,22 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant
+from datetime import timedelta
+
+from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import dt as dt_util
 
 from .climate_control import ClimateController
 from .const import (  # v0.3.0 additions; Priority 2 additions
     ALARM_STATE_ARMED_AWAY,
     CONF_ALARM_ENTITY,
+    CONF_CLIMATE_ENTITY,
     CONF_CLIMATE_WINDOW_CHECK,
+    CONF_MANUAL_OVERRIDE_MINUTES,
+    DEFAULT_MANUAL_OVERRIDE_MINUTES,
+    PAUSE_REASON_MANUAL_OVERRIDE,
+    PAUSE_REASON_MANUAL_SWITCH,
     CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
     CONF_IGNORE_IN_AWAY,
@@ -81,6 +89,9 @@ class RoomManager:
         self._current_mode: str = MODE_COMFORT
         self._automation_enabled: bool = True
         self._paused: bool = False
+        # v0.3.9: manual override detection (pause until this time, UTC)
+        self._manual_until = None
+        self._unsub_climate = None
 
         # Window delay tracking (Priority 2)
         self._windows_opened_at = None  # Timestamp when windows opened
@@ -385,8 +396,73 @@ class RoomManager:
         return self._paused
 
     def set_paused(self, paused: bool) -> None:
-        """Set manual pause state (called by the pause switch)."""
+        """Set manual pause state (called by the pause switch).
+
+        Turning the pause off also ends a manual-override pause.
+        """
         self._paused = paused
+        if not paused:
+            self._manual_until = None
+
+    # ---- v0.3.9: manual override detection -------------------------------
+    @callback
+    def async_setup_listeners(self) -> None:
+        """Watch the climate entity for changes made by a user."""
+        climate_entity = self.room_config.get(CONF_CLIMATE_ENTITY)
+        if climate_entity and self._unsub_climate is None:
+            self._unsub_climate = async_track_state_change_event(
+                self.hass, [climate_entity], self._handle_climate_change
+            )
+
+    @callback
+    def _handle_climate_change(self, event: Event) -> None:
+        old = event.data.get("old_state")
+        new = event.data.get("new_state")
+        if old is None or new is None:
+            return
+        if "unavailable" in (old.state, new.state) or "unknown" in (old.state, new.state):
+            return
+        changed = (
+            old.state != new.state
+            or old.attributes.get("preset_mode") != new.attributes.get("preset_mode")
+            or old.attributes.get("temperature") != new.attributes.get("temperature")
+        )
+        # SRM's own service calls carry no user_id: only a person counts
+        if changed and event.context.user_id:
+            if self.start_manual_override():
+                self.coordinator.async_update_listeners()
+
+    def start_manual_override(self) -> bool:
+        """Pause the room after a manual change. Returns False if disabled."""
+        minutes = self.room_config.get(
+            CONF_MANUAL_OVERRIDE_MINUTES, DEFAULT_MANUAL_OVERRIDE_MINUTES
+        )
+        if not minutes:
+            return False
+        until = dt_util.utcnow() + timedelta(minutes=int(minutes))
+        self._manual_until = until
+        _LOGGER.info(
+            "Manual change detected in %s - automation paused until %s",
+            self.room_name,
+            dt_util.as_local(until).strftime("%Y-%m-%d %H:%M"),
+        )
+        return True
+
+    def is_manual_override(self) -> bool:
+        """Return True while a manual-override pause is active."""
+        if self._manual_until is None:
+            return False
+        if dt_util.utcnow() >= self._manual_until:
+            self._manual_until = None
+            return False
+        return True
+
+    def get_pause_reason(self) -> str | None:
+        if self._paused:
+            return PAUSE_REASON_MANUAL_SWITCH
+        if self.is_manual_override():
+            return PAUSE_REASON_MANUAL_OVERRIDE
+        return None
 
     def get_schedule_mode(self) -> str | None:
         """Get mode from schedule calendar (v0.3.0).
@@ -448,7 +524,7 @@ class RoomManager:
 
         # v0.3.0: Get schedule and pause status
         schedule_active = self.get_schedule_mode() is not None
-        pause_active = self.is_paused()
+        pause_active = self.is_paused() or self.is_manual_override()
 
         return {
             "room_id": self.room_id,
@@ -467,10 +543,19 @@ class RoomManager:
             # v0.3.0 additions
             "schedule_active": schedule_active,
             "pause_active": pause_active,
+            "pause_reason": self.get_pause_reason(),
+            "manual_override_until": (
+                dt_util.as_local(self._manual_until).isoformat()
+                if self.is_manual_override()
+                else None
+            ),
         }
 
     async def async_shutdown(self) -> None:
         """Shutdown room manager."""
+        if self._unsub_climate:
+            self._unsub_climate()
+            self._unsub_climate = None
         await self.light_controller.async_shutdown()
         await self.climate_controller.async_shutdown()
         _LOGGER.debug("Room manager shut down for %s", self.room_name)

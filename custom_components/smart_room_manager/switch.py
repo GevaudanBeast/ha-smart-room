@@ -149,8 +149,10 @@ class SmartRoomPauseSwitch(SmartRoomEntity, SwitchEntity, RestoreEntity):
 
     @property
     def is_on(self) -> bool:
-        """Return true if pause is active."""
-        return self._attr_is_on
+        """Return true if pause is active (switch or manual override)."""
+        room_manager = self.coordinator.get_room_manager(self._room_id)
+        manual = room_manager.is_manual_override() if room_manager else False
+        return self._attr_is_on or manual
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -169,6 +171,15 @@ class SmartRoomPauseSwitch(SmartRoomEntity, SwitchEntity, RestoreEntity):
             ),
         }
 
+        reason = room_manager.get_pause_reason()
+        if reason:
+            attrs["reason"] = (
+                "réglage manuel" if reason == "manual_override" else "pause manuelle"
+            )
+        if reason == "manual_override" and room_manager._manual_until:
+            attrs["pause_until"] = dt_util.as_local(
+                room_manager._manual_until
+            ).isoformat()
         if self._pause_until:
             attrs["pause_until"] = self._pause_until.isoformat()
             remaining = (self._pause_until - dt_util.now()).total_seconds() / 60

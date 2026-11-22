@@ -206,6 +206,8 @@ class SmartRoomCurrentPrioritySensor(SmartRoomEntity, SensorEntity):
                 "external_control_active", False
             ),
             "pause_active": room_data.get("pause_active", False),
+            "pause_reason": room_data.get("pause_reason"),
+            "manual_override_until": room_data.get("manual_override_until"),
             "schedule_active": room_data.get("schedule_active", False),
         }
 
@@ -316,6 +318,8 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
         if not room_data.get("automation_enabled"):
             return "Automation désactivée"
 
+        if room_data.get("pause_reason") == "manual_override":
+            return "Réglage manuel"
         if room_data.get("pause_active"):
             return "En pause"
 

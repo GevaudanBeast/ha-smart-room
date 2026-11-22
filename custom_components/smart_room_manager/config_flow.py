@@ -20,6 +20,8 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_MANUAL_OVERRIDE_MINUTES,
+    DEFAULT_MANUAL_OVERRIDE_MINUTES,
     CLIMATE_MODE_FIL_PILOTE,
     CLIMATE_MODE_NONE,
     CLIMATE_MODE_THERMOSTAT_COOL,
@@ -1083,6 +1085,20 @@ def build_room_control_schema(room_data: dict[str, Any]) -> vol.Schema:
                 CONF_PAUSE_INFINITE,
                 default=room_data.get(CONF_PAUSE_INFINITE, DEFAULT_PAUSE_INFINITE),
             ): selector.BooleanSelector(),
+            vol.Optional(
+                CONF_MANUAL_OVERRIDE_MINUTES,
+                default=room_data.get(
+                    CONF_MANUAL_OVERRIDE_MINUTES, DEFAULT_MANUAL_OVERRIDE_MINUTES
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0,
+                    max=1440,
+                    step=15,
+                    unit_of_measurement="min",
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            ),
         }
     )
 
@@ -1727,6 +1743,12 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             self._current_room[CONF_PAUSE_DURATION_MINUTES] = int(pause_value)
             self._current_room[CONF_PAUSE_INFINITE] = user_input.get(
                 CONF_PAUSE_INFINITE, DEFAULT_PAUSE_INFINITE
+            )
+            # v0.3.9: manual override duration (0 = disabled)
+            self._current_room[CONF_MANUAL_OVERRIDE_MINUTES] = int(
+                user_input.get(
+                    CONF_MANUAL_OVERRIDE_MINUTES, DEFAULT_MANUAL_OVERRIDE_MINUTES
+                )
             )
 
             return await self._save_room()

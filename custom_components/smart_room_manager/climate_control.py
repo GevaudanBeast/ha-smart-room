@@ -127,7 +127,7 @@ class ClimateController:
             return
 
         # PRIORITY 0.5: Check manual pause
-        if self.room_manager.is_paused():
+        if self.room_manager.is_paused() or self.room_manager.is_manual_override():
             _LOGGER.debug(
                 "⏸️ Manual pause active in %s - skipping automation",
                 self.room_manager.room_name,

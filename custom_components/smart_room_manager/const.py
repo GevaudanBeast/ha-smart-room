@@ -81,6 +81,12 @@ CONF_PAUSE_DURATION_MINUTES: Final = (
 )
 CONF_PAUSE_INFINITE: Final = "pause_infinite"  # Boolean
 
+# Manual override detection (v0.3.9): pause after a manual change
+CONF_MANUAL_OVERRIDE_MINUTES: Final = "manual_override_minutes"  # 0 = disabled
+DEFAULT_MANUAL_OVERRIDE_MINUTES: Final = 120
+PAUSE_REASON_MANUAL_SWITCH: Final = "pause_switch"
+PAUSE_REASON_MANUAL_OVERRIDE: Final = "manual_override"
+
 # Window delays (Priority 2)
 CONF_WINDOW_DELAY_OPEN: Final = "window_delay_open"  # Minutes before reacting to open
 CONF_WINDOW_DELAY_CLOSE: Final = (

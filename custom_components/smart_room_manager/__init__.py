@@ -81,6 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create coordinator
     coordinator = SmartRoomCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
+    coordinator.async_setup_listeners()
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 

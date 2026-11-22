@@ -102,6 +102,11 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
         """Refresh data for the first time when a config entry is setup."""
         await super().async_config_entry_first_refresh()
 
+    def async_setup_listeners(self) -> None:
+        """Start the manual-override listeners of every room (v0.3.9)."""
+        for room_manager in self.room_managers.values():
+            room_manager.async_setup_listeners()
+
     def get_room_manager(self, room_id: str) -> RoomManager | None:
         """Get room manager by room_id."""
         return self.room_managers.get(room_id)
