@@ -277,3 +277,69 @@ async def test_b1_fin_auto_de_pause(hass, freezer, calls):
     fp(hass, "comfort")
     freezer.tick(timedelta(seconds=31)); async_fire_time_changed(hass); await hass.async_block_till_done()
     assert hass.states.get("sensor.smart_room_test_test_current_priority").state != "paused"
+
+
+# B10 (point 24 h, 22/11) : une ouverture plus courte que le délai ne doit jamais
+# déclencher le hors-gel, ni pendant l'ouverture ni après la fermeture.
+async def _salon_fenetre(hass, freezer, delay_open=2, delay_close=2):
+    freezer.move_to(at(10))
+    fp(hass, "comfort")
+    hass.states.async_set("binary_sensor.baie", "off")
+    hass.states.async_set("calendar.c", "on")
+    c = make_coord(hass, [room(climate_mode="fil_pilote", climate_entity=FP, schedule_entity="calendar.c",
+                               door_window_sensors=["binary_sensor.baie"],
+                               window_delay_open=delay_open, window_delay_close=delay_close)])
+    rm = c.get_room_manager("r1")
+    await rm.async_update()
+    return rm
+
+
+async def _tick(rm, freezer, seconds):
+    freezer.tick(timedelta(seconds=seconds))
+    await rm.async_update()
+    return rm.get_current_mode()
+
+
+async def test_b10_ouverture_courte_46s_75s(hass, freezer, calls):
+    rm = await _salon_fenetre(hass, freezer)
+    modes = []
+    hass.states.async_set("binary_sensor.baie", "on")          # ouverture 46 s
+    for _ in range(2):
+        modes.append(await _tick(rm, freezer, 23))
+    hass.states.async_set("binary_sensor.baie", "off")
+    modes.append(await _tick(rm, freezer, 30))
+    hass.states.async_set("binary_sensor.baie", "on")          # ouverture 75 s
+    for _ in range(3):
+        modes.append(await _tick(rm, freezer, 25))
+    hass.states.async_set("binary_sensor.baie", "off")
+    for _ in range(10):                                       # 5 min après fermeture
+        modes.append(await _tick(rm, freezer, 30))
+    assert "frost_protection" not in modes, modes
+    assert not [x for x in calls[("climate", "set_preset_mode")] if x.data["preset_mode"] == "away"]
+
+
+async def test_b10_delai_compte_depuis_l_ouverture_reelle(hass, freezer, calls):
+    """Le délai part du moment où le capteur s'est ouvert, pas du passage de boucle."""
+    rm = await _salon_fenetre(hass, freezer)
+    hass.states.async_set("binary_sensor.baie", "on")          # ouverture à t0
+    freezer.tick(timedelta(seconds=110))                       # boucle en retard : 1er passage à t0+110 s
+    assert await _tick(rm, freezer, 15) == "frost_protection"  # t0+125 s >= 2 min
+
+
+async def test_b10_ouverture_longue_puis_delai_fermeture(hass, freezer, calls):
+    rm = await _salon_fenetre(hass, freezer, delay_open=5)
+    hass.states.async_set("binary_sensor.baie", "on")
+    assert await _tick(rm, freezer, 240) != "frost_protection"   # 4 min < 5 min
+    assert await _tick(rm, freezer, 70) == "frost_protection"    # 5 min 10 s
+    hass.states.async_set("binary_sensor.baie", "off")
+    assert await _tick(rm, freezer, 60) == "frost_protection"    # délai de fermeture en cours
+    assert await _tick(rm, freezer, 70) != "frost_protection"    # 2 min 10 s après fermeture
+
+
+# B11 (point 24 h) : le message « configuration anomalies » ne doit pas être répété
+async def test_b11_message_anomalies_une_fois(hass, freezer, calls, caplog):
+    freezer.move_to(at(15))
+    await setup_srm(hass, [room(lights=["light.absente"])])
+    for _ in range(3):
+        freezer.tick(timedelta(minutes=16)); async_fire_time_changed(hass); await hass.async_block_till_done()
+    assert caplog.text.count("configuration anomalies") == 1
