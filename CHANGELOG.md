@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Hysteresis setpoint follows the mode** (B4): eco and night use their temperatures; `setpoint_input` is only used as the comfort setpoint.
 - **External control (Wire Pilot)** (B7): compares with the real preset (no redundant command, re-applies after a manual change).
 - **Timed pause timer** (B9): cancelled when the entity is removed (reload/unload).
+- **Window delays** (B10): a window opened for less than the open delay no longer triggers frost protection (previously the close delay applied after any short opening). Delays are measured from the sensors' `last_changed`, not from the 30 s update loop.
+- **Pause release** (B1e/B1f): turning the pause off, or its timer ending, gives control back to the room.
+- **Anomalies log** (B11): the "configuration anomalies" warning is logged only when the list changes.
 - **Version** (B6): `VERSION` aligned with the manifest. **Minimum Home Assistant** (B8): 2024.11 (options flow).
 
 ### ✨ New
