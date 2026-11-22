@@ -196,8 +196,12 @@ class ClimateController:
             return
 
         # PRIORITY 4.5: Bathroom special logic (light controls heating)
-        # For bathrooms, light state takes priority over schedule
-        if self.room_manager.room_type == ROOM_TYPE_BATHROOM:
+        # v0.3.9: light on -> comfort; light off -> calendar (priority 5)
+        # when one is configured, otherwise eco.
+        if self.room_manager.room_type == ROOM_TYPE_BATHROOM and (
+            self.room_manager.is_bathroom_light_on()
+            or self.room_manager.get_schedule_mode() is None
+        ):
             mode = self.room_manager.get_current_mode()
             _LOGGER.debug(
                 "🛁 Bathroom %s - light-based mode: %s",

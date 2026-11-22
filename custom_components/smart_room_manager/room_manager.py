@@ -283,9 +283,11 @@ class RoomManager:
                 if any_light_on:
                     self._current_mode = MODE_COMFORT
                     return
-                else:
-                    self._current_mode = MODE_ECO
-                    return
+                # v0.3.9: light off -> follow the calendar when one is set,
+                # otherwise eco (previous behaviour)
+                schedule_mode = self.get_schedule_mode()
+                self._current_mode = schedule_mode or MODE_ECO
+                return
 
         # PRIORITY 4: Check schedule/calendar (v0.3.0+)
         # Schedule has priority over night period (explicit user config)
@@ -348,6 +350,14 @@ class RoomManager:
                 self._windows_effective_open = False
 
         return self._windows_effective_open
+
+    def is_bathroom_light_on(self) -> bool:
+        """Return True when a bathroom light is on (v0.3.9)."""
+        for light_entity in self.room_config.get(CONF_LIGHTS) or []:
+            light_state = self.hass.states.get(light_entity)
+            if light_state and light_state.state == STATE_ON:
+                return True
+        return False
 
     def get_current_mode(self) -> str:
         """Get current operating mode."""
