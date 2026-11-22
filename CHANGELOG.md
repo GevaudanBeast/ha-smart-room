@@ -30,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Configuration diagnostics** (B5): at startup and every 15 minutes, repair issues are created for missing entities, entities unavailable for more than 10 minutes, heating without actuator, actuators also driven by Solar Optimizer, and comfort setpoint below eco. New sensor `Anomalies`.
 
+- **Manual change detection** (B13): when a person changes the preset, HVAC mode or setpoint of a room's climate entity (change carrying a `user_id`), SRM leaves that room alone for `manual_override_minutes` (room option, default 120 min, 0 = disabled), then resumes automatically. Reason shown as "réglage manuel" on the Pause switch and the priority sensor; turning the Pause switch off resumes control. Light timers are not affected.
+
 ### 🧪 Tests
 
 - 141 automated tests (`tests/`, pytest-homeassistant-custom-component).
