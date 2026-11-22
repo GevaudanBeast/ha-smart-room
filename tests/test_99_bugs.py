@@ -343,3 +343,47 @@ async def test_b11_message_anomalies_une_fois(hass, freezer, calls, caplog):
     for _ in range(3):
         freezer.tick(timedelta(minutes=16)); async_fire_time_changed(hass); await hass.async_block_till_done()
     assert caplog.text.count("configuration anomalies") == 1
+
+
+# B12 (point 24 h) : salle de bain, lumière éteinte -> le calendrier s'applique
+async def test_b12_salle_de_bain_suit_le_calendrier(hass, freezer, calls):
+    freezer.move_to(at(9))
+    fp(hass, "eco")
+    hass.states.async_set("light.l", "off")
+    hass.states.async_set("calendar.c", "on")
+    c = make_coord(hass, [room(room_type="bathroom", lights=["light.l"], light_timeout=1800,
+                               climate_mode="fil_pilote", climate_entity=FP, schedule_entity="calendar.c")])
+    rm = c.get_room_manager("r1")
+    await rm.async_update()
+    assert rm.get_current_mode() == "comfort"
+    assert rm.climate_controller._current_priority == "schedule"
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "comfort"
+    fp(hass, "comfort")
+    hass.states.async_set("calendar.c", "off")
+    await rm.async_update()
+    assert rm.get_current_mode() == "eco"
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "eco"
+
+
+async def test_b12_lumiere_allumee_prioritaire(hass, freezer, calls):
+    freezer.move_to(at(9))
+    fp(hass, "eco")
+    hass.states.async_set("light.l", "on")
+    hass.states.async_set("calendar.c", "off")
+    c = make_coord(hass, [room(room_type="bathroom", lights=["light.l"], light_timeout=1800,
+                               climate_mode="fil_pilote", climate_entity=FP, schedule_entity="calendar.c")])
+    rm = c.get_room_manager("r1")
+    await rm.async_update()
+    assert rm.get_current_mode() == "comfort"
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "comfort"
+
+
+async def test_b12_sans_calendrier_eco(hass, freezer, calls):
+    freezer.move_to(at(9))
+    fp(hass, "comfort")
+    hass.states.async_set("light.l", "off")
+    c = make_coord(hass, [room(room_type="bathroom", lights=["light.l"], light_timeout=1800,
+                               climate_mode="fil_pilote", climate_entity=FP)])
+    rm = c.get_room_manager("r1")
+    await rm.async_update()
+    assert rm.get_current_mode() == "eco"
