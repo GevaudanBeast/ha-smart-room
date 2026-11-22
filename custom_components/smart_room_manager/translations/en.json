@@ -162,10 +162,11 @@
       },
       "room_control": {
         "title": "Room Control Options",
-        "description": "Manual pause: default duration of pause switch. Infinite: pause without time limit.",
+        "description": "Manual pause: default duration of the pause switch. Infinite: no time limit. Manual change: when someone changes the heating by hand, SRM leaves this room alone for this duration, then resumes.",
         "data": {
           "pause_duration_minutes": "Pause duration (minutes)",
-          "pause_infinite": "Allow infinite pause"
+          "pause_infinite": "Allow infinite pause",
+          "manual_override_minutes": "Manual change: suspend this room for (min, 0 = off)"
         }
       },
       "delete_room": {

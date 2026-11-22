@@ -162,10 +162,11 @@
       },
       "room_control": {
         "title": "Options de contrôle de la pièce",
-        "description": "Pause manuelle : durée par défaut du switch pause. Infini : pause sans limite de temps.",
+        "description": "Pause manuelle : durée par défaut du switch pause. Infini : pause sans limite de temps. Réglage manuel : si quelqu'un règle le chauffage à la main, SRM laisse la pièce pendant cette durée, puis reprend.",
         "data": {
           "pause_duration_minutes": "Durée de la pause (minutes)",
-          "pause_infinite": "Autoriser pause infinie"
+          "pause_infinite": "Autoriser pause infinie",
+          "manual_override_minutes": "Réglage manuel : ne plus toucher la pièce pendant (min, 0 = désactivé)"
         }
       },
       "delete_room": {
