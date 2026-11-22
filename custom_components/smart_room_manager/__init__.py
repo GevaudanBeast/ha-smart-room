@@ -145,10 +145,16 @@ def async_update_diagnostics(
         )
     coordinator.anomalies = anomalies
     coordinator.async_update_listeners()
-    if anomalies:
-        _LOGGER.warning(
-            "Smart Room Manager: %d configuration anomalies", len(anomalies)
-        )
+    # v0.3.9: log only when the set of anomalies changes (not every 15 min)
+    previous_ids = getattr(coordinator, "_last_anomaly_ids", None)
+    if set(wanted) != previous_ids:
+        coordinator._last_anomaly_ids = set(wanted)
+        if anomalies:
+            _LOGGER.warning(
+                "Smart Room Manager: %d configuration anomalies", len(anomalies)
+            )
+        elif previous_ids:
+            _LOGGER.info("Smart Room Manager: no configuration anomaly left")
     return anomalies
 
 

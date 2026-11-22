@@ -76,6 +76,7 @@ class RoomManager:
 
         # State tracking
         self._windows_open: bool = False
+        self._windows_effective_open: bool = False  # v0.3.9 latch (B10)
         self._is_night: bool = False
         self._current_mode: str = MODE_COMFORT
         self._automation_enabled: bool = True
@@ -134,39 +135,47 @@ class RoomManager:
         return self.get_state()
 
     def _update_window_states(self) -> None:
-        """Update window/door open states with delay tracking."""
-        # Use 'or []' to handle None values (dict.get returns None if value is None)
+        """Update window/door open states.
+
+        v0.3.9: the timestamps come from the sensors' ``last_changed``
+        (not from the 30 s update loop), so the delays are measured from
+        the real opening/closing.
+        """
         door_window_sensors = self.room_config.get(CONF_DOOR_WINDOW_SENSORS) or []
 
-        if not door_window_sensors:
-            previous_state = self._windows_open
-            self._windows_open = False
-            # Track close timestamp if changed
-            if previous_state and not self._windows_open:
-                self._windows_closed_at = dt_util.now()
-            return
-
-        # Check if any door/window sensor is open
-        any_open = False
+        open_since = None
+        closed_since = None
         for entity_id in door_window_sensors:
             state = self.hass.states.get(entity_id)
-            if state and state.state == STATE_ON:
-                any_open = True
-                break
+            if state is None:
+                continue
+            if state.state == STATE_ON:
+                if open_since is None or state.last_changed < open_since:
+                    open_since = state.last_changed
+            elif closed_since is None or state.last_changed > closed_since:
+                closed_since = state.last_changed
 
-        # Track state changes with timestamps
         previous_state = self._windows_open
-        self._windows_open = any_open
+        self._windows_open = open_since is not None
 
-        # Track open/close timestamps
-        if not previous_state and self._windows_open:
-            # Windows just opened
-            self._windows_opened_at = dt_util.now()
+        now = dt_util.utcnow()
+        if self._windows_open:
+            # A timestamp in the future (clock change) falls back to the
+            # first time the opening was seen by this loop.
+            if open_since > now:
+                open_since = (
+                    self._windows_opened_at
+                    if previous_state and self._windows_opened_at
+                    else now
+                )
+            self._windows_opened_at = open_since
             self._windows_closed_at = None
-        elif previous_state and not self._windows_open:
-            # Windows just closed
-            self._windows_closed_at = dt_util.now()
+        else:
             self._windows_opened_at = None
+            if previous_state:
+                if closed_since is None or closed_since > now:
+                    closed_since = now
+                self._windows_closed_at = closed_since
 
     def _update_night_period(self) -> None:
         """Update night period status.
@@ -311,39 +320,34 @@ class RoomManager:
         return self._windows_open
 
     def is_windows_open_delayed(self) -> bool:
-        """Check if windows are open with delay (Priority 2).
+        """Return True when the room must be treated as "window open".
 
-        Returns True only if windows have been open longer than delay_open.
-        Returns False only if windows have been closed longer than delay_close.
+        v0.3.9 (B10): hysteresis with a latch.
+        - becomes True only after the window has stayed open >= delay_open
+        - once True, stays True until the window has stayed closed >= delay_close
+        A short opening (< delay_open) never triggers frost protection,
+        neither while open nor after closing.
         """
-        # Get configured delays
         delay_open = self.room_config.get(
             CONF_WINDOW_DELAY_OPEN, DEFAULT_WINDOW_DELAY_OPEN
         )
         delay_close = self.room_config.get(
             CONF_WINDOW_DELAY_CLOSE, DEFAULT_WINDOW_DELAY_CLOSE
         )
+        now = dt_util.utcnow()
 
-        now = dt_util.now()
-
-        # If windows are currently open
         if self._windows_open:
-            # Check if we have an open timestamp and delay has elapsed
-            if self._windows_opened_at:
-                elapsed = (now - self._windows_opened_at).total_seconds() / 60
-                return elapsed >= delay_open
-            # No timestamp yet (first check), assume not delayed
-            return False
+            if self._windows_opened_at is not None and (
+                now - self._windows_opened_at
+            ).total_seconds() >= delay_open * 60:
+                self._windows_effective_open = True
+        elif self._windows_effective_open:
+            if self._windows_closed_at is None or (
+                now - self._windows_closed_at
+            ).total_seconds() >= delay_close * 60:
+                self._windows_effective_open = False
 
-        # If windows are currently closed
-        else:
-            # Check if we have a close timestamp and delay has elapsed
-            if self._windows_closed_at:
-                elapsed = (now - self._windows_closed_at).total_seconds() / 60
-                # Return False (not open) only after delay has elapsed
-                return elapsed < delay_close
-            # No timestamp, windows were already closed
-            return False
+        return self._windows_effective_open
 
     def get_current_mode(self) -> str:
         """Get current operating mode."""
