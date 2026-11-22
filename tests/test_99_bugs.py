@@ -387,3 +387,122 @@ async def test_b12_sans_calendrier_eco(hass, freezer, calls):
     rm = c.get_room_manager("r1")
     await rm.async_update()
     assert rm.get_current_mode() == "eco"
+
+
+# ---- Point 8 du plan : détection des réglages manuels (B13) ----
+from homeassistant.core import Context  # noqa: E402
+
+USER = Context(user_id="aurelien")
+
+
+def _set_fp_user(hass, preset, context=USER):
+    hass.states.async_set(
+        FP, "heat", {"preset_modes": ["comfort", "eco", "away", "none"], "preset_mode": preset},
+        context=context,
+    )
+
+
+async def _tick_all(hass, freezer, seconds=31):
+    freezer.tick(timedelta(seconds=seconds)); async_fire_time_changed(hass); await hass.async_block_till_done()
+
+
+async def _sp(hass, freezer, **kw):
+    """Suite parentale : hystérésis, calendrier confort jusqu'à 23:30, pièce à 19 °C."""
+    freezer.move_to(at(23, 5))
+    fp(hass, "eco")
+    hass.states.async_set("sensor.t", "19")
+    hass.states.async_set("calendar.c", "on", {"start_time": "2026-11-20 22:00:00", "end_time": "2026-11-20 23:30:00"})
+    r = room(climate_mode="fil_pilote", climate_entity=FP, temperature_sensor="sensor.t",
+             schedule_entity="calendar.c", temp_comfort=17, **kw)
+    return await setup_srm(hass, [r])
+
+
+async def test_b13_confort_manuel_non_annule(hass, freezer, calls):
+    await _sp(hass, freezer)
+    before = n(calls, "climate", "set_preset_mode")
+    _set_fp_user(hass, "comfort")            # Aurélien met confort
+    await hass.async_block_till_done()
+    for _ in range(4):
+        await _tick_all(hass, freezer)
+    assert n(calls, "climate", "set_preset_mode") == before   # SRM ne remet pas eco
+    prio = hass.states.get("sensor.smart_room_test_test_current_priority")
+    assert prio.state == "paused" and prio.attributes["pause_reason"] == "manual_override"
+    assert hass.states.get("sensor.smart_room_test_test_activite").state == "Réglage manuel"
+    sw = hass.states.get("switch.smart_room_test_test_pause")
+    assert sw.state == "on" and sw.attributes["reason"] == "réglage manuel"
+
+
+async def test_b13_duree_fixe_meme_si_le_creneau_change(hass, freezer, calls):
+    """Précision du 22/11 : durée fixe (2 h par défaut), pas de fin au changement de créneau."""
+    await _sp(hass, freezer)
+    _set_fp_user(hass, "comfort"); await hass.async_block_till_done()
+    freezer.move_to(at(23, 31))                       # fin du créneau 23:30
+    hass.states.async_set("calendar.c", "off", {"start_time": "2026-11-21 05:00:00", "end_time": "2026-11-21 07:30:00"})
+    await _tick_all(hass, freezer)
+    prio = hass.states.get("sensor.smart_room_test_test_current_priority")
+    assert prio.state == "paused" and prio.attributes["manual_override_until"]
+    freezer.move_to(at(1, 6, day=21))                 # 23:05 + 2 h 01
+    await _tick_all(hass, freezer)
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state != "paused"
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "eco"
+
+
+async def test_b13_duree_par_defaut_sans_calendrier(hass, freezer, calls):
+    freezer.move_to(at(15))
+    fp(hass, "eco")
+    await setup_srm(hass, [room(climate_mode="fil_pilote", climate_entity=FP)])
+    _set_fp_user(hass, "comfort"); await hass.async_block_till_done()
+    await _tick_all(hass, freezer, 60 * 119)
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state == "paused"
+    await _tick_all(hass, freezer, 60 * 2)
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state != "paused"
+
+
+async def test_b13_duree_configurable_et_desactivable(hass, freezer, calls):
+    freezer.move_to(at(15))
+    fp(hass, "eco")
+    await setup_srm(hass, [room(climate_mode="fil_pilote", climate_entity=FP, manual_override_minutes=0)])
+    before = n(calls, "climate", "set_preset_mode")
+    _set_fp_user(hass, "comfort"); await hass.async_block_till_done()
+    await _tick_all(hass, freezer)
+    assert n(calls, "climate", "set_preset_mode") == before + 1   # désactivé : SRM remet eco
+
+
+async def test_b13_changement_srm_ou_automatisation_ignore(hass, freezer, calls):
+    await _sp(hass, freezer)
+    _set_fp_user(hass, "comfort", context=Context())                       # SRM lui-même
+    await hass.async_block_till_done()
+    _set_fp_user(hass, "comfort", context=Context(parent_id="automation"))  # automatisation
+    await hass.async_block_till_done()
+    await _tick_all(hass, freezer)
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state != "paused"
+
+
+async def test_b13_hvac_manuel_detecte(hass, freezer, calls):
+    await _sp(hass, freezer)
+    hass.states.async_set(FP, "off", {"preset_modes": ["comfort", "eco"], "preset_mode": "eco"}, context=USER)
+    await hass.async_block_till_done()
+    await _tick_all(hass, freezer)
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state == "paused"
+
+
+async def test_b13_desactiver_la_pause_reprend_la_main(hass, freezer, calls):
+    await _sp(hass, freezer)
+    _set_fp_user(hass, "comfort"); await hass.async_block_till_done()
+    ent = hass.data["entity_components"]["switch"].get_entity("switch.smart_room_test_test_pause")
+    await ent.async_turn_off(); await hass.async_block_till_done()
+    await _tick_all(hass, freezer)
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state != "paused"
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "eco"
+
+
+async def test_b13_lumieres_non_concernees(hass, freezer, calls):
+    freezer.move_to(at(15))
+    fp(hass, "eco")
+    hass.states.async_set("light.l", "on")
+    await setup_srm(hass, [room(room_type="bathroom", lights=["light.l"], light_timeout=60,
+                                climate_mode="fil_pilote", climate_entity=FP)])
+    _set_fp_user(hass, "away"); await hass.async_block_till_done()
+    await _tick_all(hass, freezer, 70)
+    await _tick_all(hass, freezer)
+    assert n(calls, "light", "turn_off") >= 1      # le minuteur de lumière continue

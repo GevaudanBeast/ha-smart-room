@@ -37,7 +37,7 @@ ANSWERS = {
     "thermostat_advanced": {},
     "thermostat_temperatures": {},
     "room_schedule": {"preset_schedule_on": "comfort", "preset_schedule_off": "eco", "ignore_in_away": False},
-    "room_control": {"pause_duration_minutes": "60", "pause_infinite": False},
+    "room_control": {"pause_duration_minutes": "60", "pause_infinite": False, "manual_override_minutes": 90},
 }
 
 
@@ -70,6 +70,7 @@ async def test_modifier_piece(hass, calls):
     assert saved["room_id"] == "r1" and saved["room_name"] == "Renommée"
     assert saved["climate_entity"] == "climate.fp" and saved["window_delay_open"] == 3
     assert saved["preset_window"] == "none" and saved["pause_duration_minutes"] in ("60", 60)
+    assert saved["manual_override_minutes"] == 90
     assert "fil_pilote_presets" in steps
 
 
