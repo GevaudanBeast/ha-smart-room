@@ -1,11 +1,11 @@
 # Smart Room Manager - Home Assistant Integration
 
-[![Version](https://img.shields.io/badge/version-0.3.7-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
+[![Version](https://img.shields.io/badge/version-0.3.9-blue.svg)](https://github.com/GevaudanBeast/ha-smart-room/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-blue.svg)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.11+-blue.svg)](https://www.home-assistant.io/)
 [![HACS](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 
-**Version 0.3.7** - Summer mode now honored by Solar Optimizer / external control!
+**Version 0.3.9** - Reliable pause, manual changes respected, heating blocked by a window, configuration diagnostics and notifications. Requires Home Assistant 2024.11 or later.
 
 [English](#english) | [Français](#français)
 
@@ -17,7 +17,19 @@ A comprehensive Home Assistant integration to intelligently manage each room in 
 
 ### 🆕 What's New
 
-**v0.3.7** (Latest) - Critical Bug Fix:
+**v0.3.9** (Latest) - Reliability release, validated on a real installation:
+- ⏸️ **Pause switch fixed**: the pause really suspends the room, a timed pause ends on time and gives control back; Pause and Automation switches are restored after a restart.
+- 🔁 **Presets re-read** on every cycle (thermostats unavailable at startup), `away` preset when away, no command to unavailable entities.
+- 🌡️ **Hysteresis setpoint follows the mode** (eco and night use their own temperatures).
+- 🌞 **External control (Wire Pilot)**: compares with the real preset, no redundant commands.
+- 🪟 **Window delays**: a window opened for less than the open delay no longer triggers frost protection.
+- 🛁 **Bathrooms follow their calendar** when the light is off.
+- ✋ **Manual changes respected**: a person changing the heating leaves the room alone for a configurable time (default 120 min).
+- 🚫 **Heating blocked by a window**: new `Chauffage bloqué` binary sensor and `smart_room_manager_heating_blocked` / `_unblocked` events; the window wins over a manual change, which is re-applied when the window closes.
+- 🩺 **Configuration diagnostics**: repair issues and an `Anomalies` sensor (missing or unavailable entities, actuator driven twice, setpoint below eco).
+- 🔔 **Notifications**: choose what to be notified about and where (notify entities, legacy notify actions, scripts), per-room targets, quiet period, cooldown, French/English texts.
+
+**v0.3.7** - Critical Bug Fix:
 - ☀️ **Summer mode + external control**: Solar Optimizer no longer forces `HEAT` in summer. Reversible AC units now switch to `COOL` with the cool comfort temperature; heater-only thermostats and Wire Pilot heaters are skipped during summer. Previously bedroom AC units kept reverting to heating each control cycle.
 
 **v0.3.6** - Critical Bug Fixes:
@@ -175,6 +187,18 @@ See [CHANGELOG.md](CHANGELOG.md) for complete details.
 - **Comfort ranges** : Format `HH:MM-HH:MM,HH:MM-HH:MM`
   - Example: `07:00-09:00,18:00-22:00` (morning + evening)
 
+**Step 7: Room control**
+- **Pause duration** : default duration of the Pause switch (or infinite)
+- **Manual change** : when a person changes the heating by hand, SRM leaves the room alone for this time (minutes, 0 = disabled, default 120)
+- **Room notifications** : notify entities, legacy notify actions or scripts for this room, added to or replacing the global targets
+
+#### Notifications (options menu)
+- **Types** : heating blocked / unblocked by a window, manual change detected / ended, configuration issues, frost protection
+- **Targets** : `notify` entities (`notify.send_message`, title and message), legacy notify actions such as `notify.mobile_app_x` (with `data`: type, room_id, room_name, entities), scripts (`script.turn_on` with variables title, message, type, room_id, room_name, entities)
+- **Quiet period** : start and end time; notifications go to the fallback targets (none = nothing is sent)
+- **Cooldown** : minimum delay between two notifications of the same type in the same room (default 10 min)
+- The `smart_room_manager_notification` event is always fired, so you can route notifications yourself (for example to voice satellites)
+
 ### 📊 Created Entities
 
 For each configured room:
@@ -185,6 +209,8 @@ For each configured room:
 **Binary Sensors**
 - **binary_sensor.smart_room_[name]_occupied** : Occupation (alarm-based)
 - **binary_sensor.smart_room_[name]_light_needed** : Always False (manual control)
+- **binary_sensor.smart_room_[name]_chauffage_bloque** : Heating blocked by an open window while heating is wanted (v0.3.9)
+- **Anomalies** sensor (Smart Room Manager device) : number of configuration issues (v0.3.9, also shown in Repairs)
 
 **Switches**
 - **switch.smart_room_[name]_automation** : Enable/disable automation
@@ -291,7 +317,19 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 
 ### 🆕 Nouveautés
 
-**v0.3.7** (Dernière) - Correction Critique :
+**v0.3.9** (Dernière) - Version de fiabilité, validée sur une installation réelle :
+- ⏸️ **Switch Pause corrigé** : la pause suspend vraiment la pièce, la pause minutée se termine à l'heure et rend la main ; les switchs Pause et Automatisation sont restaurés après un redémarrage.
+- 🔁 **Presets relus** à chaque cycle (thermostats indisponibles au démarrage), preset `away` en absence, aucune commande vers une entité indisponible.
+- 🌡️ **Consigne d'hystérésis selon le mode** (éco et nuit utilisent leur propre température).
+- 🌞 **Contrôle externe (Fil Pilote)** : comparaison avec le preset réel, plus de commande inutile.
+- 🪟 **Délais fenêtres** : une fenêtre ouverte moins longtemps que le délai ne déclenche plus le hors-gel.
+- 🛁 **Salles de bain** : lumière éteinte, elles suivent leur calendrier.
+- ✋ **Réglages manuels respectés** : un réglage fait à la main laisse la pièce tranquille pendant une durée réglable (120 min par défaut).
+- 🚫 **Chauffage bloqué par une fenêtre** : nouveau capteur binaire `Chauffage bloqué` et événements `smart_room_manager_heating_blocked` / `_unblocked` ; la fenêtre gagne sur le réglage manuel, qui est réappliqué à la fermeture.
+- 🩺 **Diagnostic de configuration** : réparations et capteur `Anomalies` (entités absentes ou indisponibles, équipement piloté deux fois, consigne sous l'éco).
+- 🔔 **Notifications** : choix des types et des cibles (entités notify, actions notify classiques, scripts), cibles par pièce, plage de silence, anti-répétition, textes français/anglais.
+
+**v0.3.7** - Correction Critique :
 - ☀️ **Mode été + contrôle externe** : Le contrôle externe (Solar Optimizer) ne force plus `HEAT` en été. Les thermostats réversibles passent en `COOL` avec `temp_cool_comfort` ; les thermostats chauffage seul et les Fil Pilote sont ignorés en été. Auparavant, les climatisations des chambres repassaient sans cesse en chauffage à chaque cycle.
 
 **v0.3.6** - Corrections Critiques :
@@ -440,6 +478,18 @@ Une intégration Home Assistant complète pour gérer intelligemment chaque piè
 - **Plages confort** : Format `HH:MM-HH:MM,HH:MM-HH:MM`
   - Exemple : `07:00-09:00,18:00-22:00`
 
+**Étape 7 : Contrôle de la pièce**
+- **Durée de pause** : durée par défaut du switch Pause (ou infinie)
+- **Réglage manuel** : quand quelqu'un règle le chauffage à la main, SRM laisse la pièce pendant cette durée (minutes, 0 = désactivé, 120 par défaut)
+- **Notifications de la pièce** : entités notify, actions notify classiques ou scripts pour cette pièce, ajoutés aux cibles globales ou à leur place
+
+#### Notifications (menu des options)
+- **Types** : chauffage bloqué / débloqué par une fenêtre, réglage manuel détecté / terminé, anomalies de configuration, hors-gel
+- **Cibles** : entités `notify` (`notify.send_message`, titre et message), actions notify classiques comme `notify.mobile_app_x` (avec `data` : type, room_id, room_name, entities), scripts (`script.turn_on` avec les variables title, message, type, room_id, room_name, entities)
+- **Plage de silence** : heure de début et de fin ; les notifications partent vers les cibles de repli (aucune = rien n'est envoyé)
+- **Anti-répétition** : délai minimum entre deux notifications du même type dans la même pièce (10 min par défaut)
+- L'événement `smart_room_manager_notification` est toujours émis, pour router soi-même les notifications (par exemple vers des satellites vocaux)
+
 ### 📊 Entités créées
 
 Pour chaque pièce configurée :
@@ -450,6 +500,8 @@ Pour chaque pièce configurée :
 **Binary Sensors**
 - **binary_sensor.smart_room_[nom]_occupied** : Occupation (basée sur alarme)
 - **binary_sensor.smart_room_[nom]_light_needed** : Toujours False (contrôle manuel)
+- **binary_sensor.smart_room_[nom]_chauffage_bloque** : Chauffage bloqué par une fenêtre ouverte alors qu'il est demandé (v0.3.9)
+- Capteur **Anomalies** (appareil Smart Room Manager) : nombre d'anomalies de configuration (v0.3.9, aussi dans Réparations)
 
 **Switches**
 - **switch.smart_room_[nom]_automation** : Active/désactive l'automatisation

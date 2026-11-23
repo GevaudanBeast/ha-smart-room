@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # English
 
-## [0.3.9] - unreleased (branch fix/v0.3.9)
+## [0.3.9] - 2026-11-23
 
 ### 🐛 Bug Fixes
 
@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Heating blocked by a window** (B14): when comfort is wanted (calendar), Solar Optimizer asks, or a person changed the climate by hand, but an open window forces frost protection, SRM fires `smart_room_manager_heating_blocked` (room, open windows, source, heat/cool) and turns on the new `Chauffage bloqué` binary sensor; `smart_room_manager_heating_unblocked` when it ends. Eco is not a demand; nothing when away; the Pause switch bypasses everything. A window now wins over a manual change, which is re-applied when the window closes if the override period is not over.
 
-- **Notifications** (B15): new options step "Notifications". Choose the types (heating blocked/unblocked by a window, manual change detected and ended, configuration issues, frost protection) and the targets: `notify` entities (`notify.send_message`, title + message), legacy notify actions (e.g. `notify.mobile_app_x`, with `data`: type, room_id, room_name, entities) and scripts (`script.turn_on` with the same variables). Each room can add to or replace the global targets. Optional quiet period with fallback targets (none = nothing sent), cooldown per room and type (default 10 min). Default texts in French or English (Home Assistant language). The `smart_room_manager_notification` event is always fired; existing events are kept.
+- **Generic notifications** (B15): new options step "Notifications". Choose the types (heating blocked/unblocked by a window, manual change detected and ended, configuration issues, frost protection) and the targets: `notify` entities (`notify.send_message`, title + message), legacy notify actions (e.g. `notify.mobile_app_x`, with `data`: type, room_id, room_name, entities) and scripts (`script.turn_on` with the same variables). Each room can add to or replace the global targets. Optional quiet period with fallback targets (none = nothing sent), cooldown per room and type (default 10 min). Default texts in French or English (Home Assistant language). The `smart_room_manager_notification` event is always fired; existing events are kept.
 - The priority sensor now shows "Réglage manuel respecté jusqu'à HH:MM" during a manual change instead of "Pause manuelle active".
 
 ### 🧪 Tests
@@ -115,6 +115,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 # Français
+
+## [0.3.9] - 2026-11-23
+
+Version de fiabilité, validée sur une installation réelle. Home Assistant 2024.11 minimum.
+
+### 🐛 Corrections
+- **Switch Pause** (B1, B1e, B1f) : l'état de pause est porté par la pièce (l'ancienne recherche par entity_id ne correspondait jamais). Couper la pause ou la fin de la pause minutée rend la main. Switchs Pause et Automatisation restaurés après un redémarrage.
+- **Presets relus** (B2, B3) : relus à chaque cycle ; preset `away` en absence au lieu de `hvac off` ; aucune commande vers une entité climat indisponible ; avertissement « pas de preset » une seule fois par mode.
+- **Consigne d'hystérésis** (B4) : éco et nuit utilisent leur température ; `setpoint_input` sert uniquement de consigne confort.
+- **Version** (B6) alignée sur le manifest. **Home Assistant minimum** (B8) : 2024.11.
+- **Contrôle externe Fil Pilote** (B7) : comparaison avec le preset réel.
+- **Timer de pause** (B9) annulé au retrait de l'entité.
+- **Délais fenêtres** (B10) : une ouverture plus courte que le délai ne déclenche plus le hors-gel ; délais mesurés depuis `last_changed`.
+- **Journal des anomalies** (B11) : écrit seulement quand la liste change.
+- **Salles de bain** (B12) : lumière allumée = confort, lumière éteinte = mode du calendrier s'il existe.
+
+### ✨ Nouveautés
+- **Diagnostic de configuration** (B5) : réparations et capteur `Anomalies`.
+- **Réglage manuel respecté** (B13) : option `manual_override_minutes` par pièce (120 par défaut, 0 = désactivé).
+- **Chauffage bloqué par une fenêtre** (B14) : capteur binaire `Chauffage bloqué` et événements `smart_room_manager_heating_blocked` / `_unblocked` ; la fenêtre gagne sur le réglage manuel, réappliqué à la fermeture.
+- **Notifications** (B15) : étape « Notifications » des options (types, entités notify, actions notify classiques, scripts, cibles par pièce, plage de silence avec repli, anti-répétition, textes FR/EN, événement `smart_room_manager_notification`).
+- Le capteur de priorité affiche « Réglage manuel respecté jusqu'à HH:MM ».
+
+### 🧪 Tests
+- 187 tests automatiques.
 
 ## [0.3.7] - 2026-05-11
 
