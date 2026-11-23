@@ -506,3 +506,109 @@ async def test_b13_lumieres_non_concernees(hass, freezer, calls):
     await _tick_all(hass, freezer, 70)
     await _tick_all(hass, freezer)
     assert n(calls, "light", "turn_off") >= 1      # le minuteur de lumière continue
+
+
+# ---- B14 : chauffage bloqué par une fenêtre (événement + capteur) ----
+from pytest_homeassistant_custom_component.common import async_capture_events  # noqa: E402
+
+WIN = "binary_sensor.fenetre"
+
+
+async def _bloc(hass, freezer, cal="on", extra=None, data=None):
+    freezer.move_to(at(22, 10))
+    fp(hass, "eco")
+    hass.states.async_set(WIN, "off", {"friendly_name": "Fenêtre SP"})
+    hass.states.async_set("calendar.c", cal, {"start_time": "2026-11-20 22:00:00", "end_time": "2026-11-20 23:30:00"})
+    r = room(climate_mode="fil_pilote", climate_entity=FP, schedule_entity="calendar.c",
+             door_window_sensors=[WIN], window_delay_open=2, window_delay_close=2, **(extra or {}))
+    await setup_srm(hass, [r], data)
+    return (async_capture_events(hass, "smart_room_manager_heating_blocked"),
+            async_capture_events(hass, "smart_room_manager_heating_unblocked"))
+
+
+async def _open_for(hass, freezer, seconds):
+    hass.states.async_set(WIN, "on", {"friendly_name": "Fenêtre SP"})
+    for _ in range(seconds // 30):
+        await _tick_all(hass, freezer, 30)
+
+
+async def test_b14_planning_confort_fenetre_un_evenement(hass, freezer, calls):
+    blocked, unblocked = await _bloc(hass, freezer)
+    await _open_for(hass, freezer, 240)
+    assert len(blocked) == 1
+    d = blocked[0].data
+    assert d["source"] == "schedule" and d["direction"] == "heat" and d["windows"] == ["Fenêtre SP"]
+    st = hass.states.get("binary_sensor.smart_room_test_test_chauffage_bloque")
+    assert st.state == "on" and st.attributes["raison"] == "fenêtre ouverte"
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "away"
+    hass.states.async_set(WIN, "off", {"friendly_name": "Fenêtre SP"})
+    for _ in range(6):
+        await _tick_all(hass, freezer, 30)
+    assert len(unblocked) == 1 and len(blocked) == 1
+    assert hass.states.get("binary_sensor.smart_room_test_test_chauffage_bloque").state == "off"
+
+
+async def test_b14_eco_ne_compte_pas(hass, freezer, calls):
+    blocked, _ = await _bloc(hass, freezer, cal="off")
+    await _open_for(hass, freezer, 240)
+    assert blocked == []
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "away"   # hors-gel quand même
+
+
+async def test_b14_demande_solar_optimizer(hass, freezer, calls):
+    hass.states.async_set("switch.so", "on")
+    blocked, _ = await _bloc(hass, freezer, cal="off", extra={"external_control_switch": "switch.so"})
+    await _open_for(hass, freezer, 240)
+    assert len(blocked) == 1 and blocked[0].data["source"] == "external"
+
+
+async def test_b14_rien_si_alarme_absence(hass, freezer, calls):
+    hass.states.async_set("alarm_control_panel.a", "armed_away")
+    blocked, _ = await _bloc(hass, freezer, extra={"ignore_in_away": True}, data={"alarm_entity": "alarm_control_panel.a"})
+    await _open_for(hass, freezer, 240)
+    assert blocked == []
+
+
+async def test_b14_ouverture_courte_rien(hass, freezer, calls):
+    blocked, _ = await _bloc(hass, freezer)
+    await _open_for(hass, freezer, 60)
+    hass.states.async_set(WIN, "off")
+    for _ in range(6):
+        await _tick_all(hass, freezer, 30)
+    assert blocked == []
+
+
+async def test_b14_pause_contourne_tout(hass, freezer, calls):
+    blocked, _ = await _bloc(hass, freezer)
+    ent = hass.data["entity_components"]["switch"].get_entity("switch.smart_room_test_test_pause")
+    await ent.async_turn_on(); await hass.async_block_till_done()
+    before = n(calls, "climate", "set_preset_mode")
+    await _open_for(hass, freezer, 240)
+    assert blocked == [] and n(calls, "climate", "set_preset_mode") == before
+
+
+async def test_b14_reglage_manuel_bloque_puis_reapplique(hass, freezer, calls):
+    blocked, _ = await _bloc(hass, freezer, cal="off")
+    _set_fp_user(hass, "comfort"); await hass.async_block_till_done()   # Aurélien met confort
+    await _tick_all(hass, freezer, 30)
+    assert n(calls, "climate", "set_preset_mode") == 0                   # respecté (B13)
+    await _open_for(hass, freezer, 240)
+    assert len(blocked) == 1 and blocked[0].data["source"] == "manual"
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "away"   # la fenêtre l'emporte
+    fp(hass, "away")                                                      # le radiateur a suivi
+    hass.states.async_set(WIN, "off")
+    for _ in range(6):
+        await _tick_all(hass, freezer, 30)
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "comfort"  # réappliqué
+    assert hass.states.get("sensor.smart_room_test_test_current_priority").state == "paused"
+
+
+async def test_b14_reglage_manuel_expire_pas_de_reapplication(hass, freezer, calls):
+    blocked, _ = await _bloc(hass, freezer, cal="off", extra={"manual_override_minutes": 3})
+    _set_fp_user(hass, "comfort"); await hass.async_block_till_done()
+    await _open_for(hass, freezer, 240)                                  # dépasse les 3 min
+    fp(hass, "away")
+    hass.states.async_set(WIN, "off")
+    for _ in range(6):
+        await _tick_all(hass, freezer, 30)
+    assert last(calls, "climate", "set_preset_mode")["preset_mode"] == "eco"     # reprise normale
