@@ -15,7 +15,7 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.start import async_at_started
 
-from .const import CONF_ROOM_ID, CONF_ROOMS, DOMAIN, VERSION
+from .const import CONF_ROOM_ID, CONF_ROOMS, DOMAIN, NOTIFY_CONFIG_ISSUES, VERSION
 from .coordinator import SmartRoomCoordinator
 from .diagnostics_check import check_rooms, issue_id
 
@@ -148,6 +148,19 @@ def async_update_diagnostics(
     coordinator.async_update_listeners()
     # v0.3.9: log only when the set of anomalies changes (not every 15 min)
     previous_ids = getattr(coordinator, "_last_anomaly_ids", None)
+    new_ids = set(wanted) - (previous_ids or set())
+    notifier = getattr(coordinator, "notifier", None)
+    if new_ids and notifier is not None:
+        new_anomalies = [wanted[i] for i in wanted if i in new_ids]
+        notifier.notify(
+            NOTIFY_CONFIG_ISSUES,
+            None,
+            {
+                "count": len(new_anomalies),
+                "details": notifier.issue_details(hass, new_anomalies),
+            },
+            [a.get("entity_id") for a in new_anomalies if a.get("entity_id")],
+        )
     if set(wanted) != previous_ids:
         coordinator._last_anomaly_ids = set(wanted)
         if anomalies:

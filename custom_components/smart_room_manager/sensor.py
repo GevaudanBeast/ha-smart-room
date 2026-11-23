@@ -34,6 +34,19 @@ from .entity import SmartRoomEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+PAUSE_REASON_MANUAL_OVERRIDE = "manual_override"
+
+
+def _manual_override_text(room_data: dict[str, Any]) -> str:
+    """Description of a manual-change period (v0.3.9)."""
+    until = room_data.get("manual_override_until")
+    if until:
+        try:
+            return f"Réglage manuel respecté jusqu'à {str(until)[11:16]}"
+        except (TypeError, IndexError):
+            pass
+    return "Réglage manuel respecté"
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -200,7 +213,8 @@ class SmartRoomCurrentPrioritySensor(SmartRoomEntity, SensorEntity):
 
         return {
             "description": self._get_priority_description(
-                climate_state.get(ATTR_CURRENT_PRIORITY, PRIORITY_NORMAL)
+                climate_state.get(ATTR_CURRENT_PRIORITY, PRIORITY_NORMAL),
+                room_data,
             ),
             "external_control_active": climate_state.get(
                 "external_control_active", False
@@ -211,8 +225,15 @@ class SmartRoomCurrentPrioritySensor(SmartRoomEntity, SensorEntity):
             "schedule_active": room_data.get("schedule_active", False),
         }
 
-    def _get_priority_description(self, priority: str) -> str:
+    def _get_priority_description(
+        self, priority: str, room_data: dict[str, Any] | None = None
+    ) -> str:
         """Get human-readable description of priority."""
+        # v0.3.9: a manual change is not the pause switch
+        if priority == "paused" and room_data and (
+            room_data.get("pause_reason") == PAUSE_REASON_MANUAL_OVERRIDE
+        ):
+            return _manual_override_text(room_data)
         descriptions = {
             "paused": "Pause manuelle active",
             "bypass": "Bypass activé (contrôle externe complet)",
@@ -360,7 +381,10 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
             return {"log": "\n".join(log_lines)}
 
         if room_data.get("pause_active"):
-            log_lines.append("⏸️ Pause manuelle active")
+            if room_data.get("pause_reason") == PAUSE_REASON_MANUAL_OVERRIDE:
+                log_lines.append("✋ " + _manual_override_text(room_data))
+            else:
+                log_lines.append("⏸️ Pause manuelle active")
             return {"log": "\n".join(log_lines)}
 
         # Current mode and why

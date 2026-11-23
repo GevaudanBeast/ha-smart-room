@@ -43,6 +43,11 @@ from .const import (  # v0.3.0 additions; Priority 2 additions
     MODE_ECO,
     MODE_FROST_PROTECTION,
     MODE_NIGHT,
+    NOTIFY_FROST_PROTECTION,
+    NOTIFY_HEATING_BLOCKED,
+    NOTIFY_HEATING_UNBLOCKED,
+    NOTIFY_MANUAL_OVERRIDE,
+    NOTIFY_MANUAL_OVERRIDE_END,
     ROOM_TYPE_BATHROOM,
     TIME_PERIOD_DAY,
     TIME_PERIOD_NIGHT,
@@ -98,6 +103,9 @@ class RoomManager:
         # v0.3.9: heating blocked by an open window
         self._heating_blocked: bool = False
         self._heating_blocked_info: dict[str, Any] = {}
+        # v0.3.9: notification transitions
+        self._override_prev: bool = False
+        self._mode_prev: str | None = None
 
         # Window delay tracking (Priority 2)
         self._windows_opened_at = None  # Timestamp when windows opened
@@ -142,11 +150,18 @@ class RoomManager:
 
         # Determine current mode
         self._update_current_mode()
+        self._check_frost_notification()
 
         # Update controllers
         if self._automation_enabled:
             await self.light_controller.async_update()
             await self.climate_controller.async_update()
+
+        # v0.3.9: end of a manual-override period
+        override_active = self.is_manual_override()
+        if self._override_prev and not override_active:
+            self._notify(NOTIFY_MANUAL_OVERRIDE_END)
+        self._override_prev = override_active
 
         # Return current state
         return self.get_state()
@@ -444,6 +459,15 @@ class RoomManager:
                     "temperature": new.attributes.get("temperature"),
                 }
                 self.manual_restore_pending = False
+                self._override_prev = True
+                self._notify(
+                    NOTIFY_MANUAL_OVERRIDE,
+                    {
+                        "until_text": dt_util.as_local(self._manual_until).strftime(
+                            "%H:%M"
+                        )
+                    },
+                )
                 self.coordinator.async_update_listeners()
 
     def start_manual_override(self) -> bool:
@@ -519,6 +543,15 @@ class RoomManager:
             else "smart_room_manager_heating_unblocked",
             data,
         )
+        self._notify(
+            NOTIFY_HEATING_BLOCKED if blocked else NOTIFY_HEATING_UNBLOCKED,
+            data,
+            extra_entities=[
+                e
+                for e in self.room_config.get(CONF_DOOR_WINDOW_SENSORS) or []
+                if (st := self.hass.states.get(e)) and st.state == STATE_ON
+            ],
+        )
         _LOGGER.info(
             "Heating %s in %s (source: %s, windows: %s)",
             "blocked by a window" if blocked else "no longer blocked",
@@ -526,6 +559,42 @@ class RoomManager:
             source,
             data["windows"],
         )
+
+    # ---- v0.3.9: notifications ------------------------------------------
+    def _notify(
+        self,
+        ntype: str,
+        values: dict[str, Any] | None = None,
+        extra_entities: list[str] | None = None,
+    ) -> None:
+        notifier = getattr(self.coordinator, "notifier", None)
+        if notifier is None:
+            return
+        entities = [e for e in [self.room_config.get(CONF_CLIMATE_ENTITY)] if e]
+        entities += list(extra_entities or [])
+        try:
+            notifier.notify(ntype, self.room_config, values, entities)
+        except Exception as err:  # noqa: BLE001 - never break the room logic
+            _LOGGER.warning("Notification %s failed in %s: %s", ntype, self.room_name, err)
+
+    def _check_frost_notification(self) -> None:
+        """Notify when a heated room enters frost protection."""
+        mode = self._current_mode
+        previous = self._mode_prev
+        self._mode_prev = mode
+        if previous is None or not self.room_config.get(CONF_CLIMATE_ENTITY):
+            return
+        if mode != MODE_FROST_PROTECTION or previous == MODE_FROST_PROTECTION:
+            return
+        if self._paused or not self._automation_enabled:
+            return
+        reason = (
+            "window"
+            if self.room_config.get(CONF_CLIMATE_WINDOW_CHECK, True)
+            and self.is_windows_open_delayed()
+            else "away"
+        )
+        self._notify(NOTIFY_FROST_PROTECTION, {"reason": reason})
 
     def is_heating_blocked(self) -> bool:
         return self._heating_blocked

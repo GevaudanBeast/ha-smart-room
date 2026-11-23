@@ -87,6 +87,49 @@ DEFAULT_MANUAL_OVERRIDE_MINUTES: Final = 120
 PAUSE_REASON_MANUAL_SWITCH: Final = "pause_switch"
 PAUSE_REASON_MANUAL_OVERRIDE: Final = "manual_override"
 
+# Notifications (v0.3.9)
+CONF_NOTIFICATIONS: Final = "notifications"  # dict stored in entry.options
+CONF_NOTIFY_TYPES: Final = "notify_types"
+CONF_NOTIFY_ENTITIES: Final = "notify_entities"  # notify.* entities
+CONF_NOTIFY_SERVICES: Final = "notify_services"  # legacy notify.xxx actions
+CONF_NOTIFY_SCRIPTS: Final = "notify_scripts"  # script.* entities
+CONF_NOTIFY_QUIET_START: Final = "notify_quiet_start"
+CONF_NOTIFY_QUIET_END: Final = "notify_quiet_end"
+CONF_NOTIFY_QUIET_ENTITIES: Final = "notify_quiet_entities"
+CONF_NOTIFY_QUIET_SERVICES: Final = "notify_quiet_services"
+CONF_NOTIFY_QUIET_SCRIPTS: Final = "notify_quiet_scripts"
+CONF_NOTIFY_COOLDOWN: Final = "notify_cooldown_minutes"
+DEFAULT_NOTIFY_COOLDOWN: Final = 10
+# Per room
+CONF_ROOM_NOTIFY_ENTITIES: Final = "room_notify_entities"
+CONF_ROOM_NOTIFY_SERVICES: Final = "room_notify_services"
+CONF_ROOM_NOTIFY_SCRIPTS: Final = "room_notify_scripts"
+CONF_ROOM_NOTIFY_MODE: Final = "room_notify_mode"
+ROOM_NOTIFY_MODE_ADD: Final = "add"
+ROOM_NOTIFY_MODE_REPLACE: Final = "replace"
+# Notification types
+NOTIFY_HEATING_BLOCKED: Final = "heating_blocked"
+NOTIFY_HEATING_UNBLOCKED: Final = "heating_unblocked"
+NOTIFY_MANUAL_OVERRIDE: Final = "manual_override"
+NOTIFY_MANUAL_OVERRIDE_END: Final = "manual_override_end"
+NOTIFY_CONFIG_ISSUES: Final = "config_issues"
+NOTIFY_FROST_PROTECTION: Final = "frost_protection"
+NOTIFY_TYPES: Final = [
+    NOTIFY_HEATING_BLOCKED,
+    NOTIFY_HEATING_UNBLOCKED,
+    NOTIFY_MANUAL_OVERRIDE,
+    NOTIFY_MANUAL_OVERRIDE_END,
+    NOTIFY_CONFIG_ISSUES,
+    NOTIFY_FROST_PROTECTION,
+]
+DEFAULT_NOTIFY_TYPES: Final = [
+    NOTIFY_HEATING_BLOCKED,
+    NOTIFY_MANUAL_OVERRIDE,
+    NOTIFY_MANUAL_OVERRIDE_END,
+    NOTIFY_CONFIG_ISSUES,
+]
+EVENT_NOTIFICATION: Final = "smart_room_manager_notification"
+
 # Window delays (Priority 2)
 CONF_WINDOW_DELAY_OPEN: Final = "window_delay_open"  # Minutes before reacting to open
 CONF_WINDOW_DELAY_CLOSE: Final = (

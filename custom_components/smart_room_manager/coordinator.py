@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_ROOMS, DOMAIN, UPDATE_INTERVAL
+from .notifier import Notifier
 from .room_manager import RoomManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +31,8 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
         self.entry = entry
         self.room_managers: dict[str, RoomManager] = {}
         self.anomalies: list[dict[str, Any]] = []
+        # v0.3.9: generic notifications
+        self.notifier = Notifier(hass, entry)
 
         # Initialize room managers
         self._setup_room_managers()
