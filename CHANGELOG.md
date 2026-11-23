@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Manual change detection** (B13): when a person changes the preset, HVAC mode or setpoint of a room's climate entity (change carrying a `user_id`), SRM leaves that room alone for `manual_override_minutes` (room option, default 120 min, 0 = disabled), then resumes automatically. Reason shown as "réglage manuel" on the Pause switch and the priority sensor; turning the Pause switch off resumes control. Light timers are not affected.
 
+- **Heating blocked by a window** (B14): when comfort is wanted (calendar), Solar Optimizer asks, or a person changed the climate by hand, but an open window forces frost protection, SRM fires `smart_room_manager_heating_blocked` (room, open windows, source, heat/cool) and turns on the new `Chauffage bloqué` binary sensor; `smart_room_manager_heating_unblocked` when it ends. Eco is not a demand; nothing when away; the Pause switch bypasses everything. A window now wins over a manual change, which is re-applied when the window closes if the override period is not over.
+
 ### 🧪 Tests
 
 - 141 automated tests (`tests/`, pytest-homeassistant-custom-component).
