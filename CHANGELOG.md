@@ -34,9 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Heating blocked by a window** (B14): when comfort is wanted (calendar), Solar Optimizer asks, or a person changed the climate by hand, but an open window forces frost protection, SRM fires `smart_room_manager_heating_blocked` (room, open windows, source, heat/cool) and turns on the new `Chauffage bloqué` binary sensor; `smart_room_manager_heating_unblocked` when it ends. Eco is not a demand; nothing when away; the Pause switch bypasses everything. A window now wins over a manual change, which is re-applied when the window closes if the override period is not over.
 
+- **Notifications** (B15): new options step "Notifications". Choose the types (heating blocked/unblocked by a window, manual change detected and ended, configuration issues, frost protection) and the targets: `notify` entities (`notify.send_message`, title + message), legacy notify actions (e.g. `notify.mobile_app_x`, with `data`: type, room_id, room_name, entities) and scripts (`script.turn_on` with the same variables). Each room can add to or replace the global targets. Optional quiet period with fallback targets (none = nothing sent), cooldown per room and type (default 10 min). Default texts in French or English (Home Assistant language). The `smart_room_manager_notification` event is always fired; existing events are kept.
+- The priority sensor now shows "Réglage manuel respecté jusqu'à HH:MM" during a manual change instead of "Pause manuelle active".
+
 ### 🧪 Tests
 
-- 141 automated tests (`tests/`, pytest-homeassistant-custom-component).
+- 187 automated tests (`tests/`, pytest-homeassistant-custom-component).
 
 ## [0.3.7] - 2026-05-11
 
