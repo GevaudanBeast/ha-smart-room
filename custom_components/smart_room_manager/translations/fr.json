@@ -18,7 +18,8 @@
         "menu_options": {
           "list_rooms": "Gérer les pièces",
           "add_room": "Ajouter une pièce",
-          "global_settings": "Paramètres globaux"
+          "global_settings": "Paramètres globaux",
+          "notifications": "Notifications"
         }
       },
       "list_rooms": {
@@ -166,7 +167,11 @@
         "data": {
           "pause_duration_minutes": "Durée de la pause (minutes)",
           "pause_infinite": "Autoriser pause infinie",
-          "manual_override_minutes": "Réglage manuel : ne plus toucher la pièce pendant (min, 0 = désactivé)"
+          "manual_override_minutes": "Réglage manuel : ne plus toucher la pièce pendant (min, 0 = désactivé)",
+          "room_notify_entities": "Notifications de la pièce : entités notify",
+          "room_notify_services": "Notifications de la pièce : actions notify",
+          "room_notify_scripts": "Notifications de la pièce : scripts",
+          "room_notify_mode": "Cibles de la pièce"
         }
       },
       "delete_room": {
@@ -190,6 +195,22 @@
           "season_calendar": "ON = été (climatisation), OFF = hiver (chauffage)",
           "vmc_entity": "Switch ou fan qui active la VMC en grande vitesse",
           "vmc_timer": "Durée pendant laquelle la VMC reste en GV après extinction lumière SDB/WC"
+        }
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Choisissez ce qui est notifié et où. Entités notify : titre et message seulement. Actions notify classiques (ex. notify.mobile_app_x) : avec données. Scripts : reçoivent title, message, type, room_id, room_name, entities. Plage de silence : les notifications vont aux cibles de repli (aucune = rien n'est envoyé). Anti-répétition : délai minimum entre deux notifications du même type dans la même pièce. L'événement smart_room_manager_notification est toujours émis.",
+        "data": {
+          "notify_types": "Types de notification",
+          "notify_entities": "Cibles : entités notify",
+          "notify_services": "Cibles : actions notify classiques",
+          "notify_scripts": "Cibles : scripts",
+          "notify_quiet_start": "Silence : début",
+          "notify_quiet_end": "Silence : fin",
+          "notify_quiet_entities": "Repli pendant le silence : entités notify",
+          "notify_quiet_services": "Repli pendant le silence : actions notify",
+          "notify_quiet_scripts": "Repli pendant le silence : scripts",
+          "notify_cooldown_minutes": "Anti-répétition (min, 0 = désactivé)"
         }
       }
     }
@@ -231,6 +252,22 @@
         "eco": "Éco",
         "night": "Nuit",
         "frost_protection": "Hors-gel"
+      }
+    },
+    "notify_types": {
+      "options": {
+        "heating_blocked": "Chauffage bloqué par une fenêtre",
+        "heating_unblocked": "Chauffage débloqué (fenêtre fermée)",
+        "manual_override": "Réglage manuel détecté",
+        "manual_override_end": "Fin du réglage manuel",
+        "config_issues": "Anomalies de configuration",
+        "frost_protection": "Pièce en hors-gel"
+      }
+    },
+    "room_notify_mode": {
+      "options": {
+        "add": "Ajouter aux cibles globales",
+        "replace": "Remplacer les cibles globales"
       }
     }
   },
