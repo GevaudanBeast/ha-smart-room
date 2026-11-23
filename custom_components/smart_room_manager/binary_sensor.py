@@ -43,7 +43,54 @@ async def async_setup_entry(
             ]
         )
 
+    # v0.3.9: heating/cooling blocked by an open window (rooms with a climate)
+    for room_manager in coordinator.get_all_room_managers():
+        if room_manager.room_config.get("climate_entity"):
+            entities.append(SmartRoomHeatingBlockedSensor(coordinator, room_manager.room_id))
+
     async_add_entities(entities)
+
+
+class SmartRoomHeatingBlockedSensor(SmartRoomEntity, BinarySensorEntity):
+    """On when heating/cooling is wanted but an open window blocks it."""
+
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+
+    def __init__(self, coordinator: SmartRoomCoordinator, room_id: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator, room_id)
+        room_manager = coordinator.get_room_manager(room_id)
+        if room_manager:
+            self._attr_name = f"{room_manager.room_name} Chauffage bloqué"
+            self._attr_unique_id = f"smart_room_{room_id}_heating_blocked"
+            self._attr_icon = "mdi:window-open-variant"
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return true if heating/cooling is blocked by a window."""
+        if self.coordinator.data and self._room_id in self.coordinator.data:
+            return bool(self.coordinator.data[self._room_id].get("heating_blocked"))
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the reason, the source of the demand and the open windows."""
+        if not self.coordinator.data or self._room_id not in self.coordinator.data:
+            return {}
+        info = self.coordinator.data[self._room_id].get("heating_blocked_info") or {}
+        if not info:
+            return {}
+        return {
+            "raison": "fenêtre ouverte",
+            "source": info.get("source"),
+            "direction": info.get("direction"),
+            "fenetres": info.get("windows"),
+        }
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
 
 
 class SmartRoomOccupiedSensor(SmartRoomEntity, BinarySensorEntity):

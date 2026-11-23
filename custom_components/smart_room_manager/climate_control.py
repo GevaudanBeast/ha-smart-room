@@ -126,12 +126,13 @@ class ClimateController:
             )
             return
 
-        # PRIORITY 0.5: Check manual pause
-        if self.room_manager.is_paused() or self.room_manager.is_manual_override():
+        # PRIORITY 0.5: Pause switch - SRM leaves everything alone
+        if self.room_manager.is_paused():
             _LOGGER.debug(
                 "⏸️ Manual pause active in %s - skipping automation",
                 self.room_manager.room_name,
             )
+            self.room_manager.set_heating_blocked(False)
             self._current_priority = PRIORITY_PAUSED
             return
 
@@ -145,19 +146,32 @@ class ClimateController:
                     bypass_switch,
                     self.room_manager.room_name,
                 )
+                self.room_manager.set_heating_blocked(False)
                 self._current_priority = PRIORITY_BYPASS
                 return
 
-        # PRIORITY 2: Check windows
+        # PRIORITY 2: Check windows (v0.3.9: wins over a manual change)
         if self.room_config.get(CONF_CLIMATE_WINDOW_CHECK, True):
             if self.room_manager.is_windows_open_delayed():
                 _LOGGER.debug(
                     "🪟 Windows open in %s - setting frost protection",
                     self.room_manager.room_name,
                 )
+                await self._update_heating_blocked(window_open=True)
                 self._current_priority = PRIORITY_WINDOWS_OPEN
                 await self._set_frost_protection(climate_entity, reason="window")
+                if self.room_manager.get_manual_request():
+                    self.room_manager.manual_restore_pending = True
                 return
+        self.room_manager.set_heating_blocked(False)
+
+        # PRIORITY 2.5: Manual change - SRM leaves the climate alone,
+        # after re-applying a change that a window had blocked
+        if self.room_manager.is_manual_override():
+            if self.room_manager.manual_restore_pending:
+                await self._restore_manual_request(climate_entity)
+            self._current_priority = PRIORITY_PAUSED
+            return
 
         # PRIORITY 3: Check External Control (Solar Optimizer, etc.)
         if await self._is_external_control_active():
@@ -232,6 +246,62 @@ class ClimateController:
         mode = self.room_manager.get_current_mode()
 
         await self._apply_mode(climate_entity, mode, is_summer)
+
+    async def _update_heating_blocked(self, window_open: bool) -> None:
+        """Flag a heating/cooling demand blocked by an open window (v0.3.9).
+
+        Demand = comfort wanted (calendar, night/eco excluded), external
+        control (Solar Optimizer) or a manual request. Nothing when away.
+        """
+        if not window_open or self._is_away_mode():
+            self.room_manager.set_heating_blocked(False)
+            return
+        source = None
+        if self.room_manager.manual_request_is_demand():
+            source = "manual"
+        elif await self._is_external_control_active():
+            source = "external"
+        elif self.room_manager.get_mode_ignoring_windows() == "comfort":
+            source = "schedule"
+        direction = "cool" if self._is_summer_mode() else "heat"
+        self.room_manager.set_heating_blocked(source is not None, source, direction)
+
+    async def _restore_manual_request(self, climate_entity: str) -> None:
+        """Re-apply the manual settings blocked by a window (v0.3.9)."""
+        request = self.room_manager.get_manual_request() or {}
+        state = self.hass.states.get(climate_entity)
+        self.room_manager.manual_restore_pending = False
+        if state is None:
+            return
+        try:
+            hvac = request.get("hvac_mode")
+            if hvac and state.state != hvac:
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE,
+                    {"entity_id": climate_entity, ATTR_HVAC_MODE: hvac},
+                    blocking=True,
+                )
+            preset = request.get("preset_mode")
+            if preset and state.attributes.get(ATTR_PRESET_MODE) != preset:
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE,
+                    {"entity_id": climate_entity, ATTR_PRESET_MODE: preset},
+                    blocking=True,
+                )
+            temp = request.get("temperature")
+            if temp is not None and state.attributes.get(ATTR_TEMPERATURE) != temp:
+                await self.hass.services.async_call(
+                    CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE,
+                    {"entity_id": climate_entity, ATTR_TEMPERATURE: temp},
+                    blocking=True,
+                )
+            _LOGGER.info(
+                "Window closed in %s - manual setting re-applied: %s",
+                self.room_manager.room_name,
+                request,
+            )
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.error("Error re-applying manual setting for %s: %s", climate_entity, err)
 
     def _detect_climate_type(self, climate_entity: str) -> str:
         """Detect if climate entity is Fil Pilote (preset_mode) or thermostat (hvac_mode).

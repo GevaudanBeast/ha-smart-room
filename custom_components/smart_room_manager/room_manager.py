@@ -92,6 +92,12 @@ class RoomManager:
         # v0.3.9: manual override detection (pause until this time, UTC)
         self._manual_until = None
         self._unsub_climate = None
+        # v0.3.9: manual request kept while a window blocks it
+        self._manual_request: dict[str, Any] | None = None
+        self.manual_restore_pending: bool = False
+        # v0.3.9: heating blocked by an open window
+        self._heating_blocked: bool = False
+        self._heating_blocked_info: dict[str, Any] = {}
 
         # Window delay tracking (Priority 2)
         self._windows_opened_at = None  # Timestamp when windows opened
@@ -244,7 +250,7 @@ class RoomManager:
 
         return False
 
-    def _update_current_mode(self) -> None:
+    def _compute_mode(self, include_windows: bool = True) -> str:
         """Determine current operating mode.
 
         Priority order (aligned with climate_control.async_update):
@@ -257,10 +263,9 @@ class RoomManager:
         7. Default: Eco
         """
         # PRIORITY 1: Check windows open (aligned with climate_control PRIORITY 2)
-        if self.room_config.get(CONF_CLIMATE_WINDOW_CHECK, True):
+        if include_windows and self.room_config.get(CONF_CLIMATE_WINDOW_CHECK, True):
             if self.is_windows_open_delayed():
-                self._current_mode = MODE_FROST_PROTECTION
-                return
+                return MODE_FROST_PROTECTION
 
         # PRIORITY 2: Check alarm armed_away
         alarm_entity = self.coordinator.entry.data.get(CONF_ALARM_ENTITY)
@@ -272,11 +277,9 @@ class RoomManager:
                 if ignore_in_away:
                     schedule_mode = self.get_schedule_mode()
                     if schedule_mode:
-                        self._current_mode = schedule_mode
-                        return
+                        return schedule_mode
                 # Default away behavior: frost protection
-                self._current_mode = MODE_FROST_PROTECTION
-                return
+                return MODE_FROST_PROTECTION
 
         # PRIORITY 3: Bathroom special logic (light state determines mode)
         if self.room_type == ROOM_TYPE_BATHROOM:
@@ -292,33 +295,36 @@ class RoomManager:
                         break
 
                 if any_light_on:
-                    self._current_mode = MODE_COMFORT
-                    return
+                    return MODE_COMFORT
                 # v0.3.9: light off -> follow the calendar when one is set,
                 # otherwise eco (previous behaviour)
                 schedule_mode = self.get_schedule_mode()
-                self._current_mode = schedule_mode or MODE_ECO
-                return
+                return schedule_mode or MODE_ECO
 
         # PRIORITY 4: Check schedule/calendar (v0.3.0+)
         # Schedule has priority over night period (explicit user config)
         schedule_mode = self.get_schedule_mode()
         if schedule_mode:
-            self._current_mode = schedule_mode
-            return
+            return schedule_mode
 
         # PRIORITY 5: Night period
         if self._is_night:
-            self._current_mode = MODE_NIGHT
-            return
+            return MODE_NIGHT
 
         # PRIORITY 6: Check legacy comfort time ranges (backward compatibility)
         if self._is_in_comfort_time_range():
-            self._current_mode = MODE_COMFORT
-            return
+            return MODE_COMFORT
 
         # DEFAULT: Eco
-        self._current_mode = MODE_ECO
+        return MODE_ECO
+
+    def _update_current_mode(self) -> None:
+        """Determine current operating mode (see _compute_mode)."""
+        self._current_mode = self._compute_mode(include_windows=True)
+
+    def get_mode_ignoring_windows(self) -> str:
+        """Mode that would apply if every window were closed (v0.3.9)."""
+        return self._compute_mode(include_windows=False)
 
     def is_night_period(self) -> bool:
         """Check if it's night period."""
@@ -403,6 +409,8 @@ class RoomManager:
         self._paused = paused
         if not paused:
             self._manual_until = None
+            self._manual_request = None
+            self.manual_restore_pending = False
 
     # ---- v0.3.9: manual override detection -------------------------------
     @callback
@@ -430,6 +438,12 @@ class RoomManager:
         # SRM's own service calls carry no user_id: only a person counts
         if changed and event.context.user_id:
             if self.start_manual_override():
+                self._manual_request = {
+                    "hvac_mode": new.state,
+                    "preset_mode": new.attributes.get("preset_mode"),
+                    "temperature": new.attributes.get("temperature"),
+                }
+                self.manual_restore_pending = False
                 self.coordinator.async_update_listeners()
 
     def start_manual_override(self) -> bool:
@@ -454,8 +468,67 @@ class RoomManager:
             return False
         if dt_util.utcnow() >= self._manual_until:
             self._manual_until = None
+            self._manual_request = None
+            self.manual_restore_pending = False
             return False
         return True
+
+    def get_manual_request(self) -> dict[str, Any] | None:
+        """Settings requested by hand, while the override period runs."""
+        return self._manual_request if self.is_manual_override() else None
+
+    def manual_request_is_demand(self) -> bool:
+        """True when the manual request asks for heating or cooling."""
+        request = self.get_manual_request()
+        if not request:
+            return False
+        if request.get("hvac_mode") in ("off",):
+            return False
+        return request.get("preset_mode") not in ("eco", "away", "none") or (
+            request.get("preset_mode") is None
+        )
+
+    # ---- v0.3.9: heating blocked by an open window -------------------------
+    def get_open_window_names(self) -> list[str]:
+        names = []
+        for entity_id in self.room_config.get(CONF_DOOR_WINDOW_SENSORS) or []:
+            state = self.hass.states.get(entity_id)
+            if state and state.state == STATE_ON:
+                names.append(state.attributes.get("friendly_name", entity_id))
+        return names
+
+    def set_heating_blocked(
+        self, blocked: bool, source: str | None = None, direction: str = "heat"
+    ) -> None:
+        """Record the blocked state and fire an event on each change."""
+        if blocked == self._heating_blocked:
+            return
+        self._heating_blocked = blocked
+        data = {
+            "room_id": self.room_id,
+            "room_name": self.room_name,
+            "climate_entity": self.room_config.get(CONF_CLIMATE_ENTITY),
+            "windows": self.get_open_window_names(),
+            "source": source,
+            "direction": direction,
+        }
+        self._heating_blocked_info = data if blocked else {}
+        self.hass.bus.async_fire(
+            "smart_room_manager_heating_blocked"
+            if blocked
+            else "smart_room_manager_heating_unblocked",
+            data,
+        )
+        _LOGGER.info(
+            "Heating %s in %s (source: %s, windows: %s)",
+            "blocked by a window" if blocked else "no longer blocked",
+            self.room_name,
+            source,
+            data["windows"],
+        )
+
+    def is_heating_blocked(self) -> bool:
+        return self._heating_blocked
 
     def get_pause_reason(self) -> str | None:
         if self._paused:
@@ -544,6 +617,8 @@ class RoomManager:
             "schedule_active": schedule_active,
             "pause_active": pause_active,
             "pause_reason": self.get_pause_reason(),
+            "heating_blocked": self._heating_blocked,
+            "heating_blocked_info": dict(self._heating_blocked_info),
             "manual_override_until": (
                 dt_util.as_local(self._manual_until).isoformat()
                 if self.is_manual_override()
