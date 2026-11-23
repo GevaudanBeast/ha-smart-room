@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*.*.*"
+      # Pre-release tags (e.g. v0.3.9-beta.5) are published by hand:
+      # skip them so the version check does not fail on every beta.
+      - "!v*-*"
 
 permissions:
   contents: write

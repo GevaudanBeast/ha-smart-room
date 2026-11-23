@@ -18,7 +18,8 @@
         "menu_options": {
           "list_rooms": "Manage rooms",
           "add_room": "Add a room",
-          "global_settings": "Global settings"
+          "global_settings": "Global settings",
+          "notifications": "Notifications"
         }
       },
       "list_rooms": {
@@ -148,10 +149,15 @@
       },
       "room_control": {
         "title": "Room Control Options",
-        "description": "Manual pause: default duration of pause switch. Infinite: pause without time limit.",
+        "description": "Manual pause: default duration of the pause switch. Infinite: no time limit. Manual change: when someone changes the heating by hand, SRM leaves this room alone for this duration, then resumes.",
         "data": {
           "pause_duration_minutes": "Pause duration (minutes)",
-          "pause_infinite": "Allow infinite pause"
+          "pause_infinite": "Allow infinite pause",
+          "manual_override_minutes": "Manual change: suspend this room for (min, 0 = off)",
+          "room_notify_entities": "Room notifications: notify entities",
+          "room_notify_services": "Room notifications: notify actions",
+          "room_notify_scripts": "Room notifications: scripts",
+          "room_notify_mode": "Room targets"
         }
       },
       "delete_room": {
@@ -167,6 +173,22 @@
         "data": {
           "alarm_entity": "Alarm entity",
           "season_calendar": "Season calendar"
+        }
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Choose what is notified and where. Notify entities: title and message only. Legacy notify actions (e.g. notify.mobile_app_x): with data. Scripts: receive title, message, type, room_id, room_name, entities. Quiet period: notifications go to the fallback targets (none = nothing is sent). Cooldown: minimum delay between two notifications of the same type in the same room. The smart_room_manager_notification event is always fired.",
+        "data": {
+          "notify_types": "Notification types",
+          "notify_entities": "Targets: notify entities",
+          "notify_services": "Targets: legacy notify actions",
+          "notify_scripts": "Targets: scripts",
+          "notify_quiet_start": "Quiet period: start",
+          "notify_quiet_end": "Quiet period: end",
+          "notify_quiet_entities": "Fallback during quiet period: notify entities",
+          "notify_quiet_services": "Fallback during quiet period: notify actions",
+          "notify_quiet_scripts": "Fallback during quiet period: scripts",
+          "notify_cooldown_minutes": "Cooldown (min, 0 = off)"
         }
       }
     }
@@ -209,6 +231,44 @@
         "night": "Night",
         "frost_protection": "Frost Protection"
       }
+    },
+    "notify_types": {
+      "options": {
+        "heating_blocked": "Heating blocked by a window",
+        "heating_unblocked": "Heating unblocked (window closed)",
+        "manual_override": "Manual change detected",
+        "manual_override_end": "Manual change ended",
+        "config_issues": "Configuration issues",
+        "frost_protection": "Room in frost protection"
+      }
+    },
+    "room_notify_mode": {
+      "options": {
+        "add": "Add to global targets",
+        "replace": "Replace global targets"
+      }
+    }
+  },
+  "issues": {
+    "missing_entity": {
+      "title": "Missing entity in room {room}",
+      "description": "The room **{room}** references `{entity}`, which does not exist. Edit the room in the integration options and choose the replacement entity."
+    },
+    "unavailable_entity": {
+      "title": "Unavailable entity in room {room}",
+      "description": "`{entity}` used by the room **{room}** has been unavailable for more than 10 minutes. Smart Room Manager cannot use it reliably."
+    },
+    "climate_without_actuator": {
+      "title": "Heating without actuator in room {room}",
+      "description": "The room **{room}** has a heating mode configured but no climate entity. Choose one in the room options, or set the heating mode to none."
+    },
+    "multi_controller": {
+      "title": "Actuator driven twice in room {room}",
+      "description": "`{entity}` is driven by Smart Room Manager and by {other}. Keep a single controller (for Solar Optimizer: let it drive an input_boolean and use it as external control in Smart Room Manager)."
+    },
+    "setpoint_below_eco": {
+      "title": "Comfort setpoint below eco in room {room}",
+      "description": "The comfort setpoint given by `{entity}` ({comfort} °C after clamping) is lower than the eco temperature ({eco} °C). Raise the helper value or remove it from the room."
     }
   }
 }

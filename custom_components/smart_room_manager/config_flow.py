@@ -41,8 +41,20 @@ from .const import (
     CONF_IGNORE_IN_AWAY,
     CONF_LIGHT_TIMEOUT,
     CONF_LIGHTS,
+    CONF_MANUAL_OVERRIDE_MINUTES,
     CONF_MAX_SETPOINT,
     CONF_MIN_SETPOINT,
+    CONF_NOTIFICATIONS,
+    CONF_NOTIFY_COOLDOWN,
+    CONF_NOTIFY_ENTITIES,
+    CONF_NOTIFY_QUIET_END,
+    CONF_NOTIFY_QUIET_ENTITIES,
+    CONF_NOTIFY_QUIET_SCRIPTS,
+    CONF_NOTIFY_QUIET_SERVICES,
+    CONF_NOTIFY_QUIET_START,
+    CONF_NOTIFY_SCRIPTS,
+    CONF_NOTIFY_SERVICES,
+    CONF_NOTIFY_TYPES,
     CONF_PAUSE_DURATION_MINUTES,
     CONF_PAUSE_INFINITE,
     CONF_PRESET_AWAY,
@@ -57,6 +69,10 @@ from .const import (
     CONF_ROOM_ICON,
     CONF_ROOM_ID,
     CONF_ROOM_NAME,
+    CONF_ROOM_NOTIFY_ENTITIES,
+    CONF_ROOM_NOTIFY_MODE,
+    CONF_ROOM_NOTIFY_SCRIPTS,
+    CONF_ROOM_NOTIFY_SERVICES,
     CONF_ROOM_TYPE,
     CONF_ROOMS,
     CONF_SCHEDULE_ENTITY,
@@ -83,8 +99,11 @@ from .const import (
     DEFAULT_HYSTERESIS,
     DEFAULT_LIGHT_TIMEOUT,
     DEFAULT_LIGHT_TIMEOUT_BATHROOM,
+    DEFAULT_MANUAL_OVERRIDE_MINUTES,
     DEFAULT_MAX_SETPOINT,
     DEFAULT_MIN_SETPOINT,
+    DEFAULT_NOTIFY_COOLDOWN,
+    DEFAULT_NOTIFY_TYPES,
     DEFAULT_PAUSE_DURATION,
     DEFAULT_PAUSE_INFINITE,
     DEFAULT_PRESET_AWAY,
@@ -114,6 +133,9 @@ from .const import (
     MODE_ECO,
     MODE_FROST_PROTECTION,
     MODE_NIGHT,
+    NOTIFY_TYPES,
+    ROOM_NOTIFY_MODE_ADD,
+    ROOM_NOTIFY_MODE_REPLACE,
     ROOM_TYPE_BATHROOM,
     ROOM_TYPE_CORRIDOR,
     ROOM_TYPE_NORMAL,
@@ -1083,8 +1105,136 @@ def build_room_control_schema(room_data: dict[str, Any]) -> vol.Schema:
                 CONF_PAUSE_INFINITE,
                 default=room_data.get(CONF_PAUSE_INFINITE, DEFAULT_PAUSE_INFINITE),
             ): selector.BooleanSelector(),
+            vol.Optional(
+                CONF_MANUAL_OVERRIDE_MINUTES,
+                default=room_data.get(
+                    CONF_MANUAL_OVERRIDE_MINUTES, DEFAULT_MANUAL_OVERRIDE_MINUTES
+                ),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0,
+                    max=1440,
+                    step=15,
+                    unit_of_measurement="min",
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            ),
         }
     )
+
+
+def list_legacy_notify_services(hass) -> list[str]:
+    """Legacy notify actions available (notify.xxx), for the dropdown."""
+    services = hass.services.async_services().get("notify", {}) if hass else {}
+    excluded = {"send_message", "persistent_notification"}
+    return sorted(f"notify.{name}" for name in services if name not in excluded)
+
+
+def _services_selector(hass, current: list[str]) -> selector.SelectSelector:
+    options = sorted(set(list_legacy_notify_services(hass)) | set(current or []))
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=options,
+            multiple=True,
+            custom_value=True,
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
+
+
+def _entities_selector(domain: str) -> selector.EntitySelector:
+    return selector.EntitySelector(
+        selector.EntitySelectorConfig(domain=domain, multiple=True)
+    )
+
+
+def build_notifications_schema(hass, cfg: dict[str, Any]) -> vol.Schema:
+    """Global notification settings (v0.3.9)."""
+
+    def opt_time(key: str):
+        value = cfg.get(key)
+        if value:
+            return vol.Optional(key, description={"suggested_value": value})
+        return vol.Optional(key)
+
+    return vol.Schema(
+        {
+            vol.Optional(
+                CONF_NOTIFY_TYPES,
+                default=list(cfg.get(CONF_NOTIFY_TYPES, DEFAULT_NOTIFY_TYPES)),
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=list(NOTIFY_TYPES),
+                    multiple=True,
+                    mode=selector.SelectSelectorMode.LIST,
+                    translation_key="notify_types",
+                )
+            ),
+            vol.Optional(
+                CONF_NOTIFY_ENTITIES, default=list(cfg.get(CONF_NOTIFY_ENTITIES) or [])
+            ): _entities_selector("notify"),
+            vol.Optional(
+                CONF_NOTIFY_SERVICES, default=list(cfg.get(CONF_NOTIFY_SERVICES) or [])
+            ): _services_selector(hass, cfg.get(CONF_NOTIFY_SERVICES) or []),
+            vol.Optional(
+                CONF_NOTIFY_SCRIPTS, default=list(cfg.get(CONF_NOTIFY_SCRIPTS) or [])
+            ): _entities_selector("script"),
+            opt_time(CONF_NOTIFY_QUIET_START): selector.TimeSelector(),
+            opt_time(CONF_NOTIFY_QUIET_END): selector.TimeSelector(),
+            vol.Optional(
+                CONF_NOTIFY_QUIET_ENTITIES,
+                default=list(cfg.get(CONF_NOTIFY_QUIET_ENTITIES) or []),
+            ): _entities_selector("notify"),
+            vol.Optional(
+                CONF_NOTIFY_QUIET_SERVICES,
+                default=list(cfg.get(CONF_NOTIFY_QUIET_SERVICES) or []),
+            ): _services_selector(hass, cfg.get(CONF_NOTIFY_QUIET_SERVICES) or []),
+            vol.Optional(
+                CONF_NOTIFY_QUIET_SCRIPTS,
+                default=list(cfg.get(CONF_NOTIFY_QUIET_SCRIPTS) or []),
+            ): _entities_selector("script"),
+            vol.Optional(
+                CONF_NOTIFY_COOLDOWN,
+                default=cfg.get(CONF_NOTIFY_COOLDOWN, DEFAULT_NOTIFY_COOLDOWN),
+            ): selector.NumberSelector(
+                selector.NumberSelectorConfig(
+                    min=0,
+                    max=1440,
+                    step=1,
+                    unit_of_measurement="min",
+                    mode=selector.NumberSelectorMode.BOX,
+                )
+            ),
+        }
+    )
+
+
+def room_notification_fields(hass, room_data: dict[str, Any]) -> dict:
+    """Per-room notification targets, shown in the room control step."""
+    return {
+        vol.Optional(
+            CONF_ROOM_NOTIFY_ENTITIES,
+            default=list(room_data.get(CONF_ROOM_NOTIFY_ENTITIES) or []),
+        ): _entities_selector("notify"),
+        vol.Optional(
+            CONF_ROOM_NOTIFY_SERVICES,
+            default=list(room_data.get(CONF_ROOM_NOTIFY_SERVICES) or []),
+        ): _services_selector(hass, room_data.get(CONF_ROOM_NOTIFY_SERVICES) or []),
+        vol.Optional(
+            CONF_ROOM_NOTIFY_SCRIPTS,
+            default=list(room_data.get(CONF_ROOM_NOTIFY_SCRIPTS) or []),
+        ): _entities_selector("script"),
+        vol.Optional(
+            CONF_ROOM_NOTIFY_MODE,
+            default=room_data.get(CONF_ROOM_NOTIFY_MODE, ROOM_NOTIFY_MODE_ADD),
+        ): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=[ROOM_NOTIFY_MODE_ADD, ROOM_NOTIFY_MODE_REPLACE],
+                mode=selector.SelectSelectorMode.DROPDOWN,
+                translation_key="room_notify_mode",
+            )
+        ),
+    }
 
 
 # Config flow classes
@@ -1175,6 +1325,7 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
                 "list_rooms",
                 "add_room",
                 "global_settings",
+                "notifications",
             ],
         )
 
@@ -1728,12 +1879,31 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             self._current_room[CONF_PAUSE_INFINITE] = user_input.get(
                 CONF_PAUSE_INFINITE, DEFAULT_PAUSE_INFINITE
             )
+            # v0.3.9: manual override duration (0 = disabled)
+            self._current_room[CONF_MANUAL_OVERRIDE_MINUTES] = int(
+                user_input.get(
+                    CONF_MANUAL_OVERRIDE_MINUTES, DEFAULT_MANUAL_OVERRIDE_MINUTES
+                )
+            )
+
+            # v0.3.9: per-room notification targets
+            for key in (
+                CONF_ROOM_NOTIFY_ENTITIES,
+                CONF_ROOM_NOTIFY_SERVICES,
+                CONF_ROOM_NOTIFY_SCRIPTS,
+            ):
+                self._current_room[key] = list(user_input.get(key) or [])
+            self._current_room[CONF_ROOM_NOTIFY_MODE] = user_input.get(
+                CONF_ROOM_NOTIFY_MODE, ROOM_NOTIFY_MODE_ADD
+            )
 
             return await self._save_room()
 
         return self.async_show_form(
             step_id="room_control",
-            data_schema=build_room_control_schema(self._current_room),
+            data_schema=build_room_control_schema(self._current_room).extend(
+                room_notification_fields(self.hass, self._current_room)
+            ),
             description_placeholders={
                 "room_name": self._current_room[CONF_ROOM_NAME],
                 "info": "Pause duration default. Infinite: no time limit.",
@@ -1872,4 +2042,40 @@ class SmartRoomManagerOptionsFlow(config_entries.OptionsFlow):
             description_placeholders={
                 "info": "VMC: durée après extinction lumière SDB/WC.",
             },
+        )
+
+    async def async_step_notifications(
+        self, user_input: dict[str, Any] | None = None
+    ) -> config_entries.FlowResult:
+        """Configure notifications (v0.3.9)."""
+        current = dict(self.config_entry.options.get(CONF_NOTIFICATIONS) or {})
+        if user_input is not None:
+            new_cfg = {
+                CONF_NOTIFY_TYPES: list(user_input.get(CONF_NOTIFY_TYPES) or []),
+                CONF_NOTIFY_ENTITIES: list(user_input.get(CONF_NOTIFY_ENTITIES) or []),
+                CONF_NOTIFY_SERVICES: list(user_input.get(CONF_NOTIFY_SERVICES) or []),
+                CONF_NOTIFY_SCRIPTS: list(user_input.get(CONF_NOTIFY_SCRIPTS) or []),
+                CONF_NOTIFY_QUIET_START: user_input.get(CONF_NOTIFY_QUIET_START),
+                CONF_NOTIFY_QUIET_END: user_input.get(CONF_NOTIFY_QUIET_END),
+                CONF_NOTIFY_QUIET_ENTITIES: list(
+                    user_input.get(CONF_NOTIFY_QUIET_ENTITIES) or []
+                ),
+                CONF_NOTIFY_QUIET_SERVICES: list(
+                    user_input.get(CONF_NOTIFY_QUIET_SERVICES) or []
+                ),
+                CONF_NOTIFY_QUIET_SCRIPTS: list(
+                    user_input.get(CONF_NOTIFY_QUIET_SCRIPTS) or []
+                ),
+                CONF_NOTIFY_COOLDOWN: int(
+                    user_input.get(CONF_NOTIFY_COOLDOWN, DEFAULT_NOTIFY_COOLDOWN)
+                ),
+            }
+            return self.async_create_entry(
+                title="",
+                data={**self.config_entry.options, CONF_NOTIFICATIONS: new_cfg},
+            )
+
+        return self.async_show_form(
+            step_id="notifications",
+            data_schema=build_notifications_schema(self.hass, current),
         )

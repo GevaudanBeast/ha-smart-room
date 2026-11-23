@@ -11,6 +11,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 # English
 
+## [0.3.9] - 2026-11-23
+
+### 🐛 Bug Fixes
+
+- **Pause switch now works** (B1): the pause state is held by the room. The previous lookup used `switch.smart_room_<room_id>_pause`, which never matched the real entity_id. Pause and Automation switches are restored after a restart; a timed pause keeps its end time.
+- **Thermostat presets re-read** (B2/B3): presets are read on every cycle, so a thermostat that was unavailable at startup gets its presets (and the `away` preset when away, instead of `hvac off`). No command is sent to an unavailable climate entity. The "No preset for mode" warning is logged once per mode.
+- **Hysteresis setpoint follows the mode** (B4): eco and night use their temperatures; `setpoint_input` is only used as the comfort setpoint.
+- **External control (Wire Pilot)** (B7): compares with the real preset (no redundant command, re-applies after a manual change).
+- **Timed pause timer** (B9): cancelled when the entity is removed (reload/unload).
+- **Window delays** (B10): a window opened for less than the open delay no longer triggers frost protection (previously the close delay applied after any short opening). Delays are measured from the sensors' `last_changed`, not from the 30 s update loop.
+- **Pause release** (B1e/B1f): turning the pause off, or its timer ending, gives control back to the room.
+- **Anomalies log** (B11): the "configuration anomalies" warning is logged only when the list changes.
+- **Bathrooms follow their calendar** (B12): light on = comfort; light off = calendar mode when a calendar is set (previously always eco).
+- **Version** (B6): `VERSION` aligned with the manifest. **Minimum Home Assistant** (B8): 2024.11 (options flow).
+
+### ✨ New
+
+- **Configuration diagnostics** (B5): at startup and every 15 minutes, repair issues are created for missing entities, entities unavailable for more than 10 minutes, heating without actuator, actuators also driven by Solar Optimizer, and comfort setpoint below eco. New sensor `Anomalies`.
+
+- **Manual change detection** (B13): when a person changes the preset, HVAC mode or setpoint of a room's climate entity (change carrying a `user_id`), SRM leaves that room alone for `manual_override_minutes` (room option, default 120 min, 0 = disabled), then resumes automatically. Reason shown as "réglage manuel" on the Pause switch and the priority sensor; turning the Pause switch off resumes control. Light timers are not affected.
+
+- **Heating blocked by a window** (B14): when comfort is wanted (calendar), Solar Optimizer asks, or a person changed the climate by hand, but an open window forces frost protection, SRM fires `smart_room_manager_heating_blocked` (room, open windows, source, heat/cool) and turns on the new `Chauffage bloqué` binary sensor; `smart_room_manager_heating_unblocked` when it ends. Eco is not a demand; nothing when away; the Pause switch bypasses everything. A window now wins over a manual change, which is re-applied when the window closes if the override period is not over.
+
+- **Generic notifications** (B15): new options step "Notifications". Choose the types (heating blocked/unblocked by a window, manual change detected and ended, configuration issues, frost protection) and the targets: `notify` entities (`notify.send_message`, title + message), legacy notify actions (e.g. `notify.mobile_app_x`, with `data`: type, room_id, room_name, entities) and scripts (`script.turn_on` with the same variables). Each room can add to or replace the global targets. Optional quiet period with fallback targets (none = nothing sent), cooldown per room and type (default 10 min). Default texts in French or English (Home Assistant language). The `smart_room_manager_notification` event is always fired; existing events are kept.
+- The priority sensor now shows "Réglage manuel respecté jusqu'à HH:MM" during a manual change instead of "Pause manuelle active".
+
+### 🧪 Tests
+
+- 187 automated tests (`tests/`, pytest-homeassistant-custom-component).
+
 ## [0.3.7] - 2026-05-11
 
 ### 🐛 Critical Bug Fixes
@@ -85,6 +115,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 # Français
+
+## [0.3.9] - 2026-11-23
+
+Version de fiabilité, validée sur une installation réelle. Home Assistant 2024.11 minimum.
+
+### 🐛 Corrections
+- **Switch Pause** (B1, B1e, B1f) : l'état de pause est porté par la pièce (l'ancienne recherche par entity_id ne correspondait jamais). Couper la pause ou la fin de la pause minutée rend la main. Switchs Pause et Automatisation restaurés après un redémarrage.
+- **Presets relus** (B2, B3) : relus à chaque cycle ; preset `away` en absence au lieu de `hvac off` ; aucune commande vers une entité climat indisponible ; avertissement « pas de preset » une seule fois par mode.
+- **Consigne d'hystérésis** (B4) : éco et nuit utilisent leur température ; `setpoint_input` sert uniquement de consigne confort.
+- **Version** (B6) alignée sur le manifest. **Home Assistant minimum** (B8) : 2024.11.
+- **Contrôle externe Fil Pilote** (B7) : comparaison avec le preset réel.
+- **Timer de pause** (B9) annulé au retrait de l'entité.
+- **Délais fenêtres** (B10) : une ouverture plus courte que le délai ne déclenche plus le hors-gel ; délais mesurés depuis `last_changed`.
+- **Journal des anomalies** (B11) : écrit seulement quand la liste change.
+- **Salles de bain** (B12) : lumière allumée = confort, lumière éteinte = mode du calendrier s'il existe.
+
+### ✨ Nouveautés
+- **Diagnostic de configuration** (B5) : réparations et capteur `Anomalies`.
+- **Réglage manuel respecté** (B13) : option `manual_override_minutes` par pièce (120 par défaut, 0 = désactivé).
+- **Chauffage bloqué par une fenêtre** (B14) : capteur binaire `Chauffage bloqué` et événements `smart_room_manager_heating_blocked` / `_unblocked` ; la fenêtre gagne sur le réglage manuel, réappliqué à la fermeture.
+- **Notifications** (B15) : étape « Notifications » des options (types, entités notify, actions notify classiques, scripts, cibles par pièce, plage de silence avec repli, anti-répétition, textes FR/EN, événement `smart_room_manager_notification`).
+- Le capteur de priorité affiche « Réglage manuel respecté jusqu'à HH:MM ».
+
+### 🧪 Tests
+- 187 tests automatiques.
 
 ## [0.3.7] - 2026-05-11
 

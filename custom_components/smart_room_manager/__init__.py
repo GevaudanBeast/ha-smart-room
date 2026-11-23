@@ -3,15 +3,22 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import issue_registry as ir
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.start import async_at_started
 
-from .const import CONF_ROOM_ID, CONF_ROOMS, DOMAIN, VERSION
+from .const import CONF_ROOM_ID, CONF_ROOMS, DOMAIN, NOTIFY_CONFIG_ISSUES, VERSION
 from .coordinator import SmartRoomCoordinator
+from .diagnostics_check import check_rooms, issue_id
+
+DIAGNOSTIC_INTERVAL = timedelta(minutes=15)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -73,6 +80,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Create coordinator
     coordinator = SmartRoomCoordinator(hass, entry)
     await coordinator.async_config_entry_first_refresh()
+    coordinator.async_setup_listeners()
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
@@ -96,8 +104,71 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register services
     register_services(hass, entry)
 
+    # v0.3.9: configuration diagnostics (repair issues + anomalies sensor)
+    async def _run_diagnostics(*_args) -> None:
+        async_update_diagnostics(hass, entry, coordinator)
+
+    entry.async_on_unload(async_at_started(hass, _run_diagnostics))
+    entry.async_on_unload(
+        async_track_time_interval(hass, _run_diagnostics, DIAGNOSTIC_INTERVAL)
+    )
+
     _LOGGER.info("Smart Room Manager integration setup completed")
     return True
+
+
+def async_update_diagnostics(
+    hass: HomeAssistant, entry: ConfigEntry, coordinator: SmartRoomCoordinator
+) -> list[dict]:
+    """Check the configuration, sync repair issues and the anomalies sensor."""
+    anomalies = check_rooms(hass, entry.options.get(CONF_ROOMS, []), dict(entry.data))
+    wanted = {issue_id(a): a for a in anomalies}
+    registry = ir.async_get(hass)
+    for domain, existing_id in list(registry.issues):
+        if domain == DOMAIN and existing_id not in wanted:
+            ir.async_delete_issue(hass, DOMAIN, existing_id)
+    for iid, anomaly in wanted.items():
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            iid,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=anomaly["code"],
+            translation_placeholders={
+                "room": str(anomaly.get("room_name")),
+                "entity": str(anomaly.get("entity_id") or ""),
+                "other": str(anomaly.get("other", "")),
+                "comfort": str(anomaly.get("comfort", "")),
+                "eco": str(anomaly.get("eco", "")),
+            },
+        )
+    coordinator.anomalies = anomalies
+    coordinator.async_update_listeners()
+    # v0.3.9: log only when the set of anomalies changes (not every 15 min)
+    previous_ids = getattr(coordinator, "_last_anomaly_ids", None)
+    new_ids = set(wanted) - (previous_ids or set())
+    notifier = getattr(coordinator, "notifier", None)
+    if new_ids and notifier is not None:
+        new_anomalies = [wanted[i] for i in wanted if i in new_ids]
+        notifier.notify(
+            NOTIFY_CONFIG_ISSUES,
+            None,
+            {
+                "count": len(new_anomalies),
+                "details": notifier.issue_details(hass, new_anomalies),
+            },
+            [a.get("entity_id") for a in new_anomalies if a.get("entity_id")],
+        )
+    if set(wanted) != previous_ids:
+        coordinator._last_anomaly_ids = set(wanted)
+        if anomalies:
+            _LOGGER.warning(
+                "Smart Room Manager: %d configuration anomalies", len(anomalies)
+            )
+        elif previous_ids:
+            _LOGGER.info("Smart Room Manager: no configuration anomaly left")
+    return anomalies
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_ROOMS, DOMAIN, UPDATE_INTERVAL
+from .notifier import Notifier
 from .room_manager import RoomManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,6 +30,9 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
         )
         self.entry = entry
         self.room_managers: dict[str, RoomManager] = {}
+        self.anomalies: list[dict[str, Any]] = []
+        # v0.3.9: generic notifications
+        self.notifier = Notifier(hass, entry)
 
         # Initialize room managers
         self._setup_room_managers()
@@ -100,6 +104,11 @@ class SmartRoomCoordinator(DataUpdateCoordinator):
     async def async_config_entry_first_refresh(self) -> None:
         """Refresh data for the first time when a config entry is setup."""
         await super().async_config_entry_first_refresh()
+
+    def async_setup_listeners(self) -> None:
+        """Start the manual-override listeners of every room (v0.3.9)."""
+        for room_manager in self.room_managers.values():
+            room_manager.async_setup_listeners()
 
     def get_room_manager(self, room_id: str) -> RoomManager | None:
         """Get room manager by room_id."""

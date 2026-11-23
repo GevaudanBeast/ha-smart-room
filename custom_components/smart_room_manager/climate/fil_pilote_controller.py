@@ -318,50 +318,45 @@ class FilPiloteController:
     def _get_setpoint(self, mode: str) -> float | None:
         """Get the setpoint temperature for hysteresis control.
 
-        Priority:
-        1. setpoint_input (input_number) if configured
-        2. Mode-based temperature (comfort, eco, night)
+        v0.3.9: the setpoint follows the mode.
+        - comfort: setpoint_input (input_number) if configured and valid,
+          otherwise temp_comfort; clamped to min/max
+        - night, eco: temp_night, temp_eco
+        - frost_protection: 7 °C
         """
-        # Try setpoint_input first (for dynamic control)
-        setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
-        if setpoint_input:
-            setpoint_state = self.hass.states.get(setpoint_input)
-            if setpoint_state:
-                try:
-                    setpoint = float(setpoint_state.state)
-                    # Clamp to min/max
-                    min_setpoint = self.room_config.get(
-                        CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT
-                    )
-                    max_setpoint = self.room_config.get(
-                        CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT
-                    )
-                    return max(min_setpoint, min(max_setpoint, setpoint))
-                except (ValueError, TypeError):
-                    _LOGGER.warning(
-                        "Invalid setpoint value from %s: %s",
-                        setpoint_input,
-                        setpoint_state.state,
-                    )
-            else:
-                _LOGGER.warning(
-                    "Setpoint input %s not found for %s",
-                    setpoint_input,
-                    self.room_manager.room_name,
-                )
-
-        # Fall back to mode-based temperature
         if mode == MODE_COMFORT:
+            setpoint_input = self.room_config.get(CONF_SETPOINT_INPUT)
+            if setpoint_input:
+                setpoint_state = self.hass.states.get(setpoint_input)
+                if setpoint_state:
+                    try:
+                        setpoint = float(setpoint_state.state)
+                        min_setpoint = self.room_config.get(
+                            CONF_MIN_SETPOINT, DEFAULT_MIN_SETPOINT
+                        )
+                        max_setpoint = self.room_config.get(
+                            CONF_MAX_SETPOINT, DEFAULT_MAX_SETPOINT
+                        )
+                        return max(min_setpoint, min(max_setpoint, setpoint))
+                    except (ValueError, TypeError):
+                        _LOGGER.warning(
+                            "Invalid setpoint value from %s: %s",
+                            setpoint_input,
+                            setpoint_state.state,
+                        )
+                else:
+                    _LOGGER.warning(
+                        "Setpoint input %s not found for %s",
+                        setpoint_input,
+                        self.room_manager.room_name,
+                    )
             return self.room_config.get(CONF_TEMP_COMFORT, DEFAULT_TEMP_COMFORT)
-        elif mode == MODE_NIGHT:
+        if mode == MODE_NIGHT:
             return self.room_config.get(CONF_TEMP_NIGHT, DEFAULT_TEMP_NIGHT)
-        elif mode == MODE_ECO:
+        if mode == MODE_ECO:
             return self.room_config.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
-        elif mode == MODE_FROST_PROTECTION:
-            # For frost protection, use a low setpoint (don't need hysteresis really)
+        if mode == MODE_FROST_PROTECTION:
             return 7.0
-
-        # Unknown mode
         return None
 
     async def set_frost_protection(

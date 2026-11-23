@@ -9,6 +9,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import ATTR_CLIMATE_STATE  # v0.3.0 debug sensors
 from .const import (
@@ -33,6 +34,19 @@ from .entity import SmartRoomEntity
 
 _LOGGER = logging.getLogger(__name__)
 
+PAUSE_REASON_MANUAL_OVERRIDE = "manual_override"
+
+
+def _manual_override_text(room_data: dict[str, Any]) -> str:
+    """Description of a manual-change period (v0.3.9)."""
+    until = room_data.get("manual_override_until")
+    if until:
+        try:
+            return f"Réglage manuel respecté jusqu'à {str(until)[11:16]}"
+        except (TypeError, IndexError):
+            pass
+    return "Réglage manuel respecté"
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -53,7 +67,39 @@ async def async_setup_entry(
         # v0.3.3 activity log sensor
         entities.append(SmartRoomActivitySensor(coordinator, room_manager.room_id))
 
+    # v0.3.9: integration-level anomalies sensor
+    entities.append(SmartRoomAnomaliesSensor(coordinator, config_entry.entry_id))
+
     async_add_entities(entities)
+
+
+class SmartRoomAnomaliesSensor(CoordinatorEntity, SensorEntity):
+    """Number of configuration anomalies found by the diagnostics (v0.3.9)."""
+
+    _attr_has_entity_name = True
+    _attr_name = "Anomalies"
+    _attr_icon = "mdi:alert-circle-check-outline"
+
+    def __init__(self, coordinator: SmartRoomCoordinator, entry_id: str) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry_id}_anomalies"
+        self._attr_device_info = {"identifiers": {(DOMAIN, entry_id)}}
+
+    @property
+    def native_value(self) -> int:
+        """Return the number of anomalies."""
+        return len(getattr(self.coordinator, "anomalies", []))
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the anomalies list."""
+        return {"anomalies": list(getattr(self.coordinator, "anomalies", []))}
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
 
 
 class SmartRoomStateSensor(SmartRoomEntity, SensorEntity):
@@ -167,17 +213,29 @@ class SmartRoomCurrentPrioritySensor(SmartRoomEntity, SensorEntity):
 
         return {
             "description": self._get_priority_description(
-                climate_state.get(ATTR_CURRENT_PRIORITY, PRIORITY_NORMAL)
+                climate_state.get(ATTR_CURRENT_PRIORITY, PRIORITY_NORMAL),
+                room_data,
             ),
             "external_control_active": climate_state.get(
                 "external_control_active", False
             ),
             "pause_active": room_data.get("pause_active", False),
+            "pause_reason": room_data.get("pause_reason"),
+            "manual_override_until": room_data.get("manual_override_until"),
             "schedule_active": room_data.get("schedule_active", False),
         }
 
-    def _get_priority_description(self, priority: str) -> str:
+    def _get_priority_description(
+        self, priority: str, room_data: dict[str, Any] | None = None
+    ) -> str:
         """Get human-readable description of priority."""
+        # v0.3.9: a manual change is not the pause switch
+        if (
+            priority == "paused"
+            and room_data
+            and (room_data.get("pause_reason") == PAUSE_REASON_MANUAL_OVERRIDE)
+        ):
+            return _manual_override_text(room_data)
         descriptions = {
             "paused": "Pause manuelle active",
             "bypass": "Bypass activé (contrôle externe complet)",
@@ -283,6 +341,8 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
         if not room_data.get("automation_enabled"):
             return "Automation désactivée"
 
+        if room_data.get("pause_reason") == "manual_override":
+            return "Réglage manuel"
         if room_data.get("pause_active"):
             return "En pause"
 
@@ -323,7 +383,10 @@ class SmartRoomActivitySensor(SmartRoomEntity, SensorEntity):
             return {"log": "\n".join(log_lines)}
 
         if room_data.get("pause_active"):
-            log_lines.append("⏸️ Pause manuelle active")
+            if room_data.get("pause_reason") == PAUSE_REASON_MANUAL_OVERRIDE:
+                log_lines.append("✋ " + _manual_override_text(room_data))
+            else:
+                log_lines.append("⏸️ Pause manuelle active")
             return {"log": "\n".join(log_lines)}
 
         # Current mode and why
