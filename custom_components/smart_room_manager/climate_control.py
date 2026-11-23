@@ -277,21 +277,24 @@ class ClimateController:
             hvac = request.get("hvac_mode")
             if hvac and state.state != hvac:
                 await self.hass.services.async_call(
-                    CLIMATE_DOMAIN, SERVICE_SET_HVAC_MODE,
+                    CLIMATE_DOMAIN,
+                    SERVICE_SET_HVAC_MODE,
                     {"entity_id": climate_entity, ATTR_HVAC_MODE: hvac},
                     blocking=True,
                 )
             preset = request.get("preset_mode")
             if preset and state.attributes.get(ATTR_PRESET_MODE) != preset:
                 await self.hass.services.async_call(
-                    CLIMATE_DOMAIN, SERVICE_SET_PRESET_MODE,
+                    CLIMATE_DOMAIN,
+                    SERVICE_SET_PRESET_MODE,
                     {"entity_id": climate_entity, ATTR_PRESET_MODE: preset},
                     blocking=True,
                 )
             temp = request.get("temperature")
             if temp is not None and state.attributes.get(ATTR_TEMPERATURE) != temp:
                 await self.hass.services.async_call(
-                    CLIMATE_DOMAIN, SERVICE_SET_TEMPERATURE,
+                    CLIMATE_DOMAIN,
+                    SERVICE_SET_TEMPERATURE,
                     {"entity_id": climate_entity, ATTR_TEMPERATURE: temp},
                     blocking=True,
                 )
@@ -301,7 +304,9 @@ class ClimateController:
                 request,
             )
         except Exception as err:  # noqa: BLE001
-            _LOGGER.error("Error re-applying manual setting for %s: %s", climate_entity, err)
+            _LOGGER.error(
+                "Error re-applying manual setting for %s: %s", climate_entity, err
+            )
 
     def _detect_climate_type(self, climate_entity: str) -> str:
         """Detect if climate entity is Fil Pilote (preset_mode) or thermostat (hvac_mode).

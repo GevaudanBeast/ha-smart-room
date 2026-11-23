@@ -217,11 +217,16 @@ class Notifier:
                 "scripts": _as_list(room_config.get(CONF_ROOM_NOTIFY_SCRIPTS)),
             }
             has_room = any(room_targets.values())
-            if has_room and room_config.get(CONF_ROOM_NOTIFY_MODE) == ROOM_NOTIFY_MODE_REPLACE:
+            if (
+                has_room
+                and room_config.get(CONF_ROOM_NOTIFY_MODE) == ROOM_NOTIFY_MODE_REPLACE
+            ):
                 targets = room_targets
             else:
                 for key, values in room_targets.items():
-                    targets[key] = targets[key] + [v for v in values if v not in targets[key]]
+                    targets[key] = targets[key] + [
+                        v for v in values if v not in targets[key]
+                    ]
         return targets
 
     # ---- texts ---------------------------------------------------------
@@ -232,7 +237,9 @@ class Notifier:
         windows = values.get("windows") or []
         fields = {
             "room": values.get("room_name") or "Smart Room Manager",
-            "equip": words["cool"] if values.get("direction") == "cool" else words["heat"],
+            "equip": (
+                words["cool"] if values.get("direction") == "cool" else words["heat"]
+            ),
             "windows": f" ({', '.join(windows)})" if windows else "",
             "until": values.get("until_text", ""),
             "reason": words.get(values.get("reason") or "", values.get("reason") or ""),
@@ -249,7 +256,9 @@ class Notifier:
             label = words.get(anomaly.get("code"), anomaly.get("code"))
             room = anomaly.get("room_name") or ""
             entity = anomaly.get("entity_id") or ""
-            parts.append(" ".join(p for p in (f"{room} :" if room else "", label, entity) if p))
+            parts.append(
+                " ".join(p for p in (f"{room} :" if room else "", label, entity) if p)
+            )
         if len(anomalies) > 5:
             parts.append("…")
         return ", ".join(parts)
@@ -268,7 +277,9 @@ class Notifier:
             return False
         room_id = (room_config or {}).get("room_id") or "_global"
         now = dt_util.utcnow()
-        cooldown = int(self.config.get(CONF_NOTIFY_COOLDOWN, DEFAULT_NOTIFY_COOLDOWN) or 0)
+        cooldown = int(
+            self.config.get(CONF_NOTIFY_COOLDOWN, DEFAULT_NOTIFY_COOLDOWN) or 0
+        )
         key = (room_id, ntype)
         last = self._last_sent.get(key)
         if cooldown and last and now - last < timedelta(minutes=cooldown):
@@ -300,12 +311,15 @@ class Notifier:
             self.hass.async_create_task(self._async_send(targets, payload))
         return True
 
-    async def _async_send(self, targets: dict[str, list[str]], payload: dict[str, Any]) -> None:
+    async def _async_send(
+        self, targets: dict[str, list[str]], payload: dict[str, Any]
+    ) -> None:
         title, message = payload["title"], payload["message"]
         data = {k: payload[k] for k in ("type", "room_id", "room_name", "entities")}
         for entity_id in targets["entities"]:
             await self._call(
-                "notify", "send_message",
+                "notify",
+                "send_message",
                 {"entity_id": entity_id, "title": title, "message": message},
             )
         for service in targets["services"]:
@@ -317,8 +331,12 @@ class Notifier:
             )
         for script in targets["scripts"]:
             await self._call(
-                "script", "turn_on",
-                {"entity_id": script, "variables": {"title": title, "message": message, **data}},
+                "script",
+                "turn_on",
+                {
+                    "entity_id": script,
+                    "variables": {"title": title, "message": message, **data},
+                },
             )
 
     async def _call(self, domain: str, service: str, data: dict[str, Any]) -> None:

@@ -57,7 +57,9 @@ _LIST_KEYS = [CONF_LIGHTS, CONF_DOOR_WINDOW_SENSORS]
 _EXTERNAL_DRIVERS = ["solar_optimizer"]
 
 
-def _anomaly(code: str, room: dict[str, Any], entity_id: str | None = None, **extra) -> dict[str, Any]:
+def _anomaly(
+    code: str, room: dict[str, Any], entity_id: str | None = None, **extra
+) -> dict[str, Any]:
     data = {
         "code": code,
         "room_id": room.get(CONF_ROOM_ID),
@@ -108,7 +110,10 @@ def check_rooms(
             state = hass.states.get(entity_id)
             if state is None:
                 anomalies.append(_anomaly(ISSUE_MISSING_ENTITY, room, entity_id))
-            elif state.state == "unavailable" and now - state.last_changed >= UNAVAILABLE_GRACE:
+            elif (
+                state.state == "unavailable"
+                and now - state.last_changed >= UNAVAILABLE_GRACE
+            ):
                 anomalies.append(_anomaly(ISSUE_UNAVAILABLE_ENTITY, room, entity_id))
 
         # 2. Heating configured without actuator
@@ -121,11 +126,21 @@ def check_rooms(
         if climate_entity:
             if climate_entity in drivers:
                 anomalies.append(
-                    _anomaly(ISSUE_MULTI_CONTROLLER, room, climate_entity, other=drivers[climate_entity])
+                    _anomaly(
+                        ISSUE_MULTI_CONTROLLER,
+                        room,
+                        climate_entity,
+                        other=drivers[climate_entity],
+                    )
                 )
             if climate_entity in climate_owners:
                 anomalies.append(
-                    _anomaly(ISSUE_MULTI_CONTROLLER, room, climate_entity, other=f"Smart Room Manager: {climate_owners[climate_entity]}")
+                    _anomaly(
+                        ISSUE_MULTI_CONTROLLER,
+                        room,
+                        climate_entity,
+                        other=f"Smart Room Manager: {climate_owners[climate_entity]}",
+                    )
                 )
             climate_owners.setdefault(climate_entity, room.get(CONF_ROOM_NAME, "?"))
 
@@ -142,7 +157,13 @@ def check_rooms(
                 eco = room.get(CONF_TEMP_ECO, DEFAULT_TEMP_ECO)
                 if comfort < eco:
                     anomalies.append(
-                        _anomaly(ISSUE_SETPOINT_BELOW_ECO, room, setpoint_input, comfort=comfort, eco=eco)
+                        _anomaly(
+                            ISSUE_SETPOINT_BELOW_ECO,
+                            room,
+                            setpoint_input,
+                            comfort=comfort,
+                            eco=eco,
+                        )
                     )
 
     return anomalies
@@ -150,4 +171,6 @@ def check_rooms(
 
 def issue_id(anomaly: dict[str, Any]) -> str:
     """Stable repair issue id for an anomaly."""
-    return f"{anomaly['code']}_{anomaly['room_id']}_{anomaly.get('entity_id') or 'room'}"
+    return (
+        f"{anomaly['code']}_{anomaly['room_id']}_{anomaly.get('entity_id') or 'room'}"
+    )

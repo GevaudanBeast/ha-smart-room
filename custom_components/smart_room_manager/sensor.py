@@ -230,8 +230,10 @@ class SmartRoomCurrentPrioritySensor(SmartRoomEntity, SensorEntity):
     ) -> str:
         """Get human-readable description of priority."""
         # v0.3.9: a manual change is not the pause switch
-        if priority == "paused" and room_data and (
-            room_data.get("pause_reason") == PAUSE_REASON_MANUAL_OVERRIDE
+        if (
+            priority == "paused"
+            and room_data
+            and (room_data.get("pause_reason") == PAUSE_REASON_MANUAL_OVERRIDE)
         ):
             return _manual_override_text(room_data)
         descriptions = {

@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import STATE_ON
-from datetime import timedelta
-
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import dt as dt_util
@@ -18,14 +17,11 @@ from .const import (  # v0.3.0 additions; Priority 2 additions
     CONF_ALARM_ENTITY,
     CONF_CLIMATE_ENTITY,
     CONF_CLIMATE_WINDOW_CHECK,
-    CONF_MANUAL_OVERRIDE_MINUTES,
-    DEFAULT_MANUAL_OVERRIDE_MINUTES,
-    PAUSE_REASON_MANUAL_OVERRIDE,
-    PAUSE_REASON_MANUAL_SWITCH,
     CONF_COMFORT_TIME_RANGES,
     CONF_DOOR_WINDOW_SENSORS,
     CONF_IGNORE_IN_AWAY,
     CONF_LIGHTS,
+    CONF_MANUAL_OVERRIDE_MINUTES,
     CONF_NIGHT_START,
     CONF_PRESET_SCHEDULE_OFF,
     CONF_PRESET_SCHEDULE_ON,
@@ -36,6 +32,7 @@ from .const import (  # v0.3.0 additions; Priority 2 additions
     CONF_WINDOW_DELAY_CLOSE,
     CONF_WINDOW_DELAY_OPEN,
     DEFAULT_DAY_START,
+    DEFAULT_MANUAL_OVERRIDE_MINUTES,
     DEFAULT_NIGHT_START,
     DEFAULT_WINDOW_DELAY_CLOSE,
     DEFAULT_WINDOW_DELAY_OPEN,
@@ -48,6 +45,8 @@ from .const import (  # v0.3.0 additions; Priority 2 additions
     NOTIFY_HEATING_UNBLOCKED,
     NOTIFY_MANUAL_OVERRIDE,
     NOTIFY_MANUAL_OVERRIDE_END,
+    PAUSE_REASON_MANUAL_OVERRIDE,
+    PAUSE_REASON_MANUAL_SWITCH,
     ROOM_TYPE_BATHROOM,
     TIME_PERIOD_DAY,
     TIME_PERIOD_NIGHT,
@@ -371,14 +370,16 @@ class RoomManager:
         now = dt_util.utcnow()
 
         if self._windows_open:
-            if self._windows_opened_at is not None and (
-                now - self._windows_opened_at
-            ).total_seconds() >= delay_open * 60:
+            if (
+                self._windows_opened_at is not None
+                and (now - self._windows_opened_at).total_seconds() >= delay_open * 60
+            ):
                 self._windows_effective_open = True
         elif self._windows_effective_open:
-            if self._windows_closed_at is None or (
-                now - self._windows_closed_at
-            ).total_seconds() >= delay_close * 60:
+            if (
+                self._windows_closed_at is None
+                or (now - self._windows_closed_at).total_seconds() >= delay_close * 60
+            ):
                 self._windows_effective_open = False
 
         return self._windows_effective_open
@@ -443,7 +444,10 @@ class RoomManager:
         new = event.data.get("new_state")
         if old is None or new is None:
             return
-        if "unavailable" in (old.state, new.state) or "unknown" in (old.state, new.state):
+        if "unavailable" in (old.state, new.state) or "unknown" in (
+            old.state,
+            new.state,
+        ):
             return
         changed = (
             old.state != new.state
@@ -538,9 +542,11 @@ class RoomManager:
         }
         self._heating_blocked_info = data if blocked else {}
         self.hass.bus.async_fire(
-            "smart_room_manager_heating_blocked"
-            if blocked
-            else "smart_room_manager_heating_unblocked",
+            (
+                "smart_room_manager_heating_blocked"
+                if blocked
+                else "smart_room_manager_heating_unblocked"
+            ),
             data,
         )
         self._notify(
@@ -575,7 +581,9 @@ class RoomManager:
         try:
             notifier.notify(ntype, self.room_config, values, entities)
         except Exception as err:  # noqa: BLE001 - never break the room logic
-            _LOGGER.warning("Notification %s failed in %s: %s", ntype, self.room_name, err)
+            _LOGGER.warning(
+                "Notification %s failed in %s: %s", ntype, self.room_name, err
+            )
 
     def _check_frost_notification(self) -> None:
         """Notify when a heated room enters frost protection."""

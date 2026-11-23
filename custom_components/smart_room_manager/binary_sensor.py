@@ -46,7 +46,9 @@ async def async_setup_entry(
     # v0.3.9: heating/cooling blocked by an open window (rooms with a climate)
     for room_manager in coordinator.get_all_room_managers():
         if room_manager.room_config.get("climate_entity"):
-            entities.append(SmartRoomHeatingBlockedSensor(coordinator, room_manager.room_id))
+            entities.append(
+                SmartRoomHeatingBlockedSensor(coordinator, room_manager.room_id)
+            )
 
     async_add_entities(entities)
 
